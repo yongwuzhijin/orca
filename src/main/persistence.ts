@@ -2714,6 +2714,9 @@ export class Store {
               parsed.settings?.terminalCustomThemes
             ),
             appIcon: normalizeAppIconId(parsed.settings?.appIcon),
+            // Why: persisted settings can be user-edited or written by older
+            // builds; keep tray-minimize false unless the stored value is true.
+            minimizeToTrayOnClose: parsed.settings?.minimizeToTrayOnClose === true,
             uiLanguage: normalizeUiLanguage(parsed.settings?.uiLanguage),
             defaultTaskSource: taskProviderSettings.defaultTaskSource,
             visibleTaskProviders: taskProviderSettings.visibleTaskProviders,
@@ -4498,6 +4501,12 @@ export class Store {
     options: { notifyListeners?: boolean; originWebContentsId?: number } = {}
   ): GlobalSettings {
     const sanitizedUpdates = { ...updates }
+    // Why: coerce strictly to boolean here (not at the IPC edge) so every write
+    // path is covered and a non-bool renderer payload can never persist a
+    // truthy non-bool that later reads as "tray-minimize on".
+    if ('minimizeToTrayOnClose' in updates) {
+      sanitizedUpdates.minimizeToTrayOnClose = updates.minimizeToTrayOnClose === true
+    }
     if ('disabledTuiAgents' in updates) {
       sanitizedUpdates.disabledTuiAgents = normalizeDisabledTuiAgents(updates.disabledTuiAgents)
     }
@@ -4640,6 +4649,9 @@ export class Store {
         this.state.ui?.workspaceBoardColumnWidth
       ),
       syncTaskStatusFromWorkspaceBoard: this.state.ui?.syncTaskStatusFromWorkspaceBoard === true,
+      // Why: strict boolean coercion so a missing/legacy value reads as false
+      // (first-run notice still fires) rather than leaking a non-bool through.
+      trayMinimizeNoticeShown: this.state.ui?.trayMinimizeNoticeShown === true,
       markdownTocPanelWidth: clampMarkdownTocPanelWidth(this.state.ui?.markdownTocPanelWidth),
       visibleWorkspaceHostIds: normalizeVisibleExecutionHostIds(
         this.state.ui?.visibleWorkspaceHostIds

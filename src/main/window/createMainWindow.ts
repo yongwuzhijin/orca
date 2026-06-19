@@ -1,11 +1,21 @@
 /* oxlint-disable max-lines */
-import { app, BrowserWindow, ipcMain, Menu, nativeTheme, screen, shell } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Menu,
+  nativeTheme,
+  Notification,
+  screen,
+  shell
+} from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import type { Store } from '../persistence'
 import { getAppIconPath } from '../app-icon'
 import { browserManager } from '../browser/browser-manager'
 import { browserSessionRegistry } from '../browser/browser-session-registry'
+import { translateMain } from '../i18n/main-i18n'
 import {
   normalizeBrowserNavigationUrl,
   normalizeExternalBrowserUrl
@@ -932,7 +942,50 @@ export function createMainWindow(
   let windowCloseConfirmed = false
   const confirmCloseChannel = 'window:confirm-close'
 
+  // Why: Windows minimize-to-tray. Hides the window instead of closing when the
+  // setting is on, this isn't a real quit (Ctrl+Q / tray "Quit" set
+  // getIsQuitting), and the renderer is alive. Returns true when it handled the
+  // close by hiding, so callers skip their normal close path. Shared by BOTH the
+  // renderer-drawn X (window:request-close) and the native close event (Alt+F4).
+  const hideToTrayIfEnabled = (): boolean => {
+    const isRendererCrashed = mainWindow.webContents.isCrashed?.() ?? false
+    if (
+      process.platform !== 'win32' ||
+      rendererProcessGone ||
+      isRendererCrashed ||
+      opts?.getIsQuitting?.() === true ||
+      store?.getSettings().minimizeToTrayOnClose !== true
+    ) {
+      return false
+    }
+    mainWindow.hide()
+    // Why: tell the user once that closing only hid the window; the persisted
+    // flag stops the notice from repeating on every later minimize.
+    if (store.getUI().trayMinimizeNoticeShown !== true) {
+      try {
+        new Notification({
+          title: 'Orca',
+          body: translateMain(
+            'tray.minimizeNotice.body',
+            'Orca is still running in the system tray'
+          )
+        }).show()
+      } catch {
+        // Notification is best-effort — never block hiding the window.
+      }
+      store.updateUI({ trayMinimizeNoticeShown: true })
+    }
+    return true
+  }
+
   mainWindow.on('close', (e) => {
+    // Why: Alt+F4 and programmatic closes reach the native event; apply the same
+    // minimize-to-tray guard the renderer-drawn X uses via onRequestClose.
+    if (!windowCloseConfirmed && hideToTrayIfEnabled()) {
+      e.preventDefault()
+      return
+    }
+    const isRendererCrashed = mainWindow.webContents.isCrashed?.() ?? false
     if (windowCloseConfirmed) {
       windowCloseConfirmed = false
       // Why: past this point Electron/OS may emit resize/move/unmaximize as
@@ -947,7 +1000,6 @@ export function createMainWindow(
       }
       return
     }
-    const isRendererCrashed = mainWindow.webContents.isCrashed?.() ?? false
     if (rendererProcessGone || isRendererCrashed) {
       // Why: after a native renderer crash the renderer cannot answer
       // window:close-requested. Let Cmd+Q / OS close complete instead of
@@ -1016,9 +1068,16 @@ export function createMainWindow(
   // with windowCloseConfirmed = true.
   const requestCloseChannel = 'window:request-close'
   const onRequestClose = (): void => {
-    if (!mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('window:close-requested', { isQuitting: false })
+    if (mainWindow.isDestroyed()) {
+      return
     }
+    // Why: the renderer-drawn X on Windows routes here (not the native close
+    // event), so the minimize-to-tray guard must run on this path too — hide
+    // instead of asking the renderer to close.
+    if (hideToTrayIfEnabled()) {
+      return
+    }
+    mainWindow.webContents.send('window:close-requested', { isQuitting: false })
   }
   // Why: the ··· button in the renderer-drawn title bar on Windows pops up
   // the application menu at the cursor position, replicating the Alt-key
