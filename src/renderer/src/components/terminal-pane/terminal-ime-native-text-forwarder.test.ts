@@ -46,9 +46,9 @@ describe('isImeNativeTextKeydownCandidate', () => {
     }
   })
 
-  it('accepts unmodified ASCII punctuation keydown without an input source gate', () => {
+  it('rejects unmodified ASCII punctuation keydown without an input source gate', () => {
     expect(isImeNativeTextKeydownCandidate(keyEvent({ key: '.' }), false, DISABLED_FEATURES)).toBe(
-      true
+      false
     )
   })
 
@@ -58,7 +58,17 @@ describe('isImeNativeTextKeydownCandidate', () => {
     }
   })
 
-  it('accepts Vietnamese short replacement keys while punctuation stays source-independent', () => {
+  it('accepts direct CJK punctuation keydown when the input source probe is stale', () => {
+    expect(
+      isImeNativeTextKeydownCandidate(
+        keyEvent({ key: '，', code: 'Comma' }),
+        false,
+        DISABLED_FEATURES
+      )
+    ).toBe(true)
+  })
+
+  it('accepts Vietnamese short replacement keys without enabling punctuation', () => {
     expect(
       isImeNativeTextKeydownCandidate(
         keyEvent({ key: 'a', code: 'KeyA' }),
@@ -82,7 +92,7 @@ describe('isImeNativeTextKeydownCandidate', () => {
     ).toBe(true)
     expect(
       isImeNativeTextKeydownCandidate(keyEvent({ key: ',' }), false, VIETNAMESE_FEATURES)
-    ).toBe(true)
+    ).toBe(false)
   })
 
   it('accepts synthesized Unicode text keydowns without an input source gate', () => {
@@ -588,7 +598,7 @@ describe('installTerminalImeNativeTextForwarder', () => {
     expect(() => forwarder.dispose()).not.toThrow()
   })
 
-  it('still forwards punctuation when input-source features are disabled', () => {
+  it('does not forward punctuation when input-source features are disabled', () => {
     const sendInput = vi.fn()
     const forwarder = installTerminalImeNativeTextForwarder({
       terminalElement: element,
@@ -597,9 +607,9 @@ describe('installTerminalImeNativeTextForwarder', () => {
       getInputSourceFeatures: () => DISABLED_FEATURES
     })
 
-    expect(forwarder.claimKeyEvent(keyEvent({ key: ',' }))).toBe(true)
+    expect(forwarder.claimKeyEvent(keyEvent({ key: ',' }))).toBe(false)
     dispatchInsertText(textarea, '，')
-    expect(sendInput).toHaveBeenCalledExactlyOnceWith('，')
+    expect(sendInput).not.toHaveBeenCalled()
   })
 
   it('can become enabled after the input source changes to a Vietnamese IME', () => {
