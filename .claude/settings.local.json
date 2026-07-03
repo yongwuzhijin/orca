@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sed -n '905,985p' src/renderer/src/components/Terminal.tsx)",
+      "Bash(sed -n '340,375p' src/main/browser/browser-guest-ui.ts)"
+    ]
+  }
+}
