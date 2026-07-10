@@ -121,6 +121,7 @@ import type {
   JiraIssue,
   JiraIssueFilter,
   JiraIssueType,
+  JiraProjectStatusOrder,
   JiraIssueUpdate,
   JiraPriority,
   JiraProject,
@@ -1931,6 +1932,10 @@ export type PreloadApi = {
       siteId?: string
     }) => Promise<JiraUser[]>
     listTransitions: (args: { key: string; siteId?: string }) => Promise<JiraTransition[]>
+    getProjectStatusOrder: (args: {
+      projectKey: string
+      siteId?: string
+    }) => Promise<JiraProjectStatusOrder>
   }
   starNag: {
     onShow: (

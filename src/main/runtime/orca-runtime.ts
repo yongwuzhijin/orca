@@ -534,6 +534,7 @@ import {
   createIssue as createJiraIssue,
   getIssue as getJiraIssue,
   getIssueComments as getJiraIssueComments,
+  getProjectStatusOrder as getJiraProjectStatusOrder,
   listAssignableUsers as listJiraAssignableUsers,
   listCreateFields as listJiraCreateFields,
   listIssueTypes as listJiraIssueTypes,
@@ -22749,6 +22750,13 @@ export class OrcaRuntimeService {
 
   jiraListTransitions(key: string, siteId?: string): ReturnType<typeof listJiraTransitions> {
     return listJiraTransitions(key, siteId)
+  }
+
+  jiraGetProjectStatusOrder(
+    projectKey: string,
+    siteId?: string
+  ): ReturnType<typeof getJiraProjectStatusOrder> {
+    return getJiraProjectStatusOrder(projectKey, siteId)
   }
 
   // ── Browser automation ──
