@@ -22,7 +22,7 @@ import type { TelemetryConsentState } from '../../../shared/telemetry-consent-ty
 export { tuiAgentToAgentKind } from '../../../shared/agent-kind'
 
 // Why: single source-of-truth for the privacy doc URL linked from the two
-// telemetry surfaces (FirstLaunchBanner, PrivacyPane). Keeping it here — in
+// telemetry surfaces (FirstLaunchBanner). Keeping it here — in
 // the shared telemetry lib — prevents the surfaces from drifting if the doc
 // ever moves.
 export const PRIVACY_URL = 'https://www.onorca.dev/docs/telemetry'

@@ -25,8 +25,7 @@ export function TelemetryFirstLaunchSurface(): React.JSX.Element | null {
   // Main's `telemetry:setOptIn` / `telemetry:acknowledgeBanner` handlers
   // intentionally do NOT broadcast `settings:changed`, so the notice
   // must call `fetchSettings()` itself after its IPC writes to keep the
-  // renderer store (and PrivacyPane) from rendering stale telemetry
-  // state. See PrivacyPane.tsx for the identical pattern.
+  // renderer store from rendering stale telemetry state.
   const fetchSettings = useAppStore((s) => s.fetchSettings)
   const [dismissedThisSession, setDismissedThisSession] = useState(false)
 

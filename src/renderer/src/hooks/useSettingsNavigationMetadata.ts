@@ -16,7 +16,6 @@ import {
   Globe,
   Keyboard,
   ListChecks,
-  Lock,
   Mic,
   MousePointerClick,
   Network,
@@ -65,7 +64,6 @@ import { getMobileEmulatorSearchEntries } from '@/components/settings/mobile-emu
 import { getComputerUsePaneSearchEntries } from '@/components/settings/computer-use-search'
 import { getVoicePaneSearchEntries } from '@/components/settings/voice-pane-search'
 import { getDeveloperPermissionsPaneSearchEntries } from '@/components/settings/developer-permissions-search'
-import { getPrivacyPaneSearchEntries } from '@/components/settings/privacy-search'
 import { getAdvancedPaneSearchEntries } from '@/components/settings/advanced-search'
 import { getShortcutsPaneSearchEntries } from '@/components/settings/shortcuts-search'
 import { getStatsPaneSearchEntries } from '@/components/stats/stats-search'
@@ -477,20 +475,6 @@ export function buildSettingsNavigationMetadata({
           }
         ]
       : []),
-    {
-      id: 'privacy',
-      title: translate(
-        'auto.hooks.useSettingsNavigationMetadata.3618579df6',
-        'Privacy & Telemetry'
-      ),
-      description: translate(
-        'auto.hooks.useSettingsNavigationMetadata.8400cfe1c1',
-        'Anonymous usage data and telemetry controls.'
-      ),
-      icon: Lock,
-      searchEntries: getPrivacyPaneSearchEntries(),
-      group: 'security'
-    },
     ...(showDesktopOnlySettings
       ? [
           {

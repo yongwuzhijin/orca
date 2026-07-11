@@ -70,10 +70,7 @@ export function FirstLaunchBanner({
     // without an opt-in event and intentionally does NOT broadcast
     // `settings:changed` (see src/main/ipc/telemetry.ts). Without an
     // explicit `fetchSettings()` refresh, the renderer store would retain
-    // `optedIn: null` and PrivacyPane would keep rendering its pending-
-    // banner helper text until the next full relaunch. Mirror
-    // PrivacyPane's handleToggle pattern which refetches for the same
-    // reason before surfacing UI changes.
+    // `optedIn: null` until the next full relaunch.
     try {
       await acknowledgeBanner()
       await fetchSettings()

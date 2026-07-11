@@ -20,7 +20,6 @@ export type SettingsNavTarget =
   | 'notifications'
   | 'computer-use'
   | 'developer-permissions'
-  | 'privacy'
   | 'advanced'
   | 'dev'
   | 'voice'
