@@ -1,4 +1,5 @@
 import React from 'react'
+import { toast } from 'sonner'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -47,17 +48,44 @@ export function TodoTemplateManagerDialog({
     setBody(template.body)
   }
 
-  const handleSave = (): void => {
+  // Only clear the form after the IPC call resolves; on rejection we keep the
+  // draft so the user can retry without re-typing.
+  const handleSave = async (): Promise<void> => {
     const trimmedName = name.trim()
     if (trimmedName.length === 0) {
       return
     }
-    if (editingId) {
-      void updateTodoTemplate({ id: editingId, name: trimmedName, body })
-    } else {
-      void createTodoTemplate({ name: trimmedName, body })
+    try {
+      await (editingId
+        ? updateTodoTemplate({ id: editingId, name: trimmedName, body })
+        : createTodoTemplate({ name: trimmedName, body }))
+      resetForm()
+    } catch {
+      toast.error(
+        translate(
+          'auto.components.todo.TodoTemplateManagerDialog.saveError',
+          'Failed to save template'
+        )
+      )
     }
-    resetForm()
+  }
+
+  // Preserve the confirm/edit state on failure so the delete can be retried.
+  const handleDelete = async (templateId: string): Promise<void> => {
+    try {
+      await deleteTodoTemplate(templateId)
+      if (editingId === templateId) {
+        resetForm()
+      }
+      setConfirmDeleteId(null)
+    } catch {
+      toast.error(
+        translate(
+          'auto.components.todo.TodoTemplateManagerDialog.deleteError',
+          'Failed to delete template'
+        )
+      )
+    }
   }
 
   return (
@@ -103,11 +131,7 @@ export function TodoTemplateManagerDialog({
                         size="sm"
                         variant="destructive"
                         onClick={() => {
-                          void deleteTodoTemplate(template.id)
-                          if (editingId === template.id) {
-                            resetForm()
-                          }
-                          setConfirmDeleteId(null)
+                          void handleDelete(template.id)
                         }}
                       >
                         {translate(
@@ -190,7 +214,12 @@ export function TodoTemplateManagerDialog({
                 {translate('auto.components.todo.TodoTemplateManagerDialog.cancelEdit', 'Cancel')}
               </Button>
             ) : null}
-            <Button onClick={handleSave} disabled={name.trim().length === 0}>
+            <Button
+              onClick={() => {
+                void handleSave()
+              }}
+              disabled={name.trim().length === 0}
+            >
               {editingId ? (
                 translate('auto.components.todo.TodoTemplateManagerDialog.save', 'Save')
               ) : (

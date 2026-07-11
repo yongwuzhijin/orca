@@ -1,4 +1,5 @@
 import React from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -89,22 +90,30 @@ export function TodoCreateDialog({
 
   const canSubmit = title.trim().length > 0
 
-  const handleSubmit = (): void => {
+  // Keep the dialog open and preserve entered values if the IPC call rejects,
+  // so a transient failure never silently discards the user's input.
+  const handleSubmit = async (): Promise<void> => {
     if (!canSubmit) {
       return
     }
-    void createTodoItem(
-      buildCreateTodoPayload({
-        projectId,
-        title,
-        description,
-        status,
-        priority,
-        scheduledDate,
-        templateId
-      })
-    )
-    onClose()
+    try {
+      await createTodoItem(
+        buildCreateTodoPayload({
+          projectId,
+          title,
+          description,
+          status,
+          priority,
+          scheduledDate,
+          templateId
+        })
+      )
+      onClose()
+    } catch {
+      toast.error(
+        translate('auto.components.todo.TodoCreateDialog.createError', 'Failed to create task')
+      )
+    }
   }
 
   return (
@@ -220,7 +229,12 @@ export function TodoCreateDialog({
           <Button variant="ghost" onClick={onClose}>
             {translate('auto.components.todo.TodoCreateDialog.cancel', 'Cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit}>
+          <Button
+            onClick={() => {
+              void handleSubmit()
+            }}
+            disabled={!canSubmit}
+          >
             {translate('auto.components.todo.TodoCreateDialog.create', 'Create task')}
           </Button>
         </DialogFooter>
