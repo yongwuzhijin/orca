@@ -4504,6 +4504,9 @@
           "importing": "正在导入...",
           "importSshConfig": "导入 ~/.ssh/config",
           "sshPersistenceDefault": "此主机上的远程终端会保持运行，直到你结束它们或重置中继。"
+        },
+        "SidebarTodoNavButton": {
+          "title": "待办"
         }
       },
       "shared": {
@@ -12292,6 +12295,90 @@
       "nativeChat": {
         "contextMenu": {
           "copy": "复制"
+        }
+      },
+      "todo": {
+        "status": {
+          "backlog": "待办池",
+          "todo": "待办",
+          "in_progress": "进行中",
+          "rework": "返工",
+          "human_review": "人工评审",
+          "merging": "合并中",
+          "done": "已完成",
+          "canceled": "已取消",
+          "duplicate": "重复"
+        },
+        "priority": {
+          "none": "无优先级",
+          "low": "低",
+          "medium": "中",
+          "high": "高",
+          "urgent": "紧急"
+        },
+        "TodoPage": {
+          "newTask": "新建任务",
+          "empty": "创建一个项目开始使用"
+        },
+        "TodoColumn": {
+          "addTask": "添加任务"
+        },
+        "TodoProjectSwitcher": {
+          "projects": "项目",
+          "newProject": "新建项目",
+          "noProject": "无项目",
+          "nameLabel": "名称",
+          "create": "创建",
+          "cancel": "取消",
+          "delete": "删除",
+          "deleteTitle": "删除项目?",
+          "deleteProject": "删除项目",
+          "deleteWarning": "删除此项目将永久移除它及其所有任务,此操作无法撤销。",
+          "newProjectDescription": "为项目命名,并为其任务选择一个简短的标识前缀。",
+          "prefixLabel": "标识前缀",
+          "prefixPlaceholder": "ENG"
+        },
+        "TodoCreateDialog": {
+          "title": "新建任务",
+          "titleLabel": "标题",
+          "descriptionLabel": "描述",
+          "statusLabel": "状态",
+          "priorityLabel": "优先级",
+          "scheduledLabel": "计划日期",
+          "templateLabel": "模板",
+          "create": "创建任务",
+          "cancel": "取消",
+          "createError": "创建任务失败",
+          "titlePlaceholder": "需要做什么?",
+          "descriptionPlaceholder": "添加更多细节(支持 Markdown)"
+        },
+        "TodoDetailDialog": {
+          "statusLabel": "状态",
+          "priorityLabel": "优先级",
+          "scheduledLabel": "计划日期"
+        },
+        "TodoTemplatePicker": {
+          "none": "无模板",
+          "manage": "管理模板"
+        },
+        "TodoTemplateManagerDialog": {
+          "title": "管理模板",
+          "existing": "模板",
+          "save": "保存",
+          "cancelEdit": "取消",
+          "saveError": "保存模板失败",
+          "deleteError": "删除模板失败",
+          "description": "创建任务时可复用的描述。",
+          "empty": "暂无模板",
+          "confirmDelete": "删除",
+          "cancel": "取消",
+          "edit": "编辑模板",
+          "delete": "删除模板",
+          "editHeading": "编辑模板",
+          "newHeading": "新建模板",
+          "namePlaceholder": "模板名称",
+          "bodyPlaceholder": "模板内容(Markdown)",
+          "create": "添加模板"
         }
       }
     },
