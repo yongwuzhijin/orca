@@ -13,6 +13,18 @@ import type { ProjectExecutionRuntimeResolution } from '../shared/project-execut
 import type { StartupCommandDelivery } from '../shared/codex-startup-delivery'
 import type { SleepingAgentLaunchConfig } from '../shared/agent-session-resume'
 import type {
+  TodoProject,
+  CreateTodoProjectInput,
+  RenameTodoProjectInput
+} from '../shared/todo/todo-project'
+import type { TodoItem, CreateTodoItemInput, UpdateTodoItemPatch } from '../shared/todo/todo-item'
+import type {
+  TodoTemplate,
+  CreateTodoTemplateInput,
+  UpdateTodoTemplateInput
+} from '../shared/todo/todo-template'
+import type { TodoStatus } from '../shared/todo/todo-status'
+import type {
   BaseRefSearchResult,
   BaseRefDefaultResult,
   BrowserViewportOverride,
@@ -3965,6 +3977,37 @@ const api = {
         callback(request)
       ipcRenderer.on('automations:dispatchRequested', listener)
       return () => ipcRenderer.removeListener('automations:dispatchRequested', listener)
+    }
+  },
+
+  todos: {
+    projects: {
+      list: (): Promise<TodoProject[]> => ipcRenderer.invoke('todos:projects:list'),
+      create: (input: CreateTodoProjectInput): Promise<TodoProject> =>
+        ipcRenderer.invoke('todos:projects:create', input),
+      rename: (input: RenameTodoProjectInput): Promise<TodoProject> =>
+        ipcRenderer.invoke('todos:projects:rename', input),
+      delete: (id: string): Promise<void> => ipcRenderer.invoke('todos:projects:delete', id)
+    },
+    items: {
+      list: (projectId: string): Promise<TodoItem[]> =>
+        ipcRenderer.invoke('todos:items:list', projectId),
+      get: (id: string): Promise<TodoItem | null> => ipcRenderer.invoke('todos:items:get', id),
+      create: (input: CreateTodoItemInput): Promise<TodoItem> =>
+        ipcRenderer.invoke('todos:items:create', input),
+      update: (id: string, patch: UpdateTodoItemPatch): Promise<TodoItem> =>
+        ipcRenderer.invoke('todos:items:update', { id, patch }),
+      delete: (id: string): Promise<void> => ipcRenderer.invoke('todos:items:delete', id),
+      move: (id: string, status: TodoStatus, orderKey: string): Promise<TodoItem> =>
+        ipcRenderer.invoke('todos:items:move', { id, status, orderKey })
+    },
+    templates: {
+      list: (): Promise<TodoTemplate[]> => ipcRenderer.invoke('todos:templates:list'),
+      create: (input: CreateTodoTemplateInput): Promise<TodoTemplate> =>
+        ipcRenderer.invoke('todos:templates:create', input),
+      update: (input: UpdateTodoTemplateInput): Promise<TodoTemplate> =>
+        ipcRenderer.invoke('todos:templates:update', input),
+      delete: (id: string): Promise<void> => ipcRenderer.invoke('todos:templates:delete', id)
     }
   },
 
