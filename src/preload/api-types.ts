@@ -2025,22 +2025,6 @@ export type PreloadApi = {
       siteId?: string
     }) => Promise<JiraProjectStatusOrder>
   }
-  starNag: {
-    onShow: (
-      callback: (payload?: { mode?: 'gh' | 'web'; surface?: 'card' | 'toast' }) => void
-    ) => () => void
-    onHide: (callback: () => void) => () => void
-    dismiss: () => Promise<void>
-    later: () => Promise<void>
-    complete: () => Promise<void>
-    disable: () => Promise<void>
-    openWeb: () => Promise<void>
-    starOrca: () => Promise<boolean>
-    forceShow: () => Promise<void>
-    agentValueMoment: () => Promise<{ status: 'ready'; mode: 'gh' | 'web' } | { status: 'skipped' }>
-    showAgentValueMoment: () => Promise<void>
-    onboardingCompleted: () => Promise<void>
-  }
   /** Fire-and-forget track. Loose typing at the IPC boundary on purpose —
    *  the main-side validator is the single enforcement point. Renderer call
    *  sites should import `track<N>()` from `src/renderer/src/lib/telemetry.ts`

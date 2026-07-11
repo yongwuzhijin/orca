@@ -1243,13 +1243,13 @@ describe('registerGitHubHandlers', () => {
 
     registerGitHubHandlers(store as never, stats as never)
 
-    await expect(handlers['gh:starOrca'](null, 'settings')).resolves.toBe(true)
+    await expect(handlers['gh:starOrca'](null, 'landing')).resolves.toBe(true)
 
     expect(starOrcaMock).toHaveBeenCalledTimes(1)
     expect(getCohortAtEmitMock).toHaveBeenCalledTimes(1)
     expect(trackMock).toHaveBeenCalledTimes(1)
     expect(trackMock).toHaveBeenCalledWith('app_starred_orca', {
-      source: 'settings',
+      source: 'landing',
       nth_repo_added: 3
     })
   })
@@ -1259,22 +1259,12 @@ describe('registerGitHubHandlers', () => {
 
     registerGitHubHandlers(store as never, stats as never)
 
-    for (const source of [
-      'star_nag',
-      'agent_value_moment',
-      'onboarding_completed',
-      'settings',
-      'landing'
-    ] as const) {
+    for (const source of ['landing'] as const) {
       await expect(handlers['gh:starOrca'](null, source)).resolves.toBe(true)
     }
 
-    expect(trackMock).toHaveBeenCalledTimes(5)
+    expect(trackMock).toHaveBeenCalledTimes(1)
     expect(trackMock.mock.calls.map(([, props]) => props)).toEqual([
-      { source: 'star_nag', nth_repo_added: undefined },
-      { source: 'agent_value_moment', nth_repo_added: undefined },
-      { source: 'onboarding_completed', nth_repo_added: undefined },
-      { source: 'settings', nth_repo_added: undefined },
       { source: 'landing', nth_repo_added: undefined }
     ])
   })
@@ -1296,7 +1286,7 @@ describe('registerGitHubHandlers', () => {
 
     registerGitHubHandlers(store as never, stats as never)
 
-    await expect(handlers['gh:starOrca'](null, 'star_nag')).rejects.toThrow('gh failed')
+    await expect(handlers['gh:starOrca'](null, 'landing')).rejects.toThrow('gh failed')
 
     expect(trackMock).not.toHaveBeenCalled()
     expect(getCohortAtEmitMock).not.toHaveBeenCalled()

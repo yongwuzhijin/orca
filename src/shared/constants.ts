@@ -112,12 +112,6 @@ export const DEFAULT_EDITOR_AUTO_SAVE_DELAY_MS = 1000
 export const MIN_EDITOR_AUTO_SAVE_DELAY_MS = 250
 export const MAX_EDITOR_AUTO_SAVE_DELAY_MS = 10_000
 
-// Why: initial threshold of agents spawned (since last update) before we show
-// the star-on-GitHub notification. Doubles each time the user dismisses
-// without starring — e.g. 35 → 70 → 140 → 280. Past dismissals are encoded
-// in starNagNextThreshold, so this constant is only the first-time seed.
-export const STAR_NAG_INITIAL_THRESHOLD = 35
-
 /** Synthetic worktree id used by the memory collector to bucket PTYs that
  *  are not associated with any worktree. Shared across main and renderer so
  *  the collector and the status-bar popover agree on the sentinel. */

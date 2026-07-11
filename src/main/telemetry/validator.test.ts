@@ -41,39 +41,26 @@ describe('validate', () => {
     expect(result.ok).toBe(true)
   })
 
-  it('accepts a well-formed star_nag_outcome payload with cohort context', () => {
-    const result = validate('star_nag_outcome', {
-      outcome: 'opened_repo',
-      source: 'force_show',
-      mode: 'web',
-      threshold: 35,
-      agents_since_baseline: 42,
-      agents_since_baseline_bucket: '35-69',
+  it('accepts a well-formed app_starred_orca payload with cohort context', () => {
+    const result = validate('app_starred_orca', {
+      source: 'landing',
       nth_repo_added: 4
     })
     expect(result.ok).toBe(true)
   })
 
-  it('rejects malformed star_nag_outcome payloads', () => {
+  it('rejects malformed app_starred_orca payloads', () => {
     expect(
-      validate('star_nag_outcome', {
-        outcome: 'opened_repo',
-        source: 'force_show',
-        mode: 'web',
-        threshold: 35,
-        agents_since_baseline: 42,
-        agents_since_baseline_bucket: '35-69',
+      validate('app_starred_orca', {
+        source: 'landing',
+        nth_repo_added: 4,
         raw_error: 'nope'
       } as never).ok
     ).toBe(false)
     expect(
-      validate('star_nag_outcome', {
-        outcome: 'opened_repo',
-        source: 'force_show',
-        mode: 'web',
-        threshold: 0,
-        agents_since_baseline: 42,
-        agents_since_baseline_bucket: '35-69'
+      validate('app_starred_orca', {
+        source: 'not_a_source',
+        nth_repo_added: 4
       } as never).ok
     ).toBe(false)
   })

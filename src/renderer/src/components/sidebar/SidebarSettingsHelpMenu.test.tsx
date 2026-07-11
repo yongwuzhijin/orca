@@ -114,10 +114,6 @@ vi.mock('sonner', () => ({
   }
 }))
 
-vi.mock('./SidebarFeedbackDialog', () => ({
-  SidebarFeedbackDialog: () => <div data-testid="feedback-dialog" />
-}))
-
 function installWindowApi(): void {
   Object.assign(window, {
     api: {
@@ -195,14 +191,17 @@ describe('SidebarSettingsHelpMenu', () => {
     expect(helpIndex).toBeGreaterThan(settingsIndex)
   })
 
-  it('renders Send Feedback menu item', () => {
-    const html = renderToStaticMarkup(<SidebarSettingsHelpMenu />)
-    expect(html).toContain('Send Feedback')
-  })
-
   it('renders Keyboard Shortcuts menu item', () => {
     const html = renderToStaticMarkup(<SidebarSettingsHelpMenu />)
     expect(html).toContain('Keyboard Shortcuts')
+  })
+
+  it('does not render Send Feedback or social links', () => {
+    const html = renderToStaticMarkup(<SidebarSettingsHelpMenu />)
+    expect(html).not.toContain('Send Feedback')
+    expect(html).not.toContain('GitHub')
+    expect(html).not.toContain('Discord')
+    expect(html).not.toContain('>X<')
   })
 
   it('renders Milestones with progress when setup is incomplete', () => {
@@ -235,34 +234,6 @@ describe('SidebarSettingsHelpMenu', () => {
   it('renders Changelog link', () => {
     const html = renderToStaticMarkup(<SidebarSettingsHelpMenu />)
     expect(html).toContain('Changelog')
-  })
-
-  it('renders GitHub link', () => {
-    const html = renderToStaticMarkup(<SidebarSettingsHelpMenu />)
-    expect(html).toContain('GitHub')
-  })
-
-  it('renders Discord link', () => {
-    const html = renderToStaticMarkup(<SidebarSettingsHelpMenu />)
-    expect(html).toContain('Discord')
-    expect(html).toContain('viewBox="0 0 20 20"')
-    expect(html).toContain('M16.0742 4.45014C14.9244 3.92097 13.7106 3.54556 12.4638 3.3335')
-  })
-
-  it('opens Discord invite through the shell bridge', async () => {
-    const container = await renderMenu()
-    const discordButton = findMenuItem(container, 'Discord')
-
-    await act(async () => {
-      discordButton.click()
-    })
-
-    expect(mocks.shellOpenUrl).toHaveBeenCalledWith('https://discord.gg/fzjDKHxv8Q')
-  })
-
-  it('renders X link', () => {
-    const html = renderToStaticMarkup(<SidebarSettingsHelpMenu />)
-    expect(html).toContain('>X<')
   })
 
   it('renders Check for Updates menu item', () => {

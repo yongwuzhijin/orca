@@ -1,2 +1,11 @@
 #!/usr/bin/env sh
-pnpm exec lint-staged
+# Why: GUI/IDE git commits use a stripped PATH that omits user toolchains
+# (Volta, npm-global, Homebrew), so `pnpm`/`node` resolve as missing.
+export PATH="$HOME/.volta/bin:$HOME/.npm-global/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+if command -v pnpm >/dev/null 2>&1; then
+  pnpm exec lint-staged
+else
+  # Fallback when only the local binary is available on PATH.
+  lint-staged
+fi
