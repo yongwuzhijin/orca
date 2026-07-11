@@ -53,6 +53,7 @@ import { registerCodexAccountHandlers } from './codex-accounts'
 import { registerAgentHookHandlers } from './agent-hooks'
 import { registerAgentTrustHandlers } from './agent-trust'
 import { registerClaudeAccountHandlers } from './claude-accounts'
+import { registerTodoHandlers } from './todos'
 import { registerUpdaterHandlers } from '../window/attach-main-window-services'
 import {
   registerClipboardHandlers,
@@ -175,4 +176,5 @@ export function registerCoreHandlers(
   registerClipboardHandlers(store)
   registerUpdaterHandlers(store)
   registerSpeechHandlers(store)
+  registerTodoHandlers(runtime.getTodoRepository())
 }

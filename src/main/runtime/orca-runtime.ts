@@ -48,6 +48,8 @@ import { isAbsolute, join, resolve } from 'node:path'
 import { mkdir, readFile, readdir, rm, stat } from 'node:fs/promises'
 import { OrchestrationDb } from './orchestration/db'
 import { formatMessagesForInjection } from './orchestration/formatter'
+import { TodoDatabase } from '../todos/todo-database'
+import { TodoRepository } from '../todos/todo-repository'
 import type {
   Automation,
   AutomationCreateInput,
@@ -1935,6 +1937,7 @@ export class OrcaRuntimeService {
   private ptyForegroundAgentRefreshes = new Map<string, PtyForegroundAgentRefresh>()
   private ptyDelayedForegroundSnapshotTitleObservations = new Map<string, number>()
   private _orchestrationDb: OrchestrationDb | null = null
+  private _todoRepository: TodoRepository | null = null
   private messageWaitersByHandle = new Map<string, Set<MessageWaiter>>()
   // Why: mobile clients subscribe to terminal output via terminal.subscribe.
   // These listeners fire on every onPtyData call, enabling real-time streaming
@@ -2577,6 +2580,17 @@ export class OrcaRuntimeService {
 
   setOrchestrationDb(db: OrchestrationDb): void {
     this._orchestrationDb = db
+  }
+
+  // Why: lazy initialization mirrors the orchestration DB — the todo DB path
+  // depends on Electron's userData which isn't finalized until after app.ready.
+  getTodoRepository(): TodoRepository {
+    if (!this._todoRepository) {
+      const { app } = require('electron')
+      const dbPath = join(app.getPath('userData'), 'todo.db')
+      this._todoRepository = new TodoRepository(new TodoDatabase(dbPath))
+    }
+    return this._todoRepository
   }
 
   setAutomationService(service: AutomationService): void {
