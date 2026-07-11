@@ -96,6 +96,8 @@
     "bench:compare": "node config/scripts/compare-benchmark-artifacts.mjs"
   },
   "dependencies": {
+    "@agentclientprotocol/claude-agent-acp": "^0.44.0",
+    "@agentclientprotocol/sdk": "^0.25.0",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@floating-ui/dom": "1.7.6",
