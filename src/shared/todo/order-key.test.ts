@@ -35,4 +35,18 @@ describe('orderKeyBetween', () => {
     const sorted = [...keys].sort()
     expect(keys).toEqual(sorted)
   })
+
+  it('produces descending-inserted keys that stay globally ordered across repeated prepends', () => {
+    const keys: string[] = []
+    for (let i = 0; i < 20; i++) {
+      const key = orderKeyBetween(null, keys[0] ?? null)
+      keys.unshift(key)
+    }
+    const sorted = [...keys].sort()
+    expect(keys).toEqual(sorted)
+    // every adjacent pair strictly increasing
+    for (let i = 1; i < keys.length; i++) {
+      expect(keys[i - 1] < keys[i]).toBe(true)
+    }
+  })
 })
