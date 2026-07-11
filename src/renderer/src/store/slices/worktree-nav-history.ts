@@ -20,7 +20,7 @@ const MAX_HISTORY = 50
 // "worktree"/"WorktreeHistory" prefix for call-site stability — renaming
 // across ~20 sites would churn for no behavior win. View entries are
 // always live (never skipped by findPrev/NextLiveWorktreeHistoryIndex).
-export type WorktreeNavHistorySimpleViewEntry = 'tasks' | 'automations'
+export type WorktreeNavHistorySimpleViewEntry = 'tasks' | 'automations' | 'todos'
 export type WorktreeNavHistoryTaskDetailEntry =
   | {
       kind: 'task-detail'

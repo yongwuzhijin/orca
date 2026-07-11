@@ -550,6 +550,7 @@ export type UISlice = {
     | 'tasks'
     | 'activity'
     | 'automations'
+    | 'todos'
     | 'space'
     | 'skills'
     | 'mobile'
@@ -558,6 +559,7 @@ export type UISlice = {
     | 'settings'
     | 'activity'
     | 'automations'
+    | 'todos'
     | 'space'
     | 'skills'
     | 'mobile'
@@ -566,6 +568,7 @@ export type UISlice = {
     | 'tasks'
     | 'activity'
     | 'automations'
+    | 'todos'
     | 'space'
     | 'skills'
     | 'mobile'
@@ -574,6 +577,7 @@ export type UISlice = {
     | 'settings'
     | 'tasks'
     | 'automations'
+    | 'todos'
     | 'space'
     | 'skills'
     | 'mobile'
@@ -582,6 +586,16 @@ export type UISlice = {
     | 'settings'
     | 'tasks'
     | 'activity'
+    | 'todos'
+    | 'space'
+    | 'skills'
+    | 'mobile'
+  previousViewBeforeTodos:
+    | 'terminal'
+    | 'settings'
+    | 'tasks'
+    | 'activity'
+    | 'automations'
     | 'space'
     | 'skills'
     | 'mobile'
@@ -591,6 +605,7 @@ export type UISlice = {
     | 'tasks'
     | 'activity'
     | 'automations'
+    | 'todos'
     | 'skills'
     | 'mobile'
   previousViewBeforeSkills:
@@ -599,6 +614,7 @@ export type UISlice = {
     | 'tasks'
     | 'activity'
     | 'automations'
+    | 'todos'
     | 'space'
     | 'mobile'
   previousViewBeforeMobile:
@@ -607,6 +623,7 @@ export type UISlice = {
     | 'tasks'
     | 'activity'
     | 'automations'
+    | 'todos'
     | 'space'
     | 'skills'
   setActiveView: (view: UISlice['activeView']) => void
@@ -683,6 +700,8 @@ export type UISlice = {
   ) => void
   openAutomationsPage: () => void
   closeAutomationsPage: () => void
+  openTodosPage: () => void
+  closeTodosPage: () => void
   openSpacePage: () => void
   closeSpacePage: () => void
   openSkillsPage: () => void
@@ -1133,6 +1152,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   previousViewBeforeSettings: 'terminal',
   previousViewBeforeActivity: 'terminal',
   previousViewBeforeAutomations: 'terminal',
+  previousViewBeforeTodos: 'terminal',
   previousViewBeforeSpace: 'terminal',
   previousViewBeforeSkills: 'terminal',
   previousViewBeforeMobile: 'terminal',
@@ -1381,6 +1401,15 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
         worktreeNavHistoryIndex: nextHistoryIndex
       }
     }),
+  openTodosPage: () => {
+    get().recordViewVisit('todos')
+    set((state) => ({
+      activeView: 'todos',
+      previousViewBeforeTodos:
+        state.activeView === 'todos' ? state.previousViewBeforeTodos : state.activeView
+    }))
+  },
+  closeTodosPage: () => set((state) => ({ activeView: state.previousViewBeforeTodos })),
   openSpacePage: () => {
     get().recordFeatureInteraction?.('workspace-cleanup')
     set((state) => ({
