@@ -45,4 +45,12 @@ describe('acp-agent-launcher', () => {
     const spec = getAgentLaunchSpec('qoder')
     expect(spec.args).toContain('--acp')
   })
+
+  it('launches cursor as `agent acp`', () => {
+    delete process.env.DMON_ACP_MOCK
+    const spec = getAgentLaunchSpec('cursor')
+    expect(spec.args).toEqual(['acp'])
+    expect(spec.command).toContain('agent')
+    expect(spec.env).toEqual({})
+  })
 })

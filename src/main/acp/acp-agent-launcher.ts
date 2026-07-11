@@ -44,6 +44,11 @@ function qoderSpec(): AgentLaunchSpec {
   return { command: resolveCliCommand('qoder'), args: ['--acp'], env: {} }
 }
 
+// cursor 原生 ACP:二进制 `agent`,子命令 `acp`(沿用 resolveCliCommand 解析路径)。
+function cursorSpec(): AgentLaunchSpec {
+  return { command: resolveCliCommand('agent'), args: ['acp'], env: {} }
+}
+
 export function getAgentLaunchSpec(engine: AcpEngine): AgentLaunchSpec {
   if (isMockMode()) {
     return mockSpec()
@@ -53,6 +58,8 @@ export function getAgentLaunchSpec(engine: AcpEngine): AgentLaunchSpec {
       return claudeSpec()
     case 'qoder':
       return qoderSpec()
+    case 'cursor':
+      return cursorSpec()
     default: {
       const _exhaustive: never = engine
       throw new Error(`Unknown ACP engine: ${String(_exhaustive)}`)
