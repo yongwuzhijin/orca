@@ -1,5 +1,5 @@
 // P2a 首批引擎;新增引擎 = 往这里加一项 + launcher 加 spec。
-export const ACP_ENGINES = ['claude', 'qoder'] as const
+export const ACP_ENGINES = ['claude', 'qoder', 'cursor'] as const
 export type AcpEngine = (typeof ACP_ENGINES)[number]
 
 export function isAcpEngine(value: string): value is AcpEngine {
