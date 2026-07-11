@@ -9,11 +9,13 @@ import { TodoColumn } from './TodoColumn'
 export function TodoBoard({
   items,
   onMove,
-  onOpenItem
+  onOpenItem,
+  onCreate
 }: {
   items: TodoItem[]
   onMove: (id: string, status: TodoStatus, orderKey: string) => void
   onOpenItem: (id: string) => void
+  onCreate: (status: TodoStatus) => void
 }): React.JSX.Element {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
   // getVisibleTodoStatuses returns TodoStatusMeta[] in catalog order; derive the id set for drop checks.
@@ -55,6 +57,7 @@ export function TodoBoard({
               .filter((i) => i.status === meta.id)
               .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1))}
             onOpenItem={onOpenItem}
+            onCreate={onCreate}
           />
         ))}
       </div>

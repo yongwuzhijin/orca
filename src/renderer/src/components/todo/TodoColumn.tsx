@@ -1,20 +1,25 @@
 import React from 'react'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useDroppable } from '@dnd-kit/core'
+import { Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
 import type { TodoItem } from '../../../../shared/todo/todo-item'
+import type { TodoStatus } from '../../../../shared/todo/todo-status'
 import type { TodoStatusMeta } from './todo-status-catalog'
 import { TodoCard } from './TodoCard'
 
 export function TodoColumn({
   meta,
   items,
-  onOpenItem
+  onOpenItem,
+  onCreate
 }: {
   meta: TodoStatusMeta
   items: TodoItem[]
   onOpenItem: (id: string) => void
+  onCreate: (status: TodoStatus) => void
 }): React.JSX.Element {
   const { setNodeRef } = useDroppable({ id: `column:${meta.id}` })
   const Icon = meta.icon
@@ -32,6 +37,15 @@ export function TodoColumn({
           ))}
         </SortableContext>
       </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="w-full justify-start text-muted-foreground"
+        onClick={() => onCreate(meta.id)}
+      >
+        <Plus className="size-4" />
+        {translate('auto.components.todo.TodoColumn.addTask', 'Add task')}
+      </Button>
     </div>
   )
 }

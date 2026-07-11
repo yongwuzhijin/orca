@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
+import type { TodoStatus } from '../../../../shared/todo/todo-status'
 import { TodoBoard } from './TodoBoard'
 import { TodoCreateDialog } from './TodoCreateDialog'
 import { TodoDetailDialog } from './TodoDetailDialog'
@@ -16,6 +17,7 @@ export default function TodoPage(): React.JSX.Element {
   const items = useAppStore((s) => s.todoItems)
   const moveTodoItem = useAppStore((s) => s.moveTodoItem)
   const [createOpen, setCreateOpen] = React.useState(false)
+  const [createStatus, setCreateStatus] = React.useState<TodoStatus | null>(null)
   const [detailId, setDetailId] = React.useState<string | null>(null)
 
   React.useEffect(() => {
@@ -36,7 +38,14 @@ export default function TodoPage(): React.JSX.Element {
       <header className="flex items-center gap-2 border-b border-border px-4 py-2.5">
         <TodoProjectSwitcher />
         <div className="flex-1" />
-        <Button size="sm" disabled={!activeProjectId} onClick={() => setCreateOpen(true)}>
+        <Button
+          size="sm"
+          disabled={!activeProjectId}
+          onClick={() => {
+            setCreateStatus(null)
+            setCreateOpen(true)
+          }}
+        >
           <Plus className="size-4" />
           {translate('auto.components.todo.TodoPage.newTask', 'New task')}
         </Button>
@@ -47,6 +56,10 @@ export default function TodoPage(): React.JSX.Element {
             items={items}
             onMove={(id, status, orderKey) => void moveTodoItem(id, status, orderKey)}
             onOpenItem={(id) => setDetailId(id)}
+            onCreate={(status) => {
+              setCreateStatus(status)
+              setCreateOpen(true)
+            }}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -55,7 +68,14 @@ export default function TodoPage(): React.JSX.Element {
         )}
       </div>
       {createOpen && activeProjectId ? (
-        <TodoCreateDialog projectId={activeProjectId} onClose={() => setCreateOpen(false)} />
+        <TodoCreateDialog
+          projectId={activeProjectId}
+          initialStatus={createStatus ?? undefined}
+          onClose={() => {
+            setCreateOpen(false)
+            setCreateStatus(null)
+          }}
+        />
       ) : null}
       {detailId ? <TodoDetailDialog itemId={detailId} onClose={() => setDetailId(null)} /> : null}
     </div>
