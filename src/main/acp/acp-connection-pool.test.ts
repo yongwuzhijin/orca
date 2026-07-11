@@ -1,6 +1,7 @@
 // src/main/acp/acp-connection-pool.test.ts
 import { describe, it, expect, vi } from 'vitest'
-import { AcpConnectionPool } from './acp-connection-pool'
+import { AcpConnectionPool, type ConnectResult } from './acp-connection-pool'
+import type { AcpEngine } from '../../shared/acp/acp-session'
 
 function fakeConnection() {
   return {
@@ -46,5 +47,47 @@ describe('AcpConnectionPool', () => {
     expect(dispose).toHaveBeenCalledTimes(1)
     await pool.getAcpConnection('qoder')
     expect(connect).toHaveBeenCalledTimes(2) // re-spawned
+  })
+})
+
+function makeConnect(initResult: unknown) {
+  const authenticate = vi.fn(async () => ({}))
+  const initialize = vi.fn(async () => initResult)
+  const connect = (_engine: AcpEngine): ConnectResult => ({
+    connection: {
+      initialize,
+      authenticate,
+      newSession: vi.fn(),
+      resumeSession: vi.fn(),
+      loadSession: vi.fn(),
+      prompt: vi.fn(),
+      cancel: vi.fn()
+    } as never,
+    onExit: () => {},
+    dispose: () => {}
+  })
+  return { connect, authenticate, initialize }
+}
+
+describe('cursor authenticate handshake (P2b)', () => {
+  it('authenticates cursor when authMethods include cursor_login', async () => {
+    const { connect, authenticate } = makeConnect({ authMethods: [{ id: 'cursor_login' }] })
+    const pool = new AcpConnectionPool({ connect })
+    await pool.getAcpConnection('cursor')
+    expect(authenticate).toHaveBeenCalledWith({ methodId: 'cursor_login' })
+  })
+
+  it('skips authenticate when cursor_login absent', async () => {
+    const { connect, authenticate } = makeConnect({ authMethods: [] })
+    const pool = new AcpConnectionPool({ connect })
+    await pool.getAcpConnection('cursor')
+    expect(authenticate).not.toHaveBeenCalled()
+  })
+
+  it('never authenticates claude (zero regression)', async () => {
+    const { connect, authenticate } = makeConnect({ authMethods: [{ id: 'cursor_login' }] })
+    const pool = new AcpConnectionPool({ connect })
+    await pool.getAcpConnection('claude')
+    expect(authenticate).not.toHaveBeenCalled()
   })
 })

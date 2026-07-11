@@ -26,6 +26,7 @@ type BroadcastFn = (channel: string, payload: unknown, scopeId?: string) => void
 // pool can run the handshake against both real and fake connections.
 type PooledConnection = AcpConnection & {
   initialize?: (params: unknown) => Promise<unknown>
+  authenticate?: (params: { methodId: string }) => Promise<unknown>
 }
 
 const EVENT_CACHE_CAP = 3000
@@ -97,11 +98,21 @@ export class AcpConnectionPool {
     this.entries.set(engine, entry)
     result.onExit(() => this.handleExit(engine))
     if (typeof result.connection.initialize === 'function') {
-      await result.connection.initialize({
+      const initResult = (await result.connection.initialize({
         protocolVersion: 1,
         clientCapabilities: { fs: { readTextFile: true, writeTextFile: true } },
         clientInfo: { name: 'orca', version: '0' }
-      })
+      })) as { authMethods?: { id: string }[] } | undefined
+      // cursor 需在 initialize 后显式 authenticate,否则 newSession 因未鉴权被拒;
+      // 其它引擎不含 cursor_login 时跳过,保持零回归。
+      const methods = initResult?.authMethods ?? []
+      if (
+        engine === 'cursor' &&
+        typeof result.connection.authenticate === 'function' &&
+        methods.some((m) => m.id === 'cursor_login')
+      ) {
+        await result.connection.authenticate({ methodId: 'cursor_login' })
+      }
     }
     return entry.connection
   }
