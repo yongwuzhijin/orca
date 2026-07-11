@@ -107,7 +107,7 @@ export function TodoTemplateManagerDialog({
           <span className="text-xs font-medium text-muted-foreground">
             {translate('auto.components.todo.TodoTemplateManagerDialog.existing', 'Templates')}
           </span>
-          <div className="flex max-h-40 flex-col gap-1 overflow-y-auto">
+          <div className="flex max-h-40 flex-col gap-1 overflow-y-auto scrollbar-sleek">
             {templates.length === 0 ? (
               <span className="px-1 py-2 text-sm text-muted-foreground">
                 {translate(

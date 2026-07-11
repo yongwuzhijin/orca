@@ -38,7 +38,7 @@ export function TodoDetailDialog({
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <span className="text-xs text-muted-foreground">{item.identifier}</span>
             <h2 className="text-lg font-semibold leading-snug">{item.title}</h2>
-            <div className="min-h-32 max-h-[60vh] overflow-y-auto">
+            <div className="min-h-32 max-h-[60vh] overflow-y-auto scrollbar-sleek">
               <MarkdownPreview
                 content={item.description || '_No description_'}
                 filePath={`todo/${item.id}.md`}
