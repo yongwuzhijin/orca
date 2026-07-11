@@ -316,6 +316,7 @@ import type { ShellOpenLocalPathResult } from '../shared/shell-open-types'
 import type { SkillDiscoveryResult, SkillDiscoveryTarget } from '../shared/skills'
 import type {
   CrashReportBreadcrumbData,
+  CrashReportCopyDiagnosticsArgs,
   CrashReportRecord,
   CrashReportSubmitArgs,
   CrashReportSubmitResult,
@@ -382,6 +383,8 @@ import type {
 import type { GhAuthDiagnostic } from '../shared/github-auth-types'
 import type {
   SshConnectionState,
+  SshConfigImportResult,
+  SshTargetAddResult,
   SshTarget,
   PortForwardEntry,
   EnrichedDetectedPort
@@ -1253,6 +1256,7 @@ export type PreloadApi = {
     write: (id: string, data: string) => void
     writeAccepted: (id: string, data: string) => Promise<boolean>
     resize: (id: string, cols: number, rows: number) => void
+    claimViewport: (id: string, cols: number, rows: number) => void
     reportGeometry: (id: string, cols: number, rows: number) => void
     signal: (id: string, signal: string) => void
     clearBuffer: (id: string) => void
@@ -1397,10 +1401,9 @@ export type PreloadApi = {
     ) => Promise<ReactErrorBoundaryReportResult>
     recordBreadcrumb: (args: { name: string; data?: CrashReportBreadcrumbData }) => void
     submit: (args: CrashReportSubmitArgs) => Promise<CrashReportSubmitResult>
-    copyLatestDiagnostics: (args?: {
-      reportId?: string
-      notes?: string
-    }) => Promise<{ ok: true } | { ok: false; error: string }>
+    copyLatestDiagnostics: (
+      args?: CrashReportCopyDiagnosticsArgs
+    ) => Promise<{ ok: true } | { ok: false; error: string }>
   }
   export: ExportApi
   gh: {
@@ -2907,7 +2910,7 @@ export type PreloadApi = {
     getStatus: () => Promise<RuntimeStatus>
     call: (args: { method: string; params?: unknown }) => Promise<RuntimeRpcResponse<unknown>>
     getTerminalFitOverrides: () => Promise<
-      { ptyId: string; mode: 'mobile-fit'; cols: number; rows: number }[]
+      { ptyId: string; mode: 'mobile-fit' | 'remote-desktop-fit'; cols: number; rows: number }[]
     >
     getTerminalDrivers: () => Promise<
       {
@@ -2926,7 +2929,7 @@ export type PreloadApi = {
     onTerminalFitOverrideChanged: (
       callback: (event: {
         ptyId: string
-        mode: 'mobile-fit' | 'desktop-fit'
+        mode: 'mobile-fit' | 'remote-desktop-fit' | 'desktop-fit'
         cols: number
         rows: number
       }) => void
@@ -3000,13 +3003,13 @@ export type PreloadApi = {
     // Removed-target id → last known label, for showing a friendly host name on
     // workspaces still pinned to a target that no longer exists.
     listRemovedTargetLabels: () => Promise<Record<string, string>>
-    addTarget: (args: { target: Omit<SshTarget, 'id'> }) => Promise<SshTarget>
+    addTarget: (args: { target: Omit<SshTarget, 'id'> }) => Promise<SshTargetAddResult>
     updateTarget: (args: {
       id: string
       updates: Partial<Omit<SshTarget, 'id'>>
     }) => Promise<SshTarget>
     removeTarget: (args: { id: string }) => Promise<void>
-    importConfig: (args?: { reAdopt?: boolean }) => Promise<SshTarget[]>
+    importConfig: (args?: { reAdopt?: boolean }) => Promise<SshConfigImportResult>
     connect: (args: { targetId: string }) => Promise<SshConnectionState | null>
     disconnect: (args: { targetId: string }) => Promise<void>
     terminateSessions: (args: { targetId: string }) => Promise<void>

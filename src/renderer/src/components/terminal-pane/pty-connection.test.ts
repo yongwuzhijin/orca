@@ -12,6 +12,7 @@ import {
   RESET_TERMINAL_CURSOR_STYLE
 } from './layout-serialization'
 import { buildFreshShellViewportBlankingSequence } from './terminal-restored-viewport'
+import { DEFAULT_DA1_RESPONSE } from './terminal-capability-replies'
 import { TERMINAL_PASTE_DIRECT_MAX_BYTES } from './terminal-paste-coordinator'
 import { resolveWindowsShiftEnterEncodingForPane } from './terminal-windows-shift-enter'
 import type * as UseNotificationDispatchModule from './use-notification-dispatch'
@@ -241,6 +242,7 @@ type MockTransport = {
   sendInput: ReturnType<typeof vi.fn>
   sendInputImmediate: ReturnType<typeof vi.fn>
   sendInputAccepted?: ReturnType<typeof vi.fn>
+  claimViewport: ReturnType<typeof vi.fn>
   resize: ReturnType<typeof vi.fn>
   getPtyId: ReturnType<typeof vi.fn>
   getConnectionId: ReturnType<typeof vi.fn>
@@ -382,6 +384,7 @@ function createMockTransport(initialPtyId: string | null = null): MockTransport 
       return ptyId
     }),
     sendInput: vi.fn(() => true),
+    claimViewport: vi.fn(() => true),
     resize: vi.fn(() => true),
     getPtyId: vi.fn(() => ptyId),
     getConnectionId: vi.fn(() => null),
@@ -3999,6 +4002,7 @@ describe('connectPanePty', () => {
     const manager = createManager(1)
     const replayingPanesRef = { current: new Map<number, number>([[1, 1]]) }
     const deps = createDeps({ replayingPanesRef })
+    const { setFitOverride } = await import('@/lib/pane-manager/mobile-fit-overrides')
 
     connectPanePty(pane as never, manager as never, deps as never)
 
@@ -4009,11 +4013,19 @@ describe('connectPanePty', () => {
     // Simulate xterm emitting a DA1 auto-reply during replay parse.
     ;(onDataHandler as (data: string) => void)('\x1b[?1;2c')
     expect(transport.sendInput).not.toHaveBeenCalled()
+    expect(transport.claimViewport).not.toHaveBeenCalled()
 
     // Once replay completes (guard cleared), real keystrokes flow through.
     replayingPanesRef.current.delete(1)
+    setFitOverride('pty-live', 'remote-desktop-fit', 80, 24)
     ;(onDataHandler as (data: string) => void)('a')
     expect(transport.sendInput).toHaveBeenCalledWith('a')
+    expect(transport.claimViewport).toHaveBeenCalledTimes(1)
+    ;(onDataHandler as (data: string) => void)('b')
+    // The renderer stays parked until runtime convergence is acknowledged, so
+    // a second keystroke can retry a transient failed resize.
+    expect(transport.claimViewport).toHaveBeenCalledTimes(2)
+    setFitOverride('pty-live', 'desktop-fit', 0, 0)
   })
 
   it('does not enumerate every worktree tab for ordinary input without Codex restart notices', async () => {
@@ -4285,10 +4297,21 @@ describe('connectPanePty', () => {
       }
       // Simulate xterm answering a TUI's DA1 query while the phone owns the PTY.
       ;(onDataHandler as unknown as (data: string) => void)('\x1b[?1;2c')
+      // Capability handlers are registered outside onData and must honor the
+      // same mobile query-authority lock.
+      const csiCalls = (
+        pane.terminal.parser.registerCsiHandler as unknown as {
+          mock: { calls: [{ final: string }, (params: (number | number[])[]) => boolean][] }
+        }
+      ).mock.calls
+      const da1Handler = csiCalls.find(([id]) => id.final === 'c')?.[1]
+      expect(da1Handler).toBeTypeOf('function')
+      da1Handler?.([])
       await flushAsyncTicks()
 
       expect(window.api.runtime.restoreTerminalFit).not.toHaveBeenCalled()
       expect(transport.sendInput).not.toHaveBeenCalled()
+      expect(transport.sendInputImmediate).not.toHaveBeenCalled()
     } finally {
       setDriverForPty(ptyId, { kind: 'idle' })
     }
@@ -8344,23 +8367,24 @@ describe('connectPanePty', () => {
         }
       })
 
-      it('salvages stateful queries out of an overflowing restore queue', async () => {
+      it('sends salvaged queries immediately from an overflowing restore queue', async () => {
         const { pane, transport, dataCallback } = await startInFlightRestore()
 
-        // Queue 400KB, then a chunk that overflows the cap and carries a DSR
-        // probe. The content is discarded (snapshot owns it) but the probe's
-        // reply is SYNTHESIZED directly — replaying it into xterm would race
-        // the restore's discard and the replay guard's auto-reply swallow.
+        // Queue 400KB, then overflow with color, CPR, and DA probes. The
+        // discarded probes need direct replies before their read windows close.
         dataCallback('a'.repeat(400 * 1024), { seq: 400 * 1024, rawLength: 400 * 1024 })
-        dataCallback(`${'b'.repeat(200 * 1024)}\x1b[6n`, {
-          seq: 600 * 1024 + 4,
-          rawLength: 200 * 1024 + 4
+        const queries = '\x1b]11;?\x1b\\\x1b[6n\x1b[c'
+        dataCallback(`${'b'.repeat(200 * 1024)}${queries}`, {
+          seq: 600 * 1024 + queries.length,
+          rawLength: 200 * 1024 + queries.length
         })
         await flushAsyncTicks(8)
 
-        const replies = transport.sendInput.mock.calls.map((call) => String(call[0]))
+        const replies = transport.sendInputImmediate.mock.calls.map((call) => String(call[0]))
+        expect(replies.some((reply) => reply.startsWith('\x1b]11;rgb:'))).toBe(true)
         // oxlint-disable-next-line no-control-regex -- the ESC byte IS the payload: this matches the CPR reply
         expect(replies.some((reply) => /^\u001b\[\d+;\d+R$/.test(reply))).toBe(true)
+        expect(replies).toContain(DEFAULT_DA1_RESPONSE)
         const written = writtenFloodData(pane)
         expect(written).not.toContain('aaaa')
         expect(written).not.toContain('bbbb')
@@ -9232,7 +9256,7 @@ describe('connectPanePty', () => {
     isVisibleRef.current = true
     capturedDataCallback.current?.('31h')
 
-    expect(transport.sendInput).toHaveBeenCalledWith('\x1b[?997;2n')
+    expect(transport.sendInputImmediate).toHaveBeenCalledWith('\x1b[?997;2n')
     expect(paneMode2031Ref.current.get(1)).toBe(true)
     expect(paneLastThemeModeRef.current.get(1)).toBe('light')
     expect(pane.terminal.write).not.toHaveBeenCalledWith('31h', expect.any(Function))
@@ -11681,7 +11705,7 @@ describe('connectPanePty', () => {
     isVisibleRef.current = true
     resizeHandler({ cols: 122, rows: 42 })
 
-    expect(transport.resize).toHaveBeenCalledWith(122, 42)
+    expect(transport.resize).toHaveBeenCalledWith(122, 42, { claim: true })
     disposable.dispose()
   })
 
@@ -17701,7 +17725,12 @@ describe('connectPanePty', () => {
       )
       await flushAsyncTicks()
 
-      expect(window.api.pty.confirmForegroundProcess).toHaveBeenCalledTimes(3)
+      // The bounded ladder runs at least its initial read plus two retries; an
+      // incidental droid reconfirm can add one more, so assert the floor, not an
+      // exact count (matches the warm-reattach-to-shell sibling test above).
+      expect(
+        vi.mocked(window.api.pty.confirmForegroundProcess).mock.calls.length
+      ).toBeGreaterThanOrEqual(3)
       expect(mockStoreState.paneForegroundAgentByPaneKey[cacheKey]).toEqual({
         agent: null,
         shellForeground: true
@@ -18226,7 +18255,7 @@ describe('connectPanePty', () => {
         await flushAsyncTicks()
 
         expect(window.api.pty.getSize).toHaveBeenCalledWith('pty-pane-2')
-        expect(transport.resize).toHaveBeenCalledWith(82, 40)
+        expect(transport.resize).toHaveBeenCalledWith(82, 40, { claim: true })
       } finally {
         observer.restore()
       }
@@ -18275,7 +18304,7 @@ describe('connectPanePty', () => {
 
       expect(pane.fitAddon.fit).toHaveBeenCalled()
       expect(window.api.pty.getSize).toHaveBeenCalledWith('pty-pane-2')
-      expect(transport.resize).toHaveBeenCalledWith(65, 63)
+      expect(transport.resize).toHaveBeenCalledWith(65, 63, { claim: true })
     })
 
     it('skips foreground grid drift repair while mobile owns the PTY without a fit override', async () => {
@@ -18366,6 +18395,56 @@ describe('connectPanePty', () => {
       }
     })
 
+    it('updates the claiming desktop xterm before forwarding an observed viewport claim', async () => {
+      const originalDocument = globalThis.document
+      ;(globalThis as { document?: Document }).document = {
+        visibilityState: 'visible',
+        hasFocus: vi.fn(() => true)
+      } as unknown as Document
+      globalThis.requestAnimationFrame = vi.fn((callback: FrameRequestCallback) => {
+        queueMicrotask(() => callback(0))
+        return 1
+      })
+      const { setFitOverride } = await import('@/lib/pane-manager/mobile-fit-overrides')
+      const pane = createPane(2)
+      const observer = installObservedPane(pane)
+      try {
+        const { connectPanePty } = await import('./pty-connection')
+        const transport = createMockTransport('pty-pane-2')
+        transportFactoryQueue.push(transport)
+        const manager = createManager(2)
+        const deps = createDeps({
+          restoredLeafId: LEAF_2,
+          paneTransportsRef: { current: new Map([[1, createMockTransport('pty-pane-1')]]) }
+        })
+        let proposedGrid = { cols: 120, rows: 40 }
+        pane.fitAddon = {
+          ...pane.fitAddon,
+          proposeDimensions: vi.fn(() => proposedGrid)
+        } as never
+
+        connectPanePty(pane as never, manager as never, deps as never)
+        await flushAsyncTicks()
+        observer.trigger()
+        await flushAsyncTicks()
+        setFitOverride('pty-pane-2', 'remote-desktop-fit', 80, 24)
+        proposedGrid = { cols: 70, rows: 30 }
+        vi.mocked(pane.terminal.resize).mockClear()
+        transport.resize.mockClear()
+
+        observer.trigger()
+        await flushAsyncTicks()
+
+        expect(pane.terminal.resize).toHaveBeenCalledWith(70, 30)
+        expect(transport.resize).toHaveBeenCalledTimes(1)
+        expect(transport.resize).toHaveBeenCalledWith(70, 30, { claim: true })
+      } finally {
+        setFitOverride('pty-pane-2', 'desktop-fit', 0, 0)
+        observer.restore()
+        globalThis.document = originalDocument
+      }
+    })
+
     it('skips observed desktop reassertion while mobile owns the PTY without a fit override', async () => {
       const { setDriverForPty } = await import('@/lib/pane-manager/mobile-driver-state')
       const pane = createPane(2)
@@ -18426,7 +18505,7 @@ describe('connectPanePty', () => {
       binding.noteVisibilityResume()
       await flushAsyncTicks()
 
-      expect(transport.resize).toHaveBeenCalledWith(120, 40)
+      expect(transport.resize).toHaveBeenCalledWith(120, 40, { claim: true })
     })
 
     it('queues re-asserted resizes while pane resize holds are active', async () => {
@@ -18468,7 +18547,7 @@ describe('connectPanePty', () => {
         release.flush()
 
         expect(transport.resize).toHaveBeenCalledTimes(1)
-        expect(transport.resize).toHaveBeenCalledWith(120, 40)
+        expect(transport.resize).toHaveBeenCalledWith(120, 40, { claim: true })
       } finally {
         globalThis.CustomEvent = originalCustomEvent
       }

@@ -46,6 +46,7 @@ import { requestStablePaneFit } from '@/lib/pane-manager/pane-fit-resize-observe
 import { getFitOverrideForPty, bindPanePtyId } from '@/lib/pane-manager/mobile-fit-overrides'
 import { isPtyLocked } from '@/lib/pane-manager/mobile-driver-state'
 import { reconcilePtySizeAcrossFrames, type PtySizeReconcileHandle } from './pty-size-reconcile'
+import { shouldClaimRemoteDesktopViewport } from './remote-desktop-viewport-claim'
 import { createPtySizeReassertion } from './pty-size-reassertion'
 import { isPaneReplaying, replayIntoTerminal, replayIntoTerminalAsync } from './replay-guard'
 import {
@@ -981,6 +982,7 @@ export function connectPanePty(
   // flips, exit, dispose) run before/after it exists, so start with no-ops.
   let syncHiddenRendererPtyDelivery: () => void = () => {}
   let releaseHiddenRendererPtyDelivery: () => void = () => {}
+  let suppressViewportClaimTerminalResize = false
   // Why: idle callbacks are registered before the deferred PTY output plumbing
   // exists. Start with the shared scheduler, then switch to the PTY writer
   // below so hidden-tab resets keep backlog-recovery callbacks and byte order.
@@ -3254,6 +3256,14 @@ export function connectPanePty(
   const transport = runtimeEnvironmentId
     ? createRemoteRuntimePtyTransport(runtimeEnvironmentId, transportOptions)
     : createIpcPtyTransport(transportOptions)
+  const canSendDesktopQueryReply = (): boolean => {
+    const ptyId = transport.getPtyId()
+    return !ptyId || !isPtyLocked(ptyId)
+  }
+  // Why: parser/capability handlers bypass the ordinary onData guard. Keep
+  // desktop silent while the elected mobile xterm owns query replies.
+  const sendDesktopQueryReplyImmediate = (data: string): boolean =>
+    canSendDesktopQueryReply() && transport.sendInputImmediate(data)
   // Why (gate mode only): for gate-managed PTYs this fact is the SOLE 2031
   // responder — visible, hidden, marked or not. Conditioning the reply on the
   // hidden mark double-fired (mark set + bytes delivered live via interest →
@@ -3271,7 +3281,7 @@ export function connectPanePty(
     )
     // Why immediate: a mode-2031 query reply must beat the remote input debounce
     // or it can miss the querying program's read window (#7329).
-    transport.sendInputImmediate(mode2031SequenceFor(mode))
+    sendDesktopQueryReplyImmediate(mode2031SequenceFor(mode))
     // Why: register the subscription exactly like the xterm CSI handler
     // would — without the registry entry, later theme flips never push the
     // CSI 997 update and the TUI keeps a stale theme after reveal.
@@ -3285,14 +3295,34 @@ export function connectPanePty(
     // Why: OSC 10/11 + DA1 replies must beat the querying program's raw-mode
     // read window; the remote transport's input debounce would corrupt them
     // (#7329), so send immediately.
-    sendInput: (data) => transport.sendInputImmediate(data),
+    sendInput: sendDesktopQueryReplyImmediate,
     isReplaying: () => isPaneReplaying(deps.replayingPanesRef, pane.id),
     ...(isNativeWindowsConpty ? { da1Response: CONPTY_DA1_RESPONSE } : {})
   })
   const respondToTerminalPixelSizeQueries = createTerminalPixelSizeQueryResponder(
     pane.terminal,
-    (data) => transport.sendInputImmediate(data)
+    sendDesktopQueryReplyImmediate
   )
+
+  const claimViewportForUserActivity = (): void => {
+    const currentPtyId = transport.getPtyId()
+    if (!currentPtyId || getFitOverrideForPty(currentPtyId)?.mode !== 'remote-desktop-fit') {
+      return
+    }
+    let proposed: { cols: number; rows: number } | undefined
+    try {
+      proposed = pane.fitAddon.proposeDimensions()
+    } catch {
+      proposed = undefined
+    }
+    const cols = proposed?.cols ?? pane.terminal.cols
+    const rows = proposed?.rows ?? pane.terminal.rows
+    if (cols > 0 && rows > 0) {
+      // Why: queuing a claim is not convergence. Keep the pane parked until the
+      // runtime confirms desktop-fit so a transient resize failure retries.
+      transport.claimViewport?.(cols, rows)
+    }
+  }
 
   const onDataDisposable = pane.terminal.onData((data) => {
     // Why: xterm auto-replies to embedded query sequences (DA1, DECRQM,
@@ -3339,7 +3369,7 @@ export function connectPanePty(
     // isTerminalQueryReply (it requires length >= 3 and a full reply grammar),
     // so a real keystroke never reaches this branch.
     if (isTerminalQueryReply(data)) {
-      transport.sendInputImmediate(data)
+      sendDesktopQueryReplyImmediate(data)
       return
     }
     const intent = pendingTerminalInputIntent
@@ -3349,6 +3379,7 @@ export function connectPanePty(
     // excluded because those transports do not expose sendInputAccepted.
     const acknowledgedIntent = intent ?? inferIntentFromExactTerminalInput(data)
     if (acknowledgedIntent && transport.sendInputAccepted) {
+      claimViewportForUserActivity()
       if (acknowledgedIntent === 'ctrl-c') {
         // Why: the accepted-write callback is async; let the next command be
         // inferred if the user cancelled an oversized line and immediately typed.
@@ -3374,6 +3405,7 @@ export function connectPanePty(
       return
     }
     if (intent) {
+      claimViewportForUserActivity()
       if (transport.sendInput(data)) {
         markAcceptedTerminalInputSent()
         observeAcceptedShellCommandInput(data)
@@ -3382,6 +3414,7 @@ export function connectPanePty(
       clearPendingTerminalInputIntent()
       return
     }
+    claimViewportForUserActivity()
     if (transport.sendInput(data)) {
       markAcceptedTerminalInputSent()
       observeAcceptedShellCommandInput(data)
@@ -3427,7 +3460,7 @@ export function connectPanePty(
     if (queuePanePtyResizeIfHeld(pane.container, cols, rows)) {
       return
     }
-    transport.resize(cols, rows)
+    transport.resize(cols, rows, { claim: true })
   }
 
   const onHeldPtyResizeFlush = (event: Event): void => {
@@ -3440,7 +3473,7 @@ export function connectPanePty(
   pane.container.addEventListener(PANE_PTY_RESIZE_HOLD_FLUSH_EVENT, onHeldPtyResizeFlush)
 
   const onResizeDisposable = pane.terminal.onResize(({ cols, rows }) => {
-    if (suppressSnapshotReplayPtyResize) {
+    if (suppressSnapshotReplayPtyResize || suppressViewportClaimTerminalResize) {
       return
     }
     forwardPtyResize(cols, rows)
@@ -3526,14 +3559,41 @@ export function connectPanePty(
   // the PTY's applied size; mobile-fit panes only report desktop geometry so
   // the parked phone-sized PTY is not resized. See docs/mobile-fit-hold.md.
   let pendingGeometryReportRaf: number | null = null
+  let lastObservedDesktopGrid: { cols: number; rows: number } | null = null
+  const readPaneSize = (): { width: number; height: number } | null => {
+    if (typeof pane.container.getBoundingClientRect !== 'function') {
+      return null
+    }
+    const rect = pane.container.getBoundingClientRect()
+    return { width: rect.width, height: rect.height }
+  }
+  let lastObservedPaneSize = readPaneSize()
+  let pendingPaneGeometryChanged = false
   const handleObservedPaneGeometry = (): void => {
     pendingGeometryReportRaf = null
+    const paneGeometryChanged = pendingPaneGeometryChanged
+    pendingPaneGeometryChanged = false
     const currentPtyId = transport.getPtyId()
     if (!currentPtyId) {
+      // Why: ResizeObserver may deliver its initial measurement before the
+      // remote binding completes; retain that passive baseline for the first
+      // real focused resize instead of swallowing the user's first claim.
+      const proposed = readProposedTerminalGrid()
+      if (proposed) {
+        lastObservedDesktopGrid = proposed
+      }
       return
     }
     const fitOverride = getFitOverrideForPty(currentPtyId)
     if (!fitOverride) {
+      if (pane.terminal.cols > 0 && pane.terminal.rows > 0) {
+        // Why: record the local grid before a later remote hold parks xterm;
+        // the first real window/split resize can then claim immediately.
+        lastObservedDesktopGrid = {
+          cols: pane.terminal.cols,
+          rows: pane.terminal.rows
+        }
+      }
       if (shouldSuppressDesktopPtyResize()) {
         return
       }
@@ -3551,6 +3611,33 @@ export function connectPanePty(
     if (!proposed || proposed.cols <= 0 || proposed.rows <= 0) {
       return
     }
+    const priorProposed = lastObservedDesktopGrid
+    lastObservedDesktopGrid = proposed
+    if (fitOverride.mode === 'remote-desktop-fit') {
+      if (
+        shouldClaimRemoteDesktopViewport({
+          holdMode: fitOverride.mode,
+          prior: priorProposed,
+          current: proposed,
+          paneGeometryChanged,
+          paneVisible: deps.isVisibleRef.current,
+          documentVisible: document.visibilityState !== 'hidden',
+          documentFocused: document.hasFocus()
+        })
+      ) {
+        // Why: a focused, visible layout change is genuine activity; release
+        // the park and update xterm before claiming so the owner does not keep
+        // rendering the prior owner's stale grid.
+        suppressViewportClaimTerminalResize = true
+        try {
+          pane.terminal.resize(proposed.cols, proposed.rows)
+        } finally {
+          suppressViewportClaimTerminalResize = false
+        }
+        transport.resize(proposed.cols, proposed.rows, { claim: true })
+      }
+      return
+    }
     if (isRemoteRuntimePtyId(currentPtyId)) {
       transport.resize(proposed.cols, proposed.rows)
     } else {
@@ -3561,6 +3648,16 @@ export function connectPanePty(
     typeof ResizeObserver === 'undefined'
       ? null
       : new ResizeObserver(() => {
+          const paneSize = readPaneSize()
+          if (
+            paneSize &&
+            lastObservedPaneSize &&
+            (paneSize.width !== lastObservedPaneSize.width ||
+              paneSize.height !== lastObservedPaneSize.height)
+          ) {
+            pendingPaneGeometryChanged = true
+          }
+          lastObservedPaneSize = paneSize
           if (pendingGeometryReportRaf !== null) {
             return
           }
@@ -5029,10 +5126,9 @@ export function connectPanePty(
       const settings = useAppStore.getState().settings
       const mode = resolveTerminalColorSchemeMode(settings, getSystemPrefersDark())
       // Why: hidden snapshot-backed panes skip xterm.write for PTY bytes. Answer
-      // mode 2031 out-of-band so TUIs still render the snapshot with the same
-      // theme-dependent styling they would have used in a visible pane.
+      // immediately so the reply cannot outlive the program's read window.
       deps.paneMode2031Ref.current.set(pane.id, true)
-      transport.sendInput(mode2031SequenceFor(mode))
+      sendDesktopQueryReplyImmediate(mode2031SequenceFor(mode))
       deps.paneLastThemeModeRef.current.set(pane.id, mode)
       recordHiddenMode2031Reply()
     }
@@ -5203,8 +5299,10 @@ export function connectPanePty(
         // Why: Codex's startup palette probe has a 100 ms budget. Answer
         // hidden color queries directly and immediately so neither renderer
         // scheduling nor the remote input debounce (#7329) can miss it.
-        sendTerminalOscColorQueryReplies(extracted.oscColorQueryData, pane.terminal, (reply) =>
-          transport.sendInputImmediate(reply)
+        sendTerminalOscColorQueryReplies(
+          extracted.oscColorQueryData,
+          pane.terminal,
+          sendDesktopQueryReplyImmediate
         )
       }
       if (extracted.statelessQueryData) {
@@ -5311,7 +5409,7 @@ export function connectPanePty(
     // Why: discarding queued flood bytes must never swallow terminal queries —
     // a lost DSR/CPR (or color/DA) reply hangs the querying program (the bench
     // DSR timeout). The discarded CONTENT is owned by the snapshot repaint.
-    // Replies are SYNTHESIZED directly (transport.sendInput) instead of
+    // Replies are synthesized through the immediate input path instead of
     // replaying the queries into xterm: a drop always triggers a snapshot
     // restore, whose replay guard swallows xterm auto-replies and whose
     // discardTerminalOutput races away queued query writes — both killed the
@@ -5323,8 +5421,10 @@ export function connectPanePty(
       }
       const extracted = extractHiddenStartupRendererQueryData(data, '')
       if (extracted.oscColorQueryData) {
-        sendTerminalOscColorQueryReplies(extracted.oscColorQueryData, pane.terminal, (reply) =>
-          transport.sendInput(reply)
+        sendTerminalOscColorQueryReplies(
+          extracted.oscColorQueryData,
+          pane.terminal,
+          sendDesktopQueryReplyImmediate
         )
       }
       let unansweredQueryData = ''
@@ -5338,9 +5438,9 @@ export function connectPanePty(
           const buffer = pane.terminal.buffer.active
           const row = Math.min(buffer.cursorY + 1, pane.terminal.rows)
           const col = Math.min(buffer.cursorX + 1, pane.terminal.cols)
-          transport.sendInput(`\x1b[${row};${col}R`)
+          sendDesktopQueryReplyImmediate(`\x1b[${row};${col}R`)
         } else if (sequence === '\x1b[c' || sequence === '\x1b[0c') {
-          transport.sendInput(DEFAULT_DA1_RESPONSE)
+          sendDesktopQueryReplyImmediate(DEFAULT_DA1_RESPONSE)
         } else {
           unansweredQueryData += sequence
         }
@@ -6294,7 +6394,7 @@ export function connectPanePty(
           pane.terminal,
           // Why: OSC color reply — immediate so the remote debounce cannot delay
           // it past the querying program's read window (#7329).
-          (reply) => transport.sendInputImmediate(reply)
+          sendDesktopQueryReplyImmediate
         )
       }
       const restoreAppliesToCurrentPty =

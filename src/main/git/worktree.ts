@@ -24,7 +24,7 @@ import {
 } from '../../shared/git-worktree-command-capabilities'
 import { getLocalGitCapabilityCache } from './git-capability-state'
 import { gitExecFileAsync, translateWslOutputPaths } from './runner'
-import { resolveGitDir } from './status'
+import { resolveGitDir, runWithGitReadCacheInvalidation } from './status'
 import { hasWorktreeBaseCommitRef } from './worktree-base-ref-probe'
 
 export type AddWorktreeResult = {
@@ -172,7 +172,8 @@ async function evaluateLocalBaseRefRefreshability(
   baseBranch: string,
   remoteTrackingRef: string,
   remoteTrackingBase?: AddWorktreeOptions['remoteTrackingBase'],
-  options: GitWorktreeExecOptions = {}
+  options: GitWorktreeExecOptions = {},
+  shouldInspectOwner: (behind: number) => boolean = () => true
 ): Promise<LocalBaseRefRefreshability | undefined> {
   const parsed = parseRemoteTrackingLocalBaseRef(baseBranch, remoteTrackingRef, remoteTrackingBase)
   if (!parsed) {
@@ -195,6 +196,11 @@ async function evaluateLocalBaseRefRefreshability(
     const parsedDrift = parseRevListDrift(stdout)
     if (!parsedDrift || parsedDrift.ahead !== 0) {
       return { refreshable: false, result: { ...resultBase, status: 'skipped_not_fast_forward' } }
+    }
+    if (!shouldInspectOwner(parsedDrift.behind)) {
+      // Why: a current local ref cannot produce an update suggestion, so the
+      // advisory path need not resolve OIDs or inspect its owner worktree.
+      return undefined
     }
     const { stdout: localOidOutput } = await gitExecFileAsync(
       ['rev-parse', '--verify', `${parsed.fullRef}^{commit}`],
@@ -289,7 +295,8 @@ async function getLocalBaseRefUpdateSuggestionForWorktreeCreate(
     baseBranch,
     remoteTrackingRef,
     remoteTrackingBase,
-    options
+    options,
+    (behind) => behind > 0
   )
   if (!evaluation?.refreshable || evaluation.behind <= 0) {
     return undefined
@@ -831,14 +838,16 @@ export async function addWorktree(
   options: AddWorktreeOptions = {}
 ): Promise<AddWorktreeResult> {
   try {
-    return await performAddWorktree(
-      repoPath,
-      worktreePath,
-      branch,
-      baseBranch,
-      refreshLocalBaseRef,
-      noCheckout,
-      options
+    return await runWithGitReadCacheInvalidation(() =>
+      performAddWorktree(
+        repoPath,
+        worktreePath,
+        branch,
+        baseBranch,
+        refreshLocalBaseRef,
+        noCheckout,
+        options
+      )
     )
   } finally {
     bumpWorktreeScanGeneration(repoPath)
@@ -1049,7 +1058,9 @@ export async function moveWorktree(
   newPath: string
 ): Promise<void> {
   try {
-    await gitExecFileAsync(['worktree', 'move', oldPath, newPath], { cwd: repoPath })
+    await runWithGitReadCacheInvalidation(() =>
+      gitExecFileAsync(['worktree', 'move', oldPath, newPath], { cwd: repoPath })
+    )
   } finally {
     bumpWorktreeScanGeneration(repoPath)
   }
@@ -1069,7 +1080,9 @@ export async function removeWorktree(
   options: RemoveWorktreeOptions = {}
 ): Promise<RemoveWorktreeResult> {
   try {
-    return await performRemoveWorktree(repoPath, worktreePath, force, options)
+    return await runWithGitReadCacheInvalidation(() =>
+      performRemoveWorktree(repoPath, worktreePath, force, options)
+    )
   } finally {
     bumpWorktreeScanGeneration(repoPath)
   }

@@ -31,6 +31,10 @@ import {
 } from '../git/worktree'
 import * as gitRunner from '../git/runner'
 import {
+  clearSubmodulePathsCacheForTests,
+  listSubmodulePaths
+} from '../git/status'
+import {
   createSetupRunnerScript,
   getEffectiveHooks,
   getEffectiveHooksFromConfig,
@@ -41,7 +45,7 @@ import {
   runHook,
   shouldRunSetupForCreate
 } from '../hooks'
-import { getBranchConflictKind, getDefaultBaseRef } from '../git/repo'
+import { getBaseRefDefault, getBranchConflictKind } from '../git/repo'
 import type { OrchestrationDb } from './orchestration/db'
 import type { MessagePriority, MessageRow, MessageType } from './orchestration/types'
 import {
@@ -91,6 +95,7 @@ import { TERMINAL_METHODS } from './rpc/methods/terminal'
 const ORIGINAL_PLATFORM = process.platform
 const ORIGINAL_PLATFORM_DESCRIPTOR = Object.getOwnPropertyDescriptor(process, 'platform')
 const removeWorktreeLinkedPathsMock = vi.hoisted(() => vi.fn())
+const resolveLocalGitUsernameMock = vi.hoisted(() => vi.fn(async () => ''))
 
 vi.mock('../ipc/worktree-symlinks', () => ({
   createWorktreeLinkedPaths: vi.fn(),
@@ -516,23 +521,30 @@ vi.mock('../github/issues', async (importOriginal) => {
   }
 })
 
-// Why: the CLI create-worktree path calls getDefaultBaseRef to resolve a
-// fallback base branch. Real resolution shells out to `git` against the
-// test's fabricated repo path, which has no refs, so we stub it to a
-// predictable 'origin/main'. The runtime no longer silently fabricates this
-// default, so tests that want the legacy behavior must express it via the mock.
+// Why: CLI worktree creation resolves a default against fabricated repo paths
+// in these tests, so keep the async resolver deterministic.
 vi.mock('../git/repo', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>
+  const actualGetBaseRefDefault = actual.getBaseRefDefault as (
+    path: string,
+    options?: { wslDistro?: string }
+  ) => Promise<string | null>
   return {
     ...actual,
-    getDefaultBaseRef: vi.fn().mockReturnValue('origin/main'),
+    // Why: fabricated local test repos need a deterministic default, while
+    // WSL coverage must still exercise the real async Git-options path.
+    getBaseRefDefault: vi
+      .fn()
+      .mockImplementation((path: string, options?: { wslDistro?: string }) =>
+        options?.wslDistro ? actualGetBaseRefDefault(path, options) : Promise.resolve('origin/main')
+      ),
     getBranchConflictKind: vi.fn().mockResolvedValue(null)
   }
 })
 
 vi.mock('../git/git-username', async () => {
   const actual = await vi.importActual<typeof GitUsernameModule>('../git/git-username')
-  return { ...actual, resolveLocalGitUsername: vi.fn(async () => '') }
+  return { ...actual, resolveLocalGitUsername: resolveLocalGitUsernameMock }
 })
 
 function resetRuntimeTestMocks(): void {
@@ -552,6 +564,7 @@ function resetRuntimeTestMocks(): void {
   vi.mocked(assertWorktreeCleanForRemoval).mockResolvedValue(undefined)
   vi.mocked(removeWorktree).mockReset()
   removeWorktreeLinkedPathsMock.mockReset()
+  resolveLocalGitUsernameMock.mockReset().mockResolvedValue('')
   vi.mocked(forceDeleteLocalBranchMock).mockReset()
   vi.mocked(forceDeleteLocalBranchMock).mockResolvedValue(undefined)
   sshGitProviders.clear()
@@ -2851,7 +2864,7 @@ describe('OrcaRuntimeService', () => {
           suggestLocalBaseRefUpdate: true
         }
       )
-      expect(getDefaultBaseRef).toHaveBeenCalled()
+      expect(getBaseRefDefault).toHaveBeenCalled()
     } finally {
       getReposSpy.mockRestore()
       gitSpy.mockRestore()
@@ -3048,6 +3061,7 @@ describe('OrcaRuntimeService', () => {
       'origin/feature/something',
       false
     )
+    expect(resolveLocalGitUsernameMock).not.toHaveBeenCalled()
     expect(result.worktree).toMatchObject({
       path: '/tmp/workspaces/feature-something',
       branch: 'feature/something'
@@ -5356,7 +5370,7 @@ describe('OrcaRuntimeService', () => {
 
   it('treats SSH worktree drift as unknown without local git probes', async () => {
     vi.mocked(listWorktrees).mockClear()
-    vi.mocked(getDefaultBaseRef).mockClear()
+    vi.mocked(getBaseRefDefault).mockClear()
     const remoteStore = {
       ...store,
       getRepos: () => [
@@ -5392,7 +5406,7 @@ describe('OrcaRuntimeService', () => {
     }
 
     expect(gitProvider.listWorktrees).toHaveBeenCalledWith('/remote/repo')
-    expect(getDefaultBaseRef).not.toHaveBeenCalled()
+    expect(getBaseRefDefault).not.toHaveBeenCalled()
     expect(listWorktrees).not.toHaveBeenCalled()
   })
 
@@ -5458,7 +5472,7 @@ describe('OrcaRuntimeService', () => {
       })
       expect(asyncGitSpy).toHaveBeenCalledWith(
         ['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD'],
-        wslGitOptions
+        { ...wslGitOptions, timeout: 15_000 }
       )
       expect(asyncGitSpy).toHaveBeenCalledWith(['remote'], wslGitOptions)
       expect(asyncGitSpy).toHaveBeenCalledWith(
@@ -6176,6 +6190,43 @@ describe('OrcaRuntimeService', () => {
       expect(prepareLocalWorktreeRootForRepoMock).toHaveBeenCalledWith(colorStore, repo)
     } finally {
       spawnSpy.mockRestore()
+    }
+  })
+
+  it('drops a same-path negative submodule cache before runtime cloneRepo', async () => {
+    const spawnSpy = vi.spyOn(gitRunner, 'gitSpawn')
+    const destination = await mkdtemp(join(tmpdir(), 'orca-runtime-reclone-'))
+    const clonePath = join(destination, 'reclone')
+    const added: Record<string, unknown>[] = []
+    const cloneStore = {
+      ...store,
+      getRepos: () => [...added] as never,
+      addRepo: (repo: Record<string, unknown>) => added.push(repo),
+      getRepo: (id: string) => added.find((repo) => repo.id === id) as never
+    }
+    spawnSpy.mockImplementation(() => {
+      const proc = new EventEmitter() as EventEmitter & { stderr: EventEmitter }
+      proc.stderr = new EventEmitter()
+      queueMicrotask(() => {
+        void mkdir(clonePath, { recursive: true })
+          .then(() =>
+            writeFile(join(clonePath, '.gitmodules'), '[submodule "lib"]\n\tpath = vendor/lib\n')
+          )
+          .then(() => proc.emit('close', 0, null))
+      })
+      return proc as never
+    })
+    const runtime = new OrcaRuntimeService(cloneStore as never)
+
+    try {
+      clearSubmodulePathsCacheForTests()
+      await expect(listSubmodulePaths(clonePath)).resolves.toEqual([])
+      await runtime.cloneRepo('https://example.com/reclone.git', destination)
+      await expect(listSubmodulePaths(clonePath)).resolves.toEqual(['vendor/lib'])
+    } finally {
+      clearSubmodulePathsCacheForTests()
+      spawnSpy.mockRestore()
+      await rm(destination, { recursive: true, force: true })
     }
   })
 
@@ -26429,6 +26480,7 @@ describe('OrcaRuntimeService', () => {
       })
       expect(gitSpy).toHaveBeenCalledWith(['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD'], {
         cwd: TEST_REPO_PATH,
+        timeout: 15_000,
         wslDistro: 'Ubuntu'
       })
       expect(gitSpy).toHaveBeenCalledWith(
@@ -27096,6 +27148,7 @@ describe('OrcaRuntimeService', () => {
       })
       expect(gitSpy).toHaveBeenCalledWith(['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD'], {
         cwd: TEST_REPO_PATH,
+        timeout: 15_000,
         wslDistro: 'Ubuntu'
       })
       expect(getBranchConflictKind).toHaveBeenCalledWith(
