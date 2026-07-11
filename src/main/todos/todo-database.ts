@@ -2,9 +2,8 @@ import Database from '../sqlite/sync-database'
 
 // Why: dedicated todo.db versioning mirrors OrchestrationDb so on-disk upgrades
 // migrate explicitly (CREATE TABLE IF NOT EXISTS is a no-op against an existing
-// DB). P1 ships v1 only; the migrate() skeleton stays so later columns land in a
-// transaction guarded by user_version.
-export const SCHEMA_VERSION = 1
+// DB). v2 adds todo_items.session_id, the pointer to the ACP execution session.
+export const SCHEMA_VERSION = 2
 
 export class TodoDatabase {
   private db: Database.Database
@@ -62,7 +61,8 @@ export class TodoDatabase {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         started_at TEXT,
-        completed_at TEXT
+        completed_at TEXT,
+        session_id TEXT
       );
 
       CREATE INDEX IF NOT EXISTS idx_todo_items_project_status
@@ -97,8 +97,10 @@ export class TodoDatabase {
 
     this.db.exec('BEGIN')
     try {
-      // Future: add `if (current < N) { ALTER TABLE ... }` steps here, guarded
-      // by hasColumn() for idempotency.
+      // v2: session_id points a todo item at its ACP execution session.
+      if (current < 2 && !this.hasColumn('todo_items', 'session_id')) {
+        this.db.exec('ALTER TABLE todo_items ADD COLUMN session_id TEXT')
+      }
       this.db.pragma(`user_version = ${SCHEMA_VERSION}`)
       this.db.exec('COMMIT')
     } catch (err) {

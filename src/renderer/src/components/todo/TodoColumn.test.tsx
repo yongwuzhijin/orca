@@ -30,7 +30,8 @@ function mkItem(id: string, status: TodoStatus, scheduledDate: string | null): T
     createdAt: '2026-07-11T00:00:00.000Z',
     updatedAt: '2026-07-11T00:00:00.000Z',
     startedAt: null,
-    completedAt: null
+    completedAt: null,
+    sessionId: null
   }
 }
 

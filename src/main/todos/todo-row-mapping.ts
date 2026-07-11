@@ -40,6 +40,7 @@ export type TodoItemRow = {
   updated_at: string
   started_at: string | null
   completed_at: string | null
+  session_id: string | null
 }
 
 export function rowToProject(row: TodoProjectRow): TodoProject {
@@ -94,6 +95,7 @@ export function rowToTodoItem(row: TodoItemRow): TodoItem {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     startedAt: row.started_at,
-    completedAt: row.completed_at
+    completedAt: row.completed_at,
+    sessionId: row.session_id
   }
 }
