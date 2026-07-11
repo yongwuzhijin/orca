@@ -1409,7 +1409,21 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
         state.activeView === 'todos' ? state.previousViewBeforeTodos : state.activeView
     }))
   },
-  closeTodosPage: () => set((state) => ({ activeView: state.previousViewBeforeTodos })),
+  closeTodosPage: () =>
+    set((state) => {
+      const currentEntry = state.worktreeNavHistory[state.worktreeNavHistoryIndex]
+      let nextHistoryIndex = state.worktreeNavHistoryIndex
+      if (currentEntry === 'todos') {
+        const prev = findPrevLiveWorktreeHistoryIndex(state)
+        if (prev !== null) {
+          nextHistoryIndex = prev
+        }
+      }
+      return {
+        activeView: state.previousViewBeforeTodos,
+        worktreeNavHistoryIndex: nextHistoryIndex
+      }
+    }),
   openSpacePage: () => {
     get().recordFeatureInteraction?.('workspace-cleanup')
     set((state) => ({
