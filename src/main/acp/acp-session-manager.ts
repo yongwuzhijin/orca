@@ -2,6 +2,7 @@
 import type {
   AcpConnection,
   AcpEngine,
+  AcpNewSessionResult,
   StartPromptOptions,
   StartPromptResult
 } from '../../shared/acp/acp-session'
@@ -47,6 +48,9 @@ export type AcpSessionManagerDeps = {
 
 export class AcpSessionManager {
   private activePrompts = new Map<string, Promise<void>>()
+  private engineOf = new Map<string, AcpEngine>()
+  private taskOf = new Map<string, string>()
+  private canceled = new Set<string>()
 
   constructor(private readonly deps: AcpSessionManagerDeps) {}
 
@@ -54,8 +58,10 @@ export class AcpSessionManager {
     const { taskId, engine, prompt, cwd } = opts
     const connection = await this.deps.connectionPool.getAcpConnection(engine)
 
-    const created = await connection.newSession({ cwd, mcpServers: [] })
+    const created = await this.acquireSession(connection, opts)
     const sessionId = created.sessionId
+    this.engineOf.set(sessionId, engine)
+    this.taskOf.set(sessionId, taskId)
     this.deps.connectionPool.trackSession(engine, sessionId)
 
     this.deps.acpSessions.create({ taskId, engine, sessionId, cwd })
@@ -83,22 +89,85 @@ export class AcpSessionManager {
     return { sessionId }
   }
 
+  // resumeSessionId → resumeSession, falling back to loadSession (engine may have
+  // dropped the live session but the transcript can still be replayed from disk).
+  private async acquireSession(
+    connection: AcpConnection,
+    opts: StartPromptOptions
+  ): Promise<AcpNewSessionResult> {
+    if (opts.resumeSessionId) {
+      try {
+        return await connection.resumeSession({
+          sessionId: opts.resumeSessionId,
+          cwd: opts.cwd
+        })
+      } catch {
+        await connection.loadSession({ sessionId: opts.resumeSessionId, cwd: opts.cwd })
+        return { sessionId: opts.resumeSessionId }
+      }
+    }
+    return connection.newSession({ cwd: opts.cwd, mcpServers: [] })
+  }
+
   private async runPrompt(
     taskId: string,
     sessionId: string,
     prompt: string,
     connection: AcpConnection
   ): Promise<void> {
-    const { stopReason } = await connection.prompt({
-      sessionId,
-      prompt: [{ type: 'text', text: prompt }]
-    })
-    const task = this.deps.todos.getItem(taskId)
-    if (task?.status === 'in_progress') {
-      this.deps.todos.updateItem(taskId, { status: 'human_review' })
+    try {
+      const { stopReason } = await connection.prompt({
+        sessionId,
+        prompt: [{ type: 'text', text: prompt }]
+      })
+      if (this.canceled.has(sessionId) || stopReason === 'cancelled') {
+        this.deps.acpSessions.finish(sessionId, 'canceled', stopReason ?? 'cancelled')
+        this.deps.broadcast('acp:task-outcome', { taskId, sessionId, result: 'canceled' }, taskId)
+        return
+      }
+      const task = this.deps.todos.getItem(taskId)
+      if (task?.status === 'in_progress') {
+        this.deps.todos.updateItem(taskId, { status: 'human_review' })
+      }
+      this.deps.acpSessions.finish(sessionId, 'completed', stopReason)
+      this.deps.broadcast('acp:complete', { sessionId, stopReason }, sessionId)
+    } catch (err) {
+      // Error/cancel are terminal-but-not-status-changing: surface to renderer,
+      // record on the session row, leave the task where the user can retry.
+      const message = err instanceof Error ? err.message : String(err)
+      this.deps.acpSessions.finish(sessionId, 'error', message)
+      this.deps.broadcast('acp:error', { sessionId, message }, sessionId)
+      this.deps.broadcast('acp:task-outcome', { taskId, sessionId, result: 'error' }, taskId)
     }
-    this.deps.acpSessions.finish(sessionId, 'completed', stopReason)
-    this.deps.broadcast('acp:complete', { sessionId, stopReason }, sessionId)
+  }
+
+  async promptExisting(sessionId: string, prompt: string): Promise<void> {
+    if (this.activePrompts.has(sessionId)) {
+      throw new Error('Session already has a prompt in flight')
+    }
+    const engine = this.engineOf.get(sessionId)
+    const taskId = this.taskOf.get(sessionId)
+    if (!engine || !taskId) {
+      throw new Error('Unknown session')
+    }
+    const connection = await this.deps.connectionPool.getAcpConnection(engine)
+    const run = this.runPrompt(taskId, sessionId, prompt, connection)
+    this.activePrompts.set(sessionId, run)
+    void run.finally(() => this.activePrompts.delete(sessionId))
+    return run
+  }
+
+  async cancelSession(sessionId: string): Promise<{ ok: boolean }> {
+    const engine = this.engineOf.get(sessionId)
+    if (!engine) {
+      return { ok: false }
+    }
+    this.canceled.add(sessionId)
+    this.deps.permissionBridge.rejectAllForSession(sessionId)
+    const connection = await this.deps.connectionPool.getAcpConnection(engine)
+    await connection.cancel({ sessionId })
+    await this.waitForPrompt(sessionId)
+    return { ok: true }
   }
 
   // Test hook + reused by the cancel path in a later task.
