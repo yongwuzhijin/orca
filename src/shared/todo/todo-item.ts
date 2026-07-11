@@ -18,6 +18,7 @@ export type TodoItem = {
   updatedAt: string
   startedAt: string | null
   completedAt: string | null
+  sessionId: string | null
 }
 
 export type CreateTodoItemInput = {

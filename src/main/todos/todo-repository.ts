@@ -196,8 +196,8 @@ export class TodoRepository {
           `INSERT INTO todo_items (
             id, identifier, project_id, title, description, status, priority,
             scheduled_date, estimate, labels, template_id, order_key,
-            created_at, updated_at, started_at, completed_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            created_at, updated_at, started_at, completed_at, session_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           id,
@@ -215,7 +215,9 @@ export class TodoRepository {
           timestamp,
           timestamp,
           startedAt,
-          completedAt
+          completedAt,
+          // New items start with no ACP session; setSessionId links one later.
+          null
         )
 
       this.db.exec('COMMIT')
@@ -287,6 +289,15 @@ export class TodoRepository {
       )
       .run(status, orderKey, timestamp, timestamps.startedAt, timestamps.completedAt, id)
 
+    return this.requireItem(id)
+  }
+
+  // session_id is managed separately from updateItem so a plain field edit never
+  // clears the pointer to a running ACP session.
+  setSessionId(id: string, sessionId: string | null): TodoItem {
+    this.db
+      .prepare('UPDATE todo_items SET session_id = ?, updated_at = ? WHERE id = ?')
+      .run(sessionId, nowIso(), id)
     return this.requireItem(id)
   }
 

@@ -4,6 +4,7 @@ review and type drift checks easier than scattering these bindings across module
 import { contextBridge, ipcRenderer, webFrame, webUtils } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { preloadE2EConfig } from './e2e-config'
+import { createAcpApi } from './acp-api'
 import { glApi } from './gitlab'
 import type { AppIdentity } from '../shared/app-identity'
 import type { CliInstallStatus } from '../shared/cli-install-types'
@@ -4225,6 +4226,8 @@ const api = {
       delete: (id: string): Promise<void> => ipcRenderer.invoke('todos:templates:delete', id)
     }
   },
+
+  acp: createAcpApi(ipcRenderer),
 
   e2e: {
     getConfig: () => preloadE2EConfig

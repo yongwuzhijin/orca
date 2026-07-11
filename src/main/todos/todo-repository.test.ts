@@ -168,6 +168,18 @@ describe('TodoRepository', () => {
     })
   })
 
+  describe('items — session pointer', () => {
+    it('defaults sessionId to null and round-trips setSessionId', () => {
+      const repo = createRepo()
+      const project = makeProject(repo)
+      const item = repo.createItem({ projectId: project.id, title: 'T' })
+      expect(item.sessionId).toBeNull()
+      const updated = repo.setSessionId(item.id, 'sess-1')
+      expect(updated.sessionId).toBe('sess-1')
+      expect(repo.getItem(item.id)?.sessionId).toBe('sess-1')
+    })
+  })
+
   describe('templates CRUD', () => {
     it('creates, lists, updates and deletes templates', () => {
       const repo = createRepo()

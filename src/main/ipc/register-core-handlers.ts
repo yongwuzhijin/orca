@@ -58,6 +58,7 @@ import { registerClaudeAccountHandlers } from './claude-accounts'
 import { registerMiniMaxCredentialsHandlers } from './minimax-credentials'
 import { registerGrokAccountHandlers } from './grok-accounts'
 import { registerTodoHandlers } from './todos'
+import { registerAcpHandlers } from './acp'
 import { registerUpdaterHandlers } from '../window/attach-main-window-services'
 import {
   registerClipboardHandlers,
@@ -194,4 +195,10 @@ export function registerCoreHandlers(
   registerUpdaterHandlers(store)
   registerSpeechHandlers(store)
   registerTodoHandlers(runtime.getTodoRepository())
+  const acpKernel = runtime.getAcpKernel()
+  registerAcpHandlers({
+    executeRouter: acpKernel.executeRouter,
+    sessionManager: acpKernel.sessionManager,
+    permissionBridge: acpKernel.permissionBridge
+  })
 }

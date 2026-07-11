@@ -17,6 +17,7 @@ import type {
 } from '../shared/local-log-tail-types'
 import type { ReadClipboardTextOptions } from '../shared/clipboard-text'
 import type { AppIdentity } from '../shared/app-identity'
+import type { AcpApi } from './acp-api'
 import type {
   CreateLocalOrcaProfileArgs,
   CreateLocalOrcaProfileResult,
@@ -3100,6 +3101,7 @@ export type PreloadApi = {
       delete: (id: string) => Promise<void>
     }
   }
+  acp: AcpApi
   wsl: {
     isAvailable: () => Promise<boolean>
     listDistros: () => Promise<string[]>

@@ -28,7 +28,8 @@ function mkItem(id: string, status: TodoItem['status']): TodoItem {
     createdAt: '',
     updatedAt: '',
     startedAt: null,
-    completedAt: null
+    completedAt: null,
+    sessionId: null
   }
 }
 

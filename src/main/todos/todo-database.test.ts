@@ -1,3 +1,7 @@
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it } from 'vitest'
 import { TodoDatabase, SCHEMA_VERSION } from './todo-database'
 
@@ -31,7 +35,7 @@ describe('TodoDatabase', () => {
   it('sets user_version to SCHEMA_VERSION', () => {
     const d = createDb()
     const version = d.raw.pragma('user_version', { simple: true }) as number
-    expect(SCHEMA_VERSION).toBe(1)
+    expect(SCHEMA_VERSION).toBe(2)
     expect(version).toBe(SCHEMA_VERSION)
   })
 
@@ -68,5 +72,39 @@ describe('TodoDatabase', () => {
     }
     expect(row.name).toBe('Inbox')
     expect(row.next_sequence).toBe(1)
+  })
+
+  it('ships schema version 2 with session_id column on a fresh db', () => {
+    const d = createDb()
+    expect(SCHEMA_VERSION).toBe(2)
+    const cols = (d.raw.pragma('table_info(todo_items)') as { name: string }[]).map((c) => c.name)
+    expect(cols).toContain('session_id')
+  })
+
+  it('adds session_id to an on-disk legacy v1 db when reopened as v2', () => {
+    // Why: Orca uses Electron's built-in node:sqlite (DatabaseSync), not the
+    // better-sqlite3 native addon, so the legacy fixture must use the same driver.
+    const file = join(mkdtempSync(join(tmpdir(), 'orca-todo-mig-')), 'todo.db')
+    const raw = new DatabaseSync(file)
+    raw.exec(`CREATE TABLE todo_items (id TEXT PRIMARY KEY, identifier TEXT NOT NULL,
+      project_id TEXT NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'backlog', priority TEXT NOT NULL DEFAULT 'none',
+      scheduled_date TEXT, estimate INTEGER, labels TEXT NOT NULL DEFAULT '[]',
+      template_id TEXT, order_key TEXT NOT NULL, created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL, started_at TEXT, completed_at TEXT);`)
+    raw.exec(`CREATE TABLE todo_projects (id TEXT PRIMARY KEY, name TEXT NOT NULL,
+      identifier_prefix TEXT NOT NULL, next_sequence INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL);`)
+    raw.exec(`CREATE TABLE todo_templates (id TEXT PRIMARY KEY, name TEXT NOT NULL,
+      body TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);`)
+    raw.exec('PRAGMA user_version = 1')
+    raw.close()
+
+    // Track on the shared `db` handle so afterEach closes it exactly once.
+    db = new TodoDatabase(file)
+    const cols = (db.raw.pragma('table_info(todo_items)') as { name: string }[]).map((c) => c.name)
+    const version = db.raw.pragma('user_version', { simple: true }) as number
+    expect(cols).toContain('session_id')
+    expect(version).toBe(2)
   })
 })

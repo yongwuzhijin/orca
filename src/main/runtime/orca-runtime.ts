@@ -72,6 +72,10 @@ import { OrchestrationDb } from './orchestration/db'
 import { formatMessagesForInjection } from './orchestration/formatter'
 import { TodoDatabase } from '../todos/todo-database'
 import { TodoRepository } from '../todos/todo-repository'
+import { AcpSessionDatabase } from '../acp/acp-session-database'
+import { AcpSessionRepository } from '../acp/acp-session-repository'
+import { buildAcpKernel } from '../acp/acp-kernel'
+import { broadcastAcpEvent } from '../acp/acp-renderer-events'
 import type {
   Automation,
   AutomationCreateInput,
@@ -2168,6 +2172,8 @@ export class OrcaRuntimeService {
   private ptyDelayedForegroundSnapshotTitleObservations = new Map<string, number>()
   private _orchestrationDb: OrchestrationDb | null = null
   private _todoRepository: TodoRepository | null = null
+  private _acpSessionRepository: AcpSessionRepository | null = null
+  private _acpKernel: ReturnType<typeof buildAcpKernel> | null = null
   private messageWaitersByHandle = new Map<string, Set<MessageWaiter>>()
   // Why: mobile clients subscribe to terminal output via terminal.subscribe.
   // These listeners fire on every onPtyData call, enabling real-time streaming
@@ -2913,6 +2919,29 @@ export class OrcaRuntimeService {
       this._todoRepository = new TodoRepository(new TodoDatabase(dbPath))
     }
     return this._todoRepository
+  }
+
+  // Why: ACP session DB is its own file so the execution domain stays decoupled
+  // from the todo domain; lazy for the same userData-after-ready reason as todos.
+  getAcpSessionRepository(): AcpSessionRepository {
+    if (!this._acpSessionRepository) {
+      const { app } = require('electron')
+      const dbPath = join(app.getPath('userData'), 'acp-sessions.db')
+      this._acpSessionRepository = new AcpSessionRepository(new AcpSessionDatabase(dbPath))
+    }
+    return this._acpSessionRepository
+  }
+
+  getAcpKernel(): ReturnType<typeof buildAcpKernel> {
+    if (!this._acpKernel) {
+      this._acpKernel = buildAcpKernel({
+        acpSessions: this.getAcpSessionRepository() as never,
+        todos: this.getTodoRepository() as never,
+        broadcast: broadcastAcpEvent,
+        now: () => new Date().toISOString()
+      })
+    }
+    return this._acpKernel
   }
 
   setAutomationService(service: AutomationService): void {
