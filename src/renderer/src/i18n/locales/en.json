@@ -12321,7 +12321,9 @@
           "empty": "Create a project to get started"
         },
         "TodoColumn": {
-          "addTask": "Add task"
+          "addTask": "Add task",
+          "today": "Today",
+          "all": "All"
         },
         "TodoProjectSwitcher": {
           "projects": "Projects",

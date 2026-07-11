@@ -12321,7 +12321,9 @@
           "empty": "创建一个项目开始使用"
         },
         "TodoColumn": {
-          "addTask": "添加任务"
+          "addTask": "添加任务",
+          "today": "今天",
+          "all": "全部"
         },
         "TodoProjectSwitcher": {
           "projects": "项目",
