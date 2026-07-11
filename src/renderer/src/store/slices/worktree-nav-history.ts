@@ -20,7 +20,7 @@ const MAX_HISTORY = 50
 // "worktree"/"WorktreeHistory" prefix for call-site stability — renaming
 // across ~20 sites would churn for no behavior win. View entries are
 // always live (never skipped by findPrev/NextLiveWorktreeHistoryIndex).
-export type WorktreeNavHistorySimpleViewEntry = 'tasks' | 'automations'
+export type WorktreeNavHistorySimpleViewEntry = 'tasks' | 'automations' | 'todos'
 export type WorktreeNavHistoryTaskDetailEntry =
   | {
       kind: 'task-detail'
@@ -94,7 +94,9 @@ export function setWorktreeNavViewActivator(fn: ViewActivateFn | null): void {
 // Why: view entries short-circuit as live unconditionally — findWorktreeById
 // takes a worktree id and would always return undefined for page sentinels.
 function isViewEntry(entry: WorktreeNavHistoryEntry): entry is WorktreeNavHistoryViewEntry {
-  return entry === 'tasks' || entry === 'automations' || typeof entry === 'object'
+  return (
+    entry === 'tasks' || entry === 'automations' || entry === 'todos' || typeof entry === 'object'
+  )
 }
 
 function isTaskStackEntry(entry: WorktreeNavHistoryEntry): boolean {
@@ -103,7 +105,9 @@ function isTaskStackEntry(entry: WorktreeNavHistoryEntry): boolean {
 
 function getHistoryEntryKey(entry: WorktreeNavHistoryEntry): string {
   if (typeof entry === 'string') {
-    return entry === 'tasks' || entry === 'automations' ? `view:${entry}` : `worktree:${entry}`
+    return entry === 'tasks' || entry === 'automations' || entry === 'todos'
+      ? `view:${entry}`
+      : `worktree:${entry}`
   }
   if (entry.source === 'github') {
     const sourceScope =

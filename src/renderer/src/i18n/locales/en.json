@@ -4654,6 +4654,9 @@
           "cancel": "Cancel",
           "forget": "Remove from Orca",
           "reconnectAndDelete": "Reconnect & Delete"
+        },
+        "SidebarTodoNavButton": {
+          "title": "TODO"
         }
       },
       "shared": {
@@ -12879,6 +12882,92 @@
         "searchLabels": "Filter labels…",
         "searchAssignee": "Filter assignee…",
         "back": "Back"
+      },
+      "todo": {
+        "status": {
+          "backlog": "Backlog",
+          "todo": "Todo",
+          "in_progress": "In Progress",
+          "rework": "Rework",
+          "human_review": "Human Review",
+          "merging": "Merging",
+          "done": "Done",
+          "canceled": "Canceled",
+          "duplicate": "Duplicate"
+        },
+        "priority": {
+          "none": "No priority",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "urgent": "Urgent"
+        },
+        "TodoPage": {
+          "newTask": "New task",
+          "empty": "Create a project to get started"
+        },
+        "TodoColumn": {
+          "addTask": "Add task",
+          "today": "Today",
+          "all": "All"
+        },
+        "TodoProjectSwitcher": {
+          "projects": "Projects",
+          "newProject": "New project",
+          "noProject": "No project",
+          "nameLabel": "Name",
+          "create": "Create",
+          "cancel": "Cancel",
+          "delete": "Delete",
+          "deleteTitle": "Delete project?",
+          "deleteProject": "Delete project",
+          "deleteWarning": "Deleting this project permanently removes it and all of its tasks. This cannot be undone.",
+          "newProjectDescription": "Name the project and pick a short identifier prefix for its tasks.",
+          "prefixLabel": "Identifier prefix",
+          "prefixPlaceholder": "ENG"
+        },
+        "TodoCreateDialog": {
+          "title": "New task",
+          "titleLabel": "Title",
+          "descriptionLabel": "Description",
+          "statusLabel": "Status",
+          "priorityLabel": "Priority",
+          "scheduledLabel": "Scheduled",
+          "templateLabel": "Template",
+          "create": "Create task",
+          "cancel": "Cancel",
+          "createError": "Failed to create task",
+          "titlePlaceholder": "What needs to be done?",
+          "descriptionPlaceholder": "Add more detail (Markdown supported)"
+        },
+        "TodoDetailDialog": {
+          "statusLabel": "Status",
+          "priorityLabel": "Priority",
+          "scheduledLabel": "Scheduled"
+        },
+        "TodoTemplatePicker": {
+          "none": "No template",
+          "manage": "Manage templates"
+        },
+        "TodoTemplateManagerDialog": {
+          "title": "Manage templates",
+          "existing": "Templates",
+          "save": "Save",
+          "cancelEdit": "Cancel",
+          "saveError": "Failed to save template",
+          "deleteError": "Failed to delete template",
+          "description": "Reusable descriptions applied when creating a task.",
+          "empty": "No templates yet",
+          "confirmDelete": "Delete",
+          "cancel": "Cancel",
+          "edit": "Edit template",
+          "delete": "Delete template",
+          "editHeading": "Edit template",
+          "newHeading": "New template",
+          "namePlaceholder": "Template name",
+          "bodyPlaceholder": "Template body (Markdown)",
+          "create": "Add template"
+        }
       }
     },
     "i18n": {

@@ -305,6 +305,7 @@ const WorktreeCreationPanel = lazy(
 )
 const TaskPage = lazy(() => import('./components/TaskPage'))
 const AutomationsPage = lazy(() => import('./components/automations/AutomationsPage'))
+const TodoPage = lazy(() => import('./components/todo/TodoPage'))
 const ActivityPrototypePage = lazy(() => import('./components/activity/ActivityPrototypePage'))
 const Settings = lazy(() => import('./components/settings/Settings'))
 const SkillsPage = lazy(() => import('./components/skills/SkillsPage'))
@@ -2436,6 +2437,7 @@ function App(): React.JSX.Element {
                               {activeView === 'skills' ? <SkillsPage /> : null}
                               {activeView === 'tasks' ? <TaskPage /> : null}
                               {activeView === 'automations' ? <AutomationsPage /> : null}
+                              {activeView === 'todos' ? <TodoPage /> : null}
                               {activeView === 'activity' ? <ActivityPrototypePage /> : null}
                               {activeView === 'space' ? <WorkspaceSpacePage /> : null}
                               {activeView === 'mobile' ? <MobilePage /> : null}

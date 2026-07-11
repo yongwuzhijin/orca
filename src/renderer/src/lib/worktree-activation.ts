@@ -782,6 +782,10 @@ setWorktreeNavViewActivator((entry) => {
     useAppStore.getState().setActiveView(entry)
     return
   }
+  if (entry === 'todos') {
+    useAppStore.getState().setActiveView(entry)
+    return
+  }
   if (entry === 'tasks') {
     useAppStore.setState((state) => ({
       activeView: 'tasks',

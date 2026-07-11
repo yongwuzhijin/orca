@@ -443,6 +443,18 @@ import type {
   AutomationUpdateInput
 } from '../shared/automations-types'
 import type {
+  TodoProject,
+  CreateTodoProjectInput,
+  RenameTodoProjectInput
+} from '../shared/todo/todo-project'
+import type { TodoItem, CreateTodoItemInput, UpdateTodoItemPatch } from '../shared/todo/todo-item'
+import type {
+  TodoTemplate,
+  CreateTodoTemplateInput,
+  UpdateTodoTemplateInput
+} from '../shared/todo/todo-template'
+import type { TodoStatus } from '../shared/todo/todo-status'
+import type {
   WorkspaceCleanupDismissArgs,
   WorkspaceCleanupLocalProcessArgs,
   WorkspaceCleanupLocalProcessResult,
@@ -3081,6 +3093,28 @@ export type PreloadApi = {
     snapshotWorkspaceName: (args: { workspaceId: string; displayName: string }) => Promise<number>
     rendererReady: () => Promise<void>
     onDispatchRequested: (callback: (request: AutomationDispatchRequest) => void) => () => void
+  }
+  todos: {
+    projects: {
+      list: () => Promise<TodoProject[]>
+      create: (input: CreateTodoProjectInput) => Promise<TodoProject>
+      rename: (input: RenameTodoProjectInput) => Promise<TodoProject>
+      delete: (id: string) => Promise<void>
+    }
+    items: {
+      list: (projectId: string) => Promise<TodoItem[]>
+      get: (id: string) => Promise<TodoItem | null>
+      create: (input: CreateTodoItemInput) => Promise<TodoItem>
+      update: (id: string, patch: UpdateTodoItemPatch) => Promise<TodoItem>
+      delete: (id: string) => Promise<void>
+      move: (id: string, status: TodoStatus, orderKey: string) => Promise<TodoItem>
+    }
+    templates: {
+      list: () => Promise<TodoTemplate[]>
+      create: (input: CreateTodoTemplateInput) => Promise<TodoTemplate>
+      update: (input: UpdateTodoTemplateInput) => Promise<TodoTemplate>
+      delete: (id: string) => Promise<void>
+    }
   }
   wsl: {
     isAvailable: () => Promise<boolean>
