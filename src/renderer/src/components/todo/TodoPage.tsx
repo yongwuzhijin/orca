@@ -28,6 +28,10 @@ export default function TodoPage(): React.JSX.Element {
   // Why: loadTodoProjects auto-selects the first project but does not fetch its
   // items, so the board would be empty on first load without this.
   React.useEffect(() => {
+    // Reset transient dialog state so it can't reference the previous project's item.
+    setDetailId(null)
+    setCreateOpen(false)
+    setCreateStatus(null)
     if (activeProjectId) {
       void loadTodoItems(activeProjectId)
     }

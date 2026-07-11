@@ -29,6 +29,11 @@ export function TodoBoard({
     }
     const activeId = String(active.id)
     const overId = String(over.id)
+    // Dropping a card onto itself is a no-op; without this, resolveDropTarget
+    // returns beforeId=activeId which columnItems excludes, sending it to the front.
+    if (activeId === overId) {
+      return
+    }
     const target = resolveDropTarget(overId, items, visibleIds)
     if (!target) {
       return
