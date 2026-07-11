@@ -24,4 +24,11 @@ describe('TodoStatusMenu', () => {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
   })
+
+  it('shows order numbers 1..9', () => {
+    render(<TodoStatusMenu value="backlog" onChange={() => {}} />)
+    for (let n = 1; n <= 9; n++) {
+      expect(screen.getByText(String(n))).toBeInTheDocument()
+    }
+  })
 })

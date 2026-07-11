@@ -30,6 +30,8 @@ export function TodoStatusOptionList({ value, onChange }: TodoStatusMenuProps): 
               selected && 'bg-accent'
             )}
           >
+            {/* Spec §5: show status order number (1..9) as a leading fixed-width badge */}
+            <span className="w-4 text-xs text-muted-foreground">{meta.order}</span>
             <Icon className={cn('size-4 shrink-0', meta.colorToken)} />
             <span className="flex-1">{translate(meta.labelKey, meta.fallbackLabel)}</span>
             {selected ? <Check className="size-4 shrink-0 text-muted-foreground" /> : null}
