@@ -1,0 +1,48 @@
+// @vitest-environment happy-dom
+// src/renderer/src/components/todo/detail/HumanReviewPanel.test.tsx
+import '@testing-library/jest-dom/vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import type { TodoItem } from '../../../../../shared/todo/todo-item'
+
+vi.mock('./ReviewBrowserPane', () => ({ ReviewBrowserPane: () => <div>review-browser</div> }))
+vi.mock('./InProgressPanel', () => ({ InProgressPanel: () => <div>in-progress-panel</div> }))
+vi.mock('./ReviewDecisionBar', () => ({ ReviewDecisionBar: () => <div>decision-bar</div> }))
+
+const { HumanReviewPanel } = await import('./HumanReviewPanel')
+
+afterEach(() => {
+  cleanup()
+  vi.clearAllMocks()
+})
+
+function mkItem(): TodoItem {
+  return {
+    id: 't1',
+    identifier: 'P-1',
+    projectId: 'p1',
+    title: 'x',
+    description: '',
+    status: 'human_review',
+    priority: 'none',
+    scheduledDate: null,
+    estimate: null,
+    labels: [],
+    templateId: null,
+    orderKey: 't1',
+    createdAt: '',
+    updatedAt: '',
+    startedAt: null,
+    completedAt: null,
+    sessionId: null
+  }
+}
+
+describe('HumanReviewPanel', () => {
+  it('renders preview, verify panel, and decision bar', () => {
+    render(<HumanReviewPanel item={mkItem()} />)
+    expect(screen.getByText('review-browser')).toBeInTheDocument()
+    expect(screen.getByText('in-progress-panel')).toBeInTheDocument()
+    expect(screen.getByText('decision-bar')).toBeInTheDocument()
+  })
+})
