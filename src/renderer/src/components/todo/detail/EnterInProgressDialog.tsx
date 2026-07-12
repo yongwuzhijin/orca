@@ -97,7 +97,10 @@ export function EnterInProgressDialog({
                 id="enter-cwd"
                 value={cwd}
                 onChange={(e) => setCwd(e.target.value)}
-                placeholder="/path/to/repo"
+                placeholder={translate(
+                  'auto.components.todo.detail.EnterInProgressDialog.cwdPlaceholder',
+                  '/path/to/repo'
+                )}
               />
               <Button size="sm" variant="outline" onClick={() => void pickDir()}>
                 {translate('auto.components.todo.detail.EnterInProgressDialog.browse', 'Browse…')}
@@ -112,7 +115,7 @@ export function EnterInProgressDialog({
                 'Base prompt'
               )}
             </Label>
-            <pre className="max-h-32 overflow-y-auto whitespace-pre-wrap rounded-md border border-border bg-muted/40 p-2 text-xs text-muted-foreground">
+            <pre className="scrollbar-sleek max-h-32 overflow-y-auto whitespace-pre-wrap rounded-md border border-border bg-muted/40 p-2 text-xs text-muted-foreground">
               {base}
             </pre>
           </div>

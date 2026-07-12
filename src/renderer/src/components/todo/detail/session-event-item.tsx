@@ -1,5 +1,6 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
+import { translate } from '@/i18n/i18n'
 import type { SessionEvent } from '../../../../../shared/acp/session-event'
 
 type SessionEventItemProps = {
@@ -24,7 +25,9 @@ export function SessionEventItem({ event }: SessionEventItemProps): React.JSX.El
     // the single place the thought text renders — avoids duplicate DOM matches.
     return (
       <details className="text-xs text-muted-foreground">
-        <summary className="cursor-pointer select-none">Thought</summary>
+        <summary className="cursor-pointer select-none">
+          {translate('auto.components.todo.detail.session-event-item.thought', 'Thought')}
+        </summary>
         <div className="mt-1 whitespace-pre-wrap">{event.text}</div>
       </details>
     )

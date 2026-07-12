@@ -31,7 +31,7 @@ function toPlanEntries(raw: { content: string; status: string; priority?: string
 // task/generate_image→ext)已在主进程 client 归一到同一形状,这里统一处理。
 export function mapSessionUpdate(update: unknown): MappedUpdate {
   const u = (update ?? {}) as RawUpdate
-  switch (u.sessionUpdate) {
+  switch (u.sessionUpdate ?? '') {
     case 'agent_message_chunk':
       return { type: 'event', event: { kind: 'agent_message', text: textOf(u.content) } }
     case 'agent_thought_chunk':

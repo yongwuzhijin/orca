@@ -12967,6 +12967,39 @@
           "namePlaceholder": "模板名称",
           "bodyPlaceholder": "模板内容(Markdown)",
           "create": "添加模板"
+        },
+        "detail": {
+          "EnterInProgressDialog": {
+            "title": "Start session",
+            "engine": "Engine",
+            "cwd": "Working directory",
+            "browse": "Browse…",
+            "basePrompt": "Base prompt",
+            "extra": "Additional prompt",
+            "cancel": "Cancel",
+            "start": "Start",
+            "cwdPlaceholder": "/path/to/repo"
+          },
+          "InProgressPanel": {
+            "noSession": "No active session",
+            "start": "Start session",
+            "plan": "Plan"
+          },
+          "PlanChecklist": {
+            "empty": "No plan yet"
+          },
+          "SessionConversation": {
+            "askMode": "Ask before actions",
+            "cancel": "Cancel",
+            "followUp": "Send a follow-up prompt…",
+            "send": "Send"
+          },
+          "TodoDetailView": {
+            "humanReviewP3": "Human Review — coming in P3"
+          },
+          "session-event-item": {
+            "thought": "Thought"
+          }
         }
       }
     },

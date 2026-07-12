@@ -21,7 +21,7 @@ describe('acp-execute-router', () => {
     await expect(
       router.executeEnginePrompt({
         taskId: 't',
-        engine: 'cursor' as never,
+        engine: 'codex' as never,
         prompt: 'x',
         cwd: '/tmp'
       })

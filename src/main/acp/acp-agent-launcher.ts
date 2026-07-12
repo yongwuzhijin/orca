@@ -60,9 +60,7 @@ export function getAgentLaunchSpec(engine: AcpEngine): AgentLaunchSpec {
       return qoderSpec()
     case 'cursor':
       return cursorSpec()
-    default: {
-      const _exhaustive: never = engine
-      throw new Error(`Unknown ACP engine: ${String(_exhaustive)}`)
-    }
   }
+  const _exhaustive: never = engine
+  throw new Error(`Unknown ACP engine: ${String(_exhaustive)}`)
 }
