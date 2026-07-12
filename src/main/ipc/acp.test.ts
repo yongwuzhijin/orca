@@ -64,4 +64,24 @@ describe('registerAcpHandlers', () => {
       await f.invoke('acp:resolve-permission', { requestId: 'r1', optionId: 'allow' })
     ).toEqual({ ok: true })
   })
+
+  it('acp:set-permission-mode calls sessionManager (P2b)', () => {
+    const setPermissionMode = vi.fn()
+    const f = fakeIpc()
+    registerAcpHandlers(
+      {
+        executeRouter: { executeEnginePrompt: vi.fn() },
+        sessionManager: {
+          cancelSession: vi.fn(),
+          listSessions: vi.fn(),
+          loadHistory: vi.fn(),
+          setPermissionMode
+        },
+        permissionBridge: { resolvePermission: vi.fn() }
+      } as never,
+      f.ipcMain as never
+    )
+    f.invoke('acp:set-permission-mode', { sessionId: 's1', mode: 'ask' })
+    expect(setPermissionMode).toHaveBeenCalledWith('s1', 'ask')
+  })
 })
