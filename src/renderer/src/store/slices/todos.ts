@@ -3,7 +3,8 @@ import type { AppState } from '../types'
 import type {
   TodoProject,
   CreateTodoProjectInput,
-  RenameTodoProjectInput
+  RenameTodoProjectInput,
+  UpdateTodoProjectInput
 } from '../../../../shared/todo/todo-project'
 import type {
   TodoItem,
@@ -23,12 +24,16 @@ export type TodosSlice = {
   todoItems: TodoItem[]
   todoTemplates: TodoTemplate[]
   todoLoaded: boolean
+  todoDetailItemId: string | null
 
   loadTodoProjects: () => Promise<void>
   setActiveTodoProject: (projectId: string) => Promise<void>
   createTodoProject: (input: CreateTodoProjectInput) => Promise<TodoProject>
   renameTodoProject: (input: RenameTodoProjectInput) => Promise<void>
   deleteTodoProject: (id: string) => Promise<void>
+  updateTodoProject: (input: UpdateTodoProjectInput) => Promise<void>
+  openTodoDetail: (id: string) => void
+  closeTodoDetail: () => void
 
   loadTodoItems: (projectId: string) => Promise<void>
   createTodoItem: (input: CreateTodoItemInput) => Promise<TodoItem>
@@ -48,6 +53,7 @@ export const createTodosSlice: StateCreator<AppState, [], [], TodosSlice> = (set
   todoItems: [],
   todoTemplates: [],
   todoLoaded: false,
+  todoDetailItemId: null,
 
   loadTodoProjects: async () => {
     const projects = await window.api.todos.projects.list()
@@ -94,6 +100,16 @@ export const createTodosSlice: StateCreator<AppState, [], [], TodosSlice> = (set
     }
     set({ todoProjects: remaining })
   },
+
+  updateTodoProject: async (input) => {
+    const updated = await window.api.todos.projects.update(input)
+    set((s) => ({
+      todoProjects: s.todoProjects.map((project) => (project.id === updated.id ? updated : project))
+    }))
+  },
+
+  openTodoDetail: (id) => set({ todoDetailItemId: id }),
+  closeTodoDetail: () => set({ todoDetailItemId: null }),
 
   loadTodoItems: async (projectId) => {
     const items = await window.api.todos.items.list(projectId)
