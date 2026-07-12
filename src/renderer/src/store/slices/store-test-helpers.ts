@@ -46,6 +46,7 @@ import { createPinnedTabCloseConfirmSlice } from './pinned-tab-close-confirm'
 import { createOrcaProfilesSlice } from './orca-profiles'
 import { createNewIssueDraftSlice } from './new-issue-draft'
 import { createTodosSlice } from './todos'
+import { createAcpSlice } from './acp'
 import { translate } from '@/i18n/i18n'
 
 export const TEST_REPO = {
@@ -95,7 +96,8 @@ export function createTestStore() {
     ...createPinnedTabCloseConfirmSlice(...a),
     ...createOrcaProfilesSlice(...a),
     ...createNewIssueDraftSlice(...a),
-    ...createTodosSlice(...a)
+    ...createTodosSlice(...a),
+    ...createAcpSlice(...a)
   }))
 }
 

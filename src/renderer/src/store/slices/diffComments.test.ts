@@ -143,6 +143,7 @@ import { createPinnedTabCloseConfirmSlice } from './pinned-tab-close-confirm'
 import { createOrcaProfilesSlice } from './orca-profiles'
 import { createNewIssueDraftSlice } from './new-issue-draft'
 import { createTodosSlice } from './todos'
+import { createAcpSlice } from './acp'
 
 function createTestStore() {
   return create<AppState>()((...a) => ({
@@ -183,7 +184,8 @@ function createTestStore() {
     ...createPinnedTabCloseConfirmSlice(...a),
     ...createOrcaProfilesSlice(...a),
     ...createNewIssueDraftSlice(...a),
-    ...createTodosSlice(...a)
+    ...createTodosSlice(...a),
+    ...createAcpSlice(...a)
   }))
 }
 

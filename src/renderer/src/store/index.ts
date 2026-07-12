@@ -38,6 +38,7 @@ import { createPinnedTabCloseConfirmSlice } from './slices/pinned-tab-close-conf
 import { createOrcaProfilesSlice } from './slices/orca-profiles'
 import { createNewIssueDraftSlice } from './slices/new-issue-draft'
 import { createTodosSlice } from './slices/todos'
+import { createAcpSlice } from './slices/acp'
 import { e2eConfig } from '@/lib/e2e-config'
 import { registerHttpLinkStoreAccessor } from '@/lib/http-link-routing'
 
@@ -79,7 +80,8 @@ export const useAppStore = create<AppState>()((...a) => ({
   ...createPinnedTabCloseConfirmSlice(...a),
   ...createOrcaProfilesSlice(...a),
   ...createNewIssueDraftSlice(...a),
-  ...createTodosSlice(...a)
+  ...createTodosSlice(...a),
+  ...createAcpSlice(...a)
 }))
 
 registerHttpLinkStoreAccessor(() => useAppStore.getState())

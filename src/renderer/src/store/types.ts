@@ -36,6 +36,7 @@ import type { PinnedTabCloseConfirmSlice } from './slices/pinned-tab-close-confi
 import type { OrcaProfilesSlice } from './slices/orca-profiles'
 import type { NewIssueDraftSlice } from './slices/new-issue-draft'
 import type { TodosSlice } from './slices/todos'
+import type { AcpSlice } from './slices/acp'
 
 export type AppState = RepoSlice &
   SparsePresetsSlice &
@@ -74,4 +75,5 @@ export type AppState = RepoSlice &
   PinnedTabCloseConfirmSlice &
   OrcaProfilesSlice &
   NewIssueDraftSlice &
-  TodosSlice
+  TodosSlice &
+  AcpSlice
