@@ -52,6 +52,19 @@ describe('TodoRepository', () => {
       repo.deleteProject(project.id)
       expect(repo.listProjects()).toHaveLength(0)
     })
+
+    it('createProject defaults defaultWorkingDir to null (P2b)', () => {
+      const repo = createRepo()
+      const p = repo.createProject({ name: 'P', identifierPrefix: 'P' })
+      expect(p.defaultWorkingDir).toBeNull()
+    })
+
+    it('updateProject writes defaultWorkingDir (P2b)', () => {
+      const repo = createRepo()
+      const p = repo.createProject({ name: 'P', identifierPrefix: 'P' })
+      const updated = repo.updateProject({ id: p.id, defaultWorkingDir: '/tmp/w' })
+      expect(updated.defaultWorkingDir).toBe('/tmp/w')
+    })
   })
 
   describe('items — identifier sequencing', () => {

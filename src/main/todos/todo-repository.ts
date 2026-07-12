@@ -8,7 +8,8 @@ import type {
 import type {
   CreateTodoProjectInput,
   RenameTodoProjectInput,
-  TodoProject
+  TodoProject,
+  UpdateTodoProjectInput
 } from '../../shared/todo/todo-project'
 import { isTerminalTodoStatus, type TodoStatus } from '../../shared/todo/todo-status'
 import type {
@@ -77,6 +78,15 @@ export class TodoRepository {
     this.db
       .prepare('UPDATE todo_projects SET name = ?, updated_at = ? WHERE id = ?')
       .run(input.name, nowIso(), input.id)
+    return this.requireProject(input.id)
+  }
+
+  updateProject(input: UpdateTodoProjectInput): TodoProject {
+    if (input.defaultWorkingDir !== undefined) {
+      this.db
+        .prepare('UPDATE todo_projects SET default_working_dir = ?, updated_at = ? WHERE id = ?')
+        .run(input.defaultWorkingDir, nowIso(), input.id)
+    }
     return this.requireProject(input.id)
   }
 
