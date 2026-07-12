@@ -10,6 +10,9 @@ function makeAgent(conn) {
     async initialize() {
       return { protocolVersion: 1, agentCapabilities: { loadSession: true }, authMethods: [] }
     },
+    async authenticate() {
+      return {}
+    },
     async newSession({ cwd }) {
       const sessionId = `mock-sess-${++counter}`
       sessions.set(sessionId, { cwd, history: [] })
@@ -57,6 +60,16 @@ function makeAgent(conn) {
           ],
           toolCall: { toolCallId: 'tc-1', title: 'mock tool', kind: 'edit' }
         })
+      }
+
+      if (text.includes('CURSOR_EXT_TEST')) {
+        // 通知型:驱动 plan(update_todos)。
+        conn.extNotification?.('cursor/update_todos', {
+          sessionId,
+          todos: [{ content: 'mock todo', status: 'pending' }]
+        })
+        // 阻塞型请求:等待 client 兜底应答。
+        await conn.extMethod?.('cursor/create_plan', { sessionId, entries: [] })
       }
 
       if (text.includes('SLOW_TEST')) {
