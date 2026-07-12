@@ -35,7 +35,7 @@ describe('TodoDatabase', () => {
   it('sets user_version to SCHEMA_VERSION', () => {
     const d = createDb()
     const version = d.raw.pragma('user_version', { simple: true }) as number
-    expect(SCHEMA_VERSION).toBe(2)
+    expect(SCHEMA_VERSION).toBe(3)
     expect(version).toBe(SCHEMA_VERSION)
   })
 
@@ -74,9 +74,9 @@ describe('TodoDatabase', () => {
     expect(row.next_sequence).toBe(1)
   })
 
-  it('ships schema version 2 with session_id column on a fresh db', () => {
+  it('ships schema version 3 with session_id column on a fresh db', () => {
     const d = createDb()
-    expect(SCHEMA_VERSION).toBe(2)
+    expect(SCHEMA_VERSION).toBe(3)
     const cols = (d.raw.pragma('table_info(todo_items)') as { name: string }[]).map((c) => c.name)
     expect(cols).toContain('session_id')
   })
@@ -105,6 +105,13 @@ describe('TodoDatabase', () => {
     const cols = (db.raw.pragma('table_info(todo_items)') as { name: string }[]).map((c) => c.name)
     const version = db.raw.pragma('user_version', { simple: true }) as number
     expect(cols).toContain('session_id')
-    expect(version).toBe(2)
+    expect(version).toBe(3)
+  })
+
+  it('migrates todo_projects with default_working_dir (v3, P2b)', () => {
+    const d = createDb()
+    const cols = d.raw.pragma('table_info(todo_projects)') as { name: string }[]
+    expect(cols.some((c) => c.name === 'default_working_dir')).toBe(true)
+    expect(d.raw.pragma('user_version', { simple: true })).toBe(3)
   })
 })
