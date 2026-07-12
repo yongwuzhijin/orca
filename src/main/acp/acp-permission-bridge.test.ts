@@ -52,3 +52,44 @@ describe('AcpPermissionBridge', () => {
     void reqId
   })
 })
+
+describe('permission modes (P2b)', () => {
+  it('auto mode resolves immediately with first allow option', async () => {
+    const bridge = new AcpPermissionBridge(() => {})
+    const outcome = await bridge.requestPermission('s1', {
+      options: [
+        { optionId: 'reject-once', name: 'Deny', kind: 'reject_once' },
+        { optionId: 'allow-once', name: 'Allow', kind: 'allow_once' }
+      ],
+      toolCall: { toolCallId: 'tc', title: 't' }
+    })
+    expect(outcome).toEqual({ outcome: 'selected', optionId: 'allow-once' })
+  })
+
+  it('ask mode suspends until resolvePermission', async () => {
+    const broadcast = vi.fn()
+    const bridge = new AcpPermissionBridge(broadcast)
+    bridge.setPermissionMode('s1', 'ask')
+    const p = bridge.requestPermission('s1', {
+      options: [{ optionId: 'allow-once', name: 'Allow', kind: 'allow_once' }],
+      toolCall: { toolCallId: 'tc', title: 't' }
+    })
+    const [, payload] = broadcast.mock.calls.find((c) => c[0] === 'acp:permission-request') ?? []
+    const requestId = (payload as { requestId: string }).requestId
+    bridge.resolvePermission(requestId, 'allow-once')
+    await expect(p).resolves.toEqual({ outcome: 'selected', optionId: 'allow-once' })
+  })
+
+  it('ask mode times out to cancelled', async () => {
+    vi.useFakeTimers()
+    const bridge = new AcpPermissionBridge(() => {}, { askTimeoutMs: 1000 })
+    bridge.setPermissionMode('s1', 'ask')
+    const p = bridge.requestPermission('s1', {
+      options: [{ optionId: 'allow-once', name: 'Allow', kind: 'allow_once' }],
+      toolCall: { toolCallId: 'tc', title: 't' }
+    })
+    vi.advanceTimersByTime(1000)
+    await expect(p).resolves.toEqual({ outcome: 'cancelled' })
+    vi.useRealTimers()
+  })
+})
