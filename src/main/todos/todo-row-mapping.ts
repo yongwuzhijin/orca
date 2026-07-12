@@ -11,6 +11,7 @@ export type TodoProjectRow = {
   name: string
   identifier_prefix: string
   next_sequence: number
+  default_working_dir: string | null
   created_at: string
   updated_at: string
 }
@@ -49,6 +50,7 @@ export function rowToProject(row: TodoProjectRow): TodoProject {
     name: row.name,
     identifierPrefix: row.identifier_prefix,
     nextSequence: row.next_sequence,
+    defaultWorkingDir: row.default_working_dir,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }
