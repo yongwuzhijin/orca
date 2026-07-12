@@ -30,6 +30,8 @@ export function createAcpApi(ipc: IpcRendererLike) {
       subscribe(ipc, `acp:session-ready:${sessionId}`, cb),
     onUpdate: (sessionId: string, cb: (p: unknown) => void) =>
       subscribe(ipc, `acp:update:${sessionId}`, cb),
+    onSessionUpdate: (sessionId: string, cb: (p: unknown) => void) =>
+      subscribe(ipc, `acp:session-update:${sessionId}`, cb),
     onComplete: (sessionId: string, cb: (p: unknown) => void) =>
       subscribe(ipc, `acp:complete:${sessionId}`, cb),
     onError: (sessionId: string, cb: (p: unknown) => void) =>
