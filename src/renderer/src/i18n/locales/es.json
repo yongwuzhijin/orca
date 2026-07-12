@@ -12999,6 +12999,9 @@
           },
           "session-event-item": {
             "thought": "Thought"
+          },
+          "ReviewBrowserPane": {
+            "urlPlaceholder": "http://localhost:..."
           }
         }
       }
