@@ -59,6 +59,10 @@ import { registerMiniMaxCredentialsHandlers } from './minimax-credentials'
 import { registerGrokAccountHandlers } from './grok-accounts'
 import { registerTodoHandlers } from './todos'
 import { registerAcpHandlers } from './acp'
+import { registerTodoReviewHandlers } from './todo-review'
+import { scanReviewPortsForTask } from '../acp/review-port-scan'
+import { scanWorkspacePortProbes } from '../ports/workspace-port-ownership'
+import type { AcpSessionRecord } from '../../shared/acp/acp-session'
 import { registerUpdaterHandlers } from '../window/attach-main-window-services'
 import {
   registerClipboardHandlers,
@@ -200,5 +204,15 @@ export function registerCoreHandlers(
     executeRouter: acpKernel.executeRouter,
     sessionManager: acpKernel.sessionManager,
     permissionBridge: acpKernel.permissionBridge
+  })
+  registerTodoReviewHandlers({
+    scanReviewPorts: (taskId) =>
+      scanReviewPortsForTask(
+        {
+          listByTask: (id) => acpKernel.sessionManager.listSessions(id) as AcpSessionRecord[],
+          scan: scanWorkspacePortProbes
+        },
+        taskId
+      )
   })
 }
