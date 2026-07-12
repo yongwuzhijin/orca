@@ -108,7 +108,10 @@ import type {
 } from '../shared/rate-limit-types'
 import type { WorkspaceSpaceScanProgress } from '../shared/workspace-space-types'
 import type { WorkspaceCleanupScanProgress } from '../shared/workspace-cleanup'
-import type { WorkspacePortAdvertisedUrlChangedEvent } from '../shared/workspace-ports'
+import type {
+  WorkspacePort,
+  WorkspacePortAdvertisedUrlChangedEvent
+} from '../shared/workspace-ports'
 import type { GhAuthDiagnostic } from '../shared/github-auth-types'
 import type { TaskSourceContext } from '../shared/task-source-context'
 import type {
@@ -4227,6 +4230,10 @@ const api = {
       update: (input: UpdateTodoTemplateInput): Promise<TodoTemplate> =>
         ipcRenderer.invoke('todos:templates:update', input),
       delete: (id: string): Promise<void> => ipcRenderer.invoke('todos:templates:delete', id)
+    },
+    review: {
+      scanPorts: (input: { taskId: string }): Promise<WorkspacePort[]> =>
+        ipcRenderer.invoke('todos:review.scanPorts', input)
     }
   },
 

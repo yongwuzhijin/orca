@@ -375,6 +375,7 @@ import type {
   WorkspaceSpaceScanProgress
 } from '../shared/workspace-space-types'
 import type {
+  WorkspacePort,
   WorkspacePortAdvertisedUrlChangedEvent,
   WorkspacePortKillRequest,
   WorkspacePortKillResult,
@@ -3101,6 +3102,9 @@ export type PreloadApi = {
       create: (input: CreateTodoTemplateInput) => Promise<TodoTemplate>
       update: (input: UpdateTodoTemplateInput) => Promise<TodoTemplate>
       delete: (id: string) => Promise<void>
+    }
+    review: {
+      scanPorts: (input: { taskId: string }) => Promise<WorkspacePort[]>
     }
   }
   acp: AcpApi
