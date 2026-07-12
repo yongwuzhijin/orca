@@ -46,7 +46,8 @@ function makeManager(d: ReturnType<typeof deps>) {
     permissionBridge: {
       requestPermission: vi.fn(),
       resolvePermission: vi.fn(),
-      rejectAllForSession: vi.fn()
+      rejectAllForSession: vi.fn(),
+      setPermissionMode: vi.fn()
     } as never,
     broadcast: d.broadcast,
     now: () => '2026-07-11T00:00:00.000Z'
@@ -192,5 +193,21 @@ describe('AcpSessionManager cancel / concurrency / resume / error', () => {
       'task-1'
     )
     expect(d.todos.updateItem).not.toHaveBeenCalled()
+  })
+})
+
+describe('AcpSessionManager permission mode (P2b)', () => {
+  it('setPermissionMode delegates to permissionBridge', () => {
+    const setPermissionMode = vi.fn()
+    const manager = new AcpSessionManager({
+      permissionBridge: {
+        requestPermission: vi.fn(),
+        resolvePermission: vi.fn(),
+        rejectAllForSession: vi.fn(),
+        setPermissionMode
+      }
+    } as never)
+    manager.setPermissionMode('s1', 'ask')
+    expect(setPermissionMode).toHaveBeenCalledWith('s1', 'ask')
   })
 })

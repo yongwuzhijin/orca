@@ -33,6 +33,7 @@ type PermissionBridgeLike = {
   requestPermission: (sessionId: string, params: unknown) => Promise<unknown>
   resolvePermission: (requestId: string, optionId: string) => boolean
   rejectAllForSession: (sessionId: string) => void
+  setPermissionMode: (sessionId: string, mode: 'auto' | 'ask') => void
 }
 
 type BroadcastFn = (channel: string, payload: unknown, scopeId?: string) => void
@@ -183,5 +184,9 @@ export class AcpSessionManager {
 
   listSessions(taskId: string): unknown[] {
     return this.deps.acpSessions.listByTask(taskId)
+  }
+
+  setPermissionMode(sessionId: string, mode: 'auto' | 'ask'): void {
+    this.deps.permissionBridge.setPermissionMode(sessionId, mode)
   }
 }
