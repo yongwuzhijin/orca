@@ -26,6 +26,7 @@ export type AcpSlice = {
   permissionRequestsBySession: Record<string, PermissionRequest[]>
   permissionModeBySession: Record<string, PermissionMode>
   sessionStatusBySession: Record<string, AcpSessionStatus>
+  activeSessionMetaByTask: Record<string, { engine: AcpEngine; cwd: string }>
 
   executeTask: (input: ExecuteTaskInput) => Promise<string>
   sendFollowUp: (taskId: string, engine: AcpEngine, cwd: string, text: string) => Promise<void>
@@ -65,6 +66,7 @@ export const createAcpSlice: StateCreator<AppState, [], [], AcpSlice> = (set, ge
     permissionRequestsBySession: {},
     permissionModeBySession: {},
     sessionStatusBySession: {},
+    activeSessionMetaByTask: {},
 
     subscribeSession: (sessionId, _taskId) => {
       if (subscribed.has(sessionId)) {
@@ -107,6 +109,10 @@ export const createAcpSlice: StateCreator<AppState, [], [], AcpSlice> = (set, ge
       get().subscribeSession(sessionId, input.taskId)
       set((s) => ({
         activeSessionByTask: { ...s.activeSessionByTask, [input.taskId]: sessionId },
+        activeSessionMetaByTask: {
+          ...s.activeSessionMetaByTask,
+          [input.taskId]: { engine: input.engine, cwd: input.cwd }
+        },
         sessionStatusBySession: { ...s.sessionStatusBySession, [sessionId]: 'running' }
       }))
       return sessionId
@@ -125,12 +131,27 @@ export const createAcpSlice: StateCreator<AppState, [], [], AcpSlice> = (set, ge
     },
 
     loadSessions: async (taskId) => {
-      const sessions = (await window.api.acp.listSessions({ taskId })) as { sessionId: string }[]
-      const active = sessions.at(-1)?.sessionId ?? null
+      const sessions = (await window.api.acp.listSessions({ taskId })) as {
+        sessionId: string
+        engine: AcpEngine
+        cwd: string
+      }[]
+      const last = sessions.at(-1)
+      const active = last?.sessionId ?? null
       if (active) {
         get().subscribeSession(active, taskId)
       }
-      set((s) => ({ activeSessionByTask: { ...s.activeSessionByTask, [taskId]: active } }))
+      set((s) => ({
+        activeSessionByTask: { ...s.activeSessionByTask, [taskId]: active },
+        ...(last
+          ? {
+              activeSessionMetaByTask: {
+                ...s.activeSessionMetaByTask,
+                [taskId]: { engine: last.engine, cwd: last.cwd }
+              }
+            }
+          : {})
+      }))
     },
 
     loadHistory: (sessionId) => {

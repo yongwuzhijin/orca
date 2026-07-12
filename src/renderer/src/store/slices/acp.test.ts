@@ -68,6 +68,23 @@ describe('acp slice', () => {
     expect(get().activeSessionByTask.t1).toBe('s1')
   })
 
+  it('executeTask records session meta (engine/cwd)', async () => {
+    const { get } = makeStore()
+    await get().executeTask({ taskId: 't1', engine: 'cursor', prompt: 'p', cwd: '/w' })
+    expect(get().activeSessionMetaByTask.t1).toEqual({ engine: 'cursor', cwd: '/w' })
+  })
+
+  it('loadSessions backfills meta from the latest record', async () => {
+    ;(window.api.acp.listSessions as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      { sessionId: 's1', engine: 'claude', cwd: '/a' },
+      { sessionId: 's2', engine: 'cursor', cwd: '/b' }
+    ])
+    const { get } = makeStore()
+    await get().loadSessions('t1')
+    expect(get().activeSessionByTask.t1).toBe('s2')
+    expect(get().activeSessionMetaByTask.t1).toEqual({ engine: 'cursor', cwd: '/b' })
+  })
+
   it('live session-update appends normalized event', async () => {
     const { get } = makeStore()
     await get().executeTask({ taskId: 't1', engine: 'cursor', prompt: 'p', cwd: '/w' })
