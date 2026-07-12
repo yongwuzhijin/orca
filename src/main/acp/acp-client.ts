@@ -61,4 +61,46 @@ export class OrcaAcpClient {
     await fs.writeFile(req.path, req.content, 'utf8')
     return {}
   }
+
+  // Why: cursor emits proprietary blocking requests beyond ACP; leaving them
+  // unanswered hangs the agent, so default-fill to unblock (rich UI is P3).
+  async extMethod(method: string, params: unknown): Promise<unknown> {
+    const sessionId = (params as { sessionId?: string } | undefined)?.sessionId
+    switch (method) {
+      case 'cursor/ask_question':
+        // Default empty answer: pick no option, let the session continue.
+        return {}
+      case 'cursor/create_plan':
+        // Default-confirm the draft plan and surface it as a plan update.
+        if (sessionId) {
+          this.deps.onSessionUpdate({
+            sessionId,
+            update: { sessionUpdate: 'plan', ...(params as object) }
+          })
+        }
+        return { accepted: true }
+      default:
+        throw new Error(`Unknown ext method: ${method}`)
+    }
+  }
+
+  // Why: cursor notifications drive UI with no reply; update_todos doubles as
+  // the plan data source, others normalize into a generic ext event.
+  async extNotification(method: string, params: unknown): Promise<void> {
+    const p = (params as { sessionId?: string }) ?? {}
+    if (!p.sessionId) {
+      return
+    }
+    if (method === 'cursor/update_todos') {
+      this.deps.onSessionUpdate({
+        sessionId: p.sessionId,
+        update: { sessionUpdate: 'plan', ...(params as object) }
+      })
+      return
+    }
+    this.deps.onSessionUpdate({
+      sessionId: p.sessionId,
+      update: { sessionUpdate: 'ext', method, params }
+    })
+  }
 }

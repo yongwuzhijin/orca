@@ -40,3 +40,46 @@ describe('OrcaAcpClient', () => {
     expect(out.content).toBe('hello')
   })
 })
+
+function make() {
+  const onSessionUpdate = vi.fn()
+  const client = new OrcaAcpClient('cursor', {
+    onSessionUpdate,
+    requestPermission: vi.fn()
+  })
+  return { client, onSessionUpdate }
+}
+
+describe('cursor extension methods (P2b)', () => {
+  it('answers blocking cursor/ask_question with empty default', async () => {
+    const { client } = make()
+    const res = await client.extMethod('cursor/ask_question', { sessionId: 's1' })
+    expect(res).toBeDefined()
+  })
+
+  it('confirms blocking cursor/create_plan', async () => {
+    const { client } = make()
+    const res = await client.extMethod('cursor/create_plan', { sessionId: 's1' })
+    expect(res).toBeDefined()
+  })
+
+  it('normalizes cursor/update_todos into a session update', async () => {
+    const { client, onSessionUpdate } = make()
+    await client.extNotification('cursor/update_todos', {
+      sessionId: 's1',
+      todos: [{ content: 'do X', status: 'pending' }]
+    })
+    expect(onSessionUpdate).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 's1' }))
+  })
+
+  it('normalizes cursor/task into a session update', async () => {
+    const { client, onSessionUpdate } = make()
+    await client.extNotification('cursor/task', { sessionId: 's1', title: 't' })
+    expect(onSessionUpdate).toHaveBeenCalled()
+  })
+
+  it('throws on unknown ext request (non-cursor)', async () => {
+    const { client } = make()
+    await expect(client.extMethod('foo/bar', {})).rejects.toThrow()
+  })
+})
