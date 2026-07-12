@@ -16,7 +16,8 @@ import type { SleepingAgentLaunchConfig } from '../shared/agent-session-resume'
 import type {
   TodoProject,
   CreateTodoProjectInput,
-  RenameTodoProjectInput
+  RenameTodoProjectInput,
+  UpdateTodoProjectInput
 } from '../shared/todo/todo-project'
 import type { TodoItem, CreateTodoItemInput, UpdateTodoItemPatch } from '../shared/todo/todo-item'
 import type {
@@ -4203,6 +4204,8 @@ const api = {
         ipcRenderer.invoke('todos:projects:create', input),
       rename: (input: RenameTodoProjectInput): Promise<TodoProject> =>
         ipcRenderer.invoke('todos:projects:rename', input),
+      update: (input: UpdateTodoProjectInput): Promise<TodoProject> =>
+        ipcRenderer.invoke('todos:projects:update', input),
       delete: (id: string): Promise<void> => ipcRenderer.invoke('todos:projects:delete', id)
     },
     items: {

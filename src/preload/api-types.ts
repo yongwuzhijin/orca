@@ -446,7 +446,8 @@ import type {
 import type {
   TodoProject,
   CreateTodoProjectInput,
-  RenameTodoProjectInput
+  RenameTodoProjectInput,
+  UpdateTodoProjectInput
 } from '../shared/todo/todo-project'
 import type { TodoItem, CreateTodoItemInput, UpdateTodoItemPatch } from '../shared/todo/todo-item'
 import type {
@@ -3084,6 +3085,7 @@ export type PreloadApi = {
       list: () => Promise<TodoProject[]>
       create: (input: CreateTodoProjectInput) => Promise<TodoProject>
       rename: (input: RenameTodoProjectInput) => Promise<TodoProject>
+      update: (input: UpdateTodoProjectInput) => Promise<TodoProject>
       delete: (id: string) => Promise<void>
     }
     items: {

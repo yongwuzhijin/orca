@@ -1,7 +1,11 @@
 import { ipcMain } from 'electron'
 import type { TodoRepository } from '../todos/todo-repository'
 import type { CreateTodoItemInput, UpdateTodoItemPatch } from '../../shared/todo/todo-item'
-import type { CreateTodoProjectInput, RenameTodoProjectInput } from '../../shared/todo/todo-project'
+import type {
+  CreateTodoProjectInput,
+  RenameTodoProjectInput,
+  UpdateTodoProjectInput
+} from '../../shared/todo/todo-project'
 import type { TodoStatus } from '../../shared/todo/todo-status'
 import type {
   CreateTodoTemplateInput,
@@ -16,6 +20,9 @@ export function registerTodoHandlers(repo: TodoRepository): void {
   )
   ipcMain.handle('todos:projects:rename', (_event, input: RenameTodoProjectInput) =>
     repo.renameProject(input)
+  )
+  ipcMain.handle('todos:projects:update', (_event, input: UpdateTodoProjectInput) =>
+    repo.updateProject(input)
   )
   ipcMain.handle('todos:projects:delete', (_event, id: string) => repo.deleteProject(id))
 
