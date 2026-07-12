@@ -6,7 +6,7 @@ import { translate } from '@/i18n/i18n'
 import type { TodoStatus } from '../../../../shared/todo/todo-status'
 import { TodoBoard } from './TodoBoard'
 import { TodoCreateDialog } from './TodoCreateDialog'
-import { TodoDetailDialog } from './TodoDetailDialog'
+import { TodoDetailView } from './detail/TodoDetailView'
 import { TodoProjectSwitcher } from './TodoProjectSwitcher'
 
 export default function TodoPage(): React.JSX.Element {
@@ -16,26 +16,30 @@ export default function TodoPage(): React.JSX.Element {
   const activeProjectId = useAppStore((s) => s.todoActiveProjectId)
   const items = useAppStore((s) => s.todoItems)
   const moveTodoItem = useAppStore((s) => s.moveTodoItem)
+  const detailItemId = useAppStore((s) => s.todoDetailItemId)
+  const openTodoDetail = useAppStore((s) => s.openTodoDetail)
+  const closeTodoDetail = useAppStore((s) => s.closeTodoDetail)
   const [createOpen, setCreateOpen] = React.useState(false)
   const [createStatus, setCreateStatus] = React.useState<TodoStatus | null>(null)
-  const [detailId, setDetailId] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     void loadTodoProjects()
     void loadTodoTemplates()
   }, [loadTodoProjects, loadTodoTemplates])
 
-  // Why: loadTodoProjects auto-selects the first project but does not fetch its
-  // items, so the board would be empty on first load without this.
   React.useEffect(() => {
-    // Reset transient dialog state so it can't reference the previous project's item.
-    setDetailId(null)
+    // Reset transient state so it can't reference the previous project's item.
+    closeTodoDetail()
     setCreateOpen(false)
     setCreateStatus(null)
     if (activeProjectId) {
       void loadTodoItems(activeProjectId)
     }
-  }, [activeProjectId, loadTodoItems])
+  }, [activeProjectId, loadTodoItems, closeTodoDetail])
+
+  if (detailItemId) {
+    return <TodoDetailView itemId={detailItemId} />
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -59,7 +63,7 @@ export default function TodoPage(): React.JSX.Element {
           <TodoBoard
             items={items}
             onMove={(id, status, orderKey) => void moveTodoItem(id, status, orderKey)}
-            onOpenItem={(id) => setDetailId(id)}
+            onOpenItem={(id) => openTodoDetail(id)}
             onCreate={(status) => {
               setCreateStatus(status)
               setCreateOpen(true)
@@ -81,7 +85,6 @@ export default function TodoPage(): React.JSX.Element {
           }}
         />
       ) : null}
-      {detailId ? <TodoDetailDialog itemId={detailId} onClose={() => setDetailId(null)} /> : null}
     </div>
   )
 }
