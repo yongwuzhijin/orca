@@ -13002,6 +13002,10 @@
           },
           "ReviewBrowserPane": {
             "urlPlaceholder": "http://localhost:..."
+          },
+          "ReviewDecisionBar": {
+            "reject": "Reject",
+            "approve": "Approve"
           }
         }
       }
