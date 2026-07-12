@@ -18,7 +18,7 @@ const mockState = {
       nextSequence: 1,
       createdAt: '',
       updatedAt: '',
-      defaultWorkingDir: '/repo'
+      defaultWorkingDir: '/repo' as string | null
     }
   ]
 }
