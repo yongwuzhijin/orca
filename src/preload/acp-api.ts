@@ -24,6 +24,8 @@ export function createAcpApi(ipc: IpcRendererLike) {
       ipc.invoke('acp:resolve-permission', arg),
     listSessions: (arg: { taskId: string }) => ipc.invoke('acp:list-sessions', arg),
     loadHistory: (arg: { sessionId: string }) => ipc.invoke('acp:load-history', arg),
+    setPermissionMode: (arg: { sessionId: string; mode: 'auto' | 'ask' }) =>
+      ipc.invoke('acp:set-permission-mode', arg),
     onSessionReady: (sessionId: string, cb: (p: unknown) => void) =>
       subscribe(ipc, `acp:session-ready:${sessionId}`, cb),
     onUpdate: (sessionId: string, cb: (p: unknown) => void) =>
