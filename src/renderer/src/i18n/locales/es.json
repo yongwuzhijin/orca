@@ -12998,7 +12998,12 @@
             "thought": "Thought"
           },
           "ReviewBrowserPane": {
-            "urlPlaceholder": "http://localhost:..."
+            "urlPlaceholder": "http://localhost:...",
+            "back": "Back",
+            "forward": "Forward",
+            "reload": "Reload",
+            "desktop": "Desktop",
+            "mobile": "Mobile"
           },
           "ReviewDecisionBar": {
             "reject": "Reject",

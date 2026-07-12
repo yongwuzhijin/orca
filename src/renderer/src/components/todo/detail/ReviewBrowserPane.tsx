@@ -66,13 +66,28 @@ export function ReviewBrowserPane({ taskId }: ReviewBrowserPaneProps): React.JSX
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-border">
       <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
-        <Button size="icon" variant="ghost" onClick={back} aria-label="back">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={back}
+          aria-label={translate('auto.components.todo.detail.ReviewBrowserPane.back', 'Back')}
+        >
           <ChevronLeft className="size-4" />
         </Button>
-        <Button size="icon" variant="ghost" onClick={forward} aria-label="forward">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={forward}
+          aria-label={translate('auto.components.todo.detail.ReviewBrowserPane.forward', 'Forward')}
+        >
           <ChevronRight className="size-4" />
         </Button>
-        <Button size="icon" variant="ghost" onClick={reload} aria-label="reload">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={reload}
+          aria-label={translate('auto.components.todo.detail.ReviewBrowserPane.reload', 'Reload')}
+        >
           <RotateCw className="size-4" />
         </Button>
         <Input
@@ -103,7 +118,7 @@ export function ReviewBrowserPane({ taskId }: ReviewBrowserPaneProps): React.JSX
         <Button
           size="icon"
           variant={mobile ? 'ghost' : 'secondary'}
-          aria-label="desktop"
+          aria-label={translate('auto.components.todo.detail.ReviewBrowserPane.desktop', 'Desktop')}
           aria-pressed={!mobile}
           onClick={() => setMobile(false)}
         >
@@ -112,7 +127,7 @@ export function ReviewBrowserPane({ taskId }: ReviewBrowserPaneProps): React.JSX
         <Button
           size="icon"
           variant={mobile ? 'secondary' : 'ghost'}
-          aria-label="mobile"
+          aria-label={translate('auto.components.todo.detail.ReviewBrowserPane.mobile', 'Mobile')}
           aria-pressed={mobile}
           onClick={() => setMobile(true)}
         >
