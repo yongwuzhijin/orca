@@ -12994,9 +12994,6 @@
             "followUp": "Send a follow-up prompt…",
             "send": "Send"
           },
-          "TodoDetailView": {
-            "humanReviewP3": "Human Review — coming in P3"
-          },
           "session-event-item": {
             "thought": "Thought"
           },

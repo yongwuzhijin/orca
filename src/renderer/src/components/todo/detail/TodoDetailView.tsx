@@ -2,12 +2,12 @@ import React from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/store'
-import { translate } from '@/i18n/i18n'
 import type { TodoStatus } from '../../../../../shared/todo/todo-status'
 import { TodoStatusMenu } from '../TodoStatusMenu'
 import { TodoDetailOverview } from './TodoDetailOverview'
 import { InProgressPanel } from './InProgressPanel'
 import { EnterInProgressDialog } from './EnterInProgressDialog'
+import { HumanReviewPanel } from './HumanReviewPanel'
 
 type TodoDetailViewProps = {
   itemId: string
@@ -56,12 +56,7 @@ export function TodoDetailView({ itemId }: TodoDetailViewProps): React.JSX.Eleme
         {item.status === 'in_progress' ? (
           <InProgressPanel item={item} />
         ) : item.status === 'human_review' ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            {translate(
-              'auto.components.todo.detail.TodoDetailView.humanReviewP3',
-              'Human Review — coming in P3'
-            )}
-          </div>
+          <HumanReviewPanel item={item} />
         ) : (
           <TodoDetailOverview item={item} />
         )}

@@ -22,6 +22,9 @@ vi.mock('@/store', () => ({
 vi.mock('./InProgressPanel', () => ({
   InProgressPanel: () => <div>in-progress-panel</div>
 }))
+vi.mock('./HumanReviewPanel', () => ({
+  HumanReviewPanel: () => <div>human-review-panel</div>
+}))
 // MarkdownPreview reads a deep slice of the real store; stub it for the same reason.
 vi.mock('@/components/editor/MarkdownPreview', () => ({
   default: () => <div>markdown-preview</div>
@@ -71,10 +74,10 @@ describe('TodoDetailView', () => {
     expect(screen.getByText('in-progress-panel')).toBeInTheDocument()
   })
 
-  it('renders a P3 placeholder for human_review', () => {
+  it('renders the HumanReviewPanel for human_review', () => {
     items = [mkItem({ status: 'human_review' })]
     render(<TodoDetailView itemId="t1" />)
-    expect(screen.getByText(/P3/i)).toBeInTheDocument()
+    expect(screen.getByText('human-review-panel')).toBeInTheDocument()
   })
 
   it('closes when the item no longer exists', () => {
