@@ -3,6 +3,7 @@ export type TodoProject = {
   name: string
   identifierPrefix: string
   nextSequence: number
+  defaultWorkingDir: string | null
   createdAt: string
   updatedAt: string
 }
@@ -15,4 +16,9 @@ export type CreateTodoProjectInput = {
 export type RenameTodoProjectInput = {
   id: string
   name: string
+}
+
+export type UpdateTodoProjectInput = {
+  id: string
+  defaultWorkingDir?: string | null
 }
