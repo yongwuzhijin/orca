@@ -60,6 +60,8 @@ import { registerGrokAccountHandlers } from './grok-accounts'
 import { registerTodoHandlers } from './todos'
 import { registerAcpHandlers } from './acp'
 import { registerTodoReviewHandlers } from './todo-review'
+import { registerTodoMergeHandlers } from './todo-merge'
+import { gitExecFileAsync } from '../git/runner'
 import { scanReviewPortsForTask } from '../acp/review-port-scan'
 import { scanWorkspacePortProbes } from '../ports/workspace-port-ownership'
 import type { AcpSessionRecord } from '../../shared/acp/acp-session'
@@ -214,5 +216,12 @@ export function registerCoreHandlers(
         },
         taskId
       )
+  })
+  registerTodoMergeHandlers({
+    getTaskCwd: (taskId) => {
+      const sessions = acpKernel.sessionManager.listSessions(taskId) as AcpSessionRecord[]
+      return sessions[0]?.cwd ?? null
+    },
+    runGitInCwd: (cwd, argv) => gitExecFileAsync(argv, { cwd })
   })
 }
