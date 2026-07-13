@@ -64,7 +64,7 @@ export function MergingPanel({ item }: MergingPanelProps): React.JSX.Element {
             'Merge conflict — moved to Rework'
           )}
         </div>
-        <ul className="min-h-0 flex-1 overflow-auto rounded border border-border p-2 text-sm">
+        <ul className="min-h-0 flex-1 overflow-auto scrollbar-sleek rounded border border-border p-2 text-sm">
           {state.files.map((f) => (
             <li key={f} className="truncate font-mono">
               {f}
