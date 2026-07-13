@@ -1226,7 +1226,7 @@ export function useIpcEvents(): void {
     // the desktop re-hydrates and the sidebar reflects it live — bi-directional.
     unsubs.push(
       window.api.ui.onStateChanged((ui) => {
-        useAppStore.getState().hydratePersistedUI(ui)
+        useAppStore.getState().hydratePersistedUI(ui, 'sync')
       })
     )
 
@@ -3029,6 +3029,9 @@ export function useIpcEvents(): void {
       const statusPayload = data.orchestration
         ? { ...resolvedPayload, orchestration: data.orchestration }
         : resolvedPayload
+      const statusPayloadWithTurnBoundary = data.promptInteractionKey
+        ? { ...statusPayload, promptInteractionKey: data.promptInteractionKey }
+        : statusPayload
       const existingStatus = store.agentStatusByPaneKey[data.paneKey]
       if (existingStatus && data.receivedAt < existingStatus.updatedAt) {
         // Why: the store rejects out-of-order status rows; keep notification and
@@ -3075,7 +3078,7 @@ export function useIpcEvents(): void {
       const statusWorktreeId = data.worktreeId ?? owningWorktreeId
       store.setAgentStatus(
         data.paneKey,
-        statusPayload,
+        statusPayloadWithTurnBoundary,
         terminalTitle,
         {
           updatedAt: data.receivedAt,
