@@ -12904,7 +12904,9 @@
         },
         "TodoPage": {
           "newTask": "新建任务",
-          "empty": "创建一个项目开始使用"
+          "empty": "创建一个项目开始使用",
+          "tabBoard": "Board",
+          "tabData": "Data"
         },
         "TodoColumn": {
           "addTask": "添加任务",
@@ -13018,6 +13020,35 @@
             "repo": "Repository",
             "strategy": "Fast-forward if possible, otherwise a merge commit.",
             "merge": "Merge"
+          }
+        },
+        "dashboard": {
+          "CycleTimeCard": {
+            "title": "Cycle time",
+            "average": "Average",
+            "median": "Median"
+          },
+          "EstimateAccuracyChart": {
+            "title": "Estimate vs actual",
+            "xAxis": "Estimate (points)",
+            "yAxis": "Actual (hours)"
+          },
+          "ThroughputChart": {
+            "title": "Throughput"
+          },
+          "TodoDashboard": {
+            "rangeAll": "All",
+            "loading": "Loading…",
+            "error": "Failed to load dashboard.",
+            "retry": "Retry",
+            "empty": "No completed tasks in this range."
+          },
+          "TokenCostCard": {
+            "title": "Token cost",
+            "tokens": "Tokens",
+            "cost": "Est. cost",
+            "coverage": "Attributed",
+            "unavailable": "n/a"
           }
         }
       }

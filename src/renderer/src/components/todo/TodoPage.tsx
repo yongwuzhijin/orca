@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
 import type { TodoStatus } from '../../../../shared/todo/todo-status'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TodoBoard } from './TodoBoard'
 import { TodoCreateDialog } from './TodoCreateDialog'
 import { TodoDetailView } from './detail/TodoDetailView'
 import { TodoProjectSwitcher } from './TodoProjectSwitcher'
+import { TodoDashboard } from './dashboard/TodoDashboard'
 
 export default function TodoPage(): React.JSX.Element {
   const loadTodoProjects = useAppStore((s) => s.loadTodoProjects)
@@ -21,6 +23,7 @@ export default function TodoPage(): React.JSX.Element {
   const closeTodoDetail = useAppStore((s) => s.closeTodoDetail)
   const [createOpen, setCreateOpen] = React.useState(false)
   const [createStatus, setCreateStatus] = React.useState<TodoStatus | null>(null)
+  const [viewMode, setViewMode] = React.useState<'board' | 'dashboard'>('board')
 
   React.useEffect(() => {
     void loadTodoProjects()
@@ -45,6 +48,16 @@ export default function TodoPage(): React.JSX.Element {
     <div className="flex h-full flex-col">
       <header className="flex items-center gap-2 border-b border-border px-4 py-2.5">
         <TodoProjectSwitcher />
+        <Tabs value={viewMode} onValueChange={(next) => setViewMode(next as 'board' | 'dashboard')}>
+          <TabsList variant="line">
+            <TabsTrigger value="board">
+              {translate('auto.components.todo.TodoPage.tabBoard', 'Board')}
+            </TabsTrigger>
+            <TabsTrigger value="dashboard">
+              {translate('auto.components.todo.TodoPage.tabData', 'Data')}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         <div className="flex-1" />
         <Button
           size="sm"
@@ -59,7 +72,13 @@ export default function TodoPage(): React.JSX.Element {
         </Button>
       </header>
       <div className="min-h-0 flex-1 overflow-hidden">
-        {activeProjectId ? (
+        {!activeProjectId ? (
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            {translate('auto.components.todo.TodoPage.empty', 'Create a project to get started')}
+          </div>
+        ) : viewMode === 'dashboard' ? (
+          <TodoDashboard projectId={activeProjectId} />
+        ) : (
           <TodoBoard
             items={items}
             onMove={(id, status, orderKey) => void moveTodoItem(id, status, orderKey)}
@@ -69,10 +88,6 @@ export default function TodoPage(): React.JSX.Element {
               setCreateOpen(true)
             }}
           />
-        ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            {translate('auto.components.todo.TodoPage.empty', 'Create a project to get started')}
-          </div>
         )}
       </div>
       {createOpen && activeProjectId ? (

@@ -61,8 +61,12 @@ import { registerTodoHandlers } from './todos'
 import { registerAcpHandlers } from './acp'
 import { registerTodoReviewHandlers } from './todo-review'
 import { registerTodoMergeHandlers } from './todo-merge'
+import { registerTodoDashboardHandlers } from './todo-dashboard'
 import { gitExecFileAsync } from '../git/runner'
 import { scanReviewPortsForTask } from '../acp/review-port-scan'
+import { resolveTaskTokenCost } from '../todos/todo-dashboard-token'
+import { resolveWorktreeIdByPath } from '../todos/todo-dashboard-worktree'
+import { loadKnownUsageWorktreesByRepo } from '../usage-worktree-metadata'
 import { scanWorkspacePortProbes } from '../ports/workspace-port-ownership'
 import type { AcpSessionRecord } from '../../shared/acp/acp-session'
 import { registerUpdaterHandlers } from '../window/attach-main-window-services'
@@ -223,5 +227,13 @@ export function registerCoreHandlers(
       return sessions[0]?.cwd ?? null
     },
     runGitInCwd: (cwd, argv) => gitExecFileAsync(argv, { cwd })
+  })
+  registerTodoDashboardHandlers({
+    listItems: (projectId) => runtime.getTodoRepository().listItems(projectId),
+    getSessions: (taskId) => acpKernel.sessionManager.listSessions(taskId) as AcpSessionRecord[],
+    resolveWorktreeId: (cwd) =>
+      resolveWorktreeIdByPath(cwd, loadKnownUsageWorktreesByRepo(store, store.getRepos())),
+    resolveTokenCost: (input) => resolveTaskTokenCost({ ...input, claudeUsage }),
+    now: () => Date.now()
   })
 }

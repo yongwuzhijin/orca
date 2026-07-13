@@ -458,6 +458,7 @@ import type {
 } from '../shared/todo/todo-template'
 import type { TodoStatus } from '../shared/todo/todo-status'
 import type { MergeOutcome, MergePlan } from '../shared/todo/todo-merge'
+import type { TodoDashboardMetrics, TodoDashboardRange } from '../shared/todo/todo-dashboard'
 import type {
   WorkspaceCleanupDismissArgs,
   WorkspaceCleanupLocalProcessArgs,
@@ -3110,6 +3111,12 @@ export type PreloadApi = {
     merge: {
       preview: (input: { taskId: string }) => Promise<MergePlan>
       execute: (input: { taskId: string }) => Promise<MergeOutcome>
+    }
+    dashboard: {
+      getMetrics: (args: {
+        projectId: string
+        range: TodoDashboardRange
+      }) => Promise<TodoDashboardMetrics>
     }
   }
   acp: AcpApi
