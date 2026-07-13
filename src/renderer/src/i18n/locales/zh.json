@@ -13008,6 +13008,16 @@
           "ReviewDecisionBar": {
             "reject": "Reject",
             "approve": "Approve"
+          },
+          "MergingPanel": {
+            "detecting": "Detecting merge target…",
+            "conflictTitle": "Merge conflict — moved to Rework",
+            "alreadyOnBase": "Already on the base branch — no merge needed.",
+            "notApplicable": "Cannot auto-merge for this task.",
+            "markDone": "Mark done",
+            "repo": "Repository",
+            "strategy": "Fast-forward if possible, otherwise a merge commit.",
+            "merge": "Merge"
           }
         }
       }

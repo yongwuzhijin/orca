@@ -25,6 +25,9 @@ vi.mock('./InProgressPanel', () => ({
 vi.mock('./HumanReviewPanel', () => ({
   HumanReviewPanel: () => <div>human-review-panel</div>
 }))
+vi.mock('./MergingPanel', () => ({
+  MergingPanel: () => <div>merging-panel</div>
+}))
 // MarkdownPreview reads a deep slice of the real store; stub it for the same reason.
 vi.mock('@/components/editor/MarkdownPreview', () => ({
   default: () => <div>markdown-preview</div>
@@ -78,6 +81,12 @@ describe('TodoDetailView', () => {
     items = [mkItem({ status: 'human_review' })]
     render(<TodoDetailView itemId="t1" />)
     expect(screen.getByText('human-review-panel')).toBeInTheDocument()
+  })
+
+  it('renders the MergingPanel for merging', () => {
+    items = [mkItem({ status: 'merging' })]
+    render(<TodoDetailView itemId="t1" />)
+    expect(screen.getByText('merging-panel')).toBeInTheDocument()
   })
 
   it('closes when the item no longer exists', () => {

@@ -26,6 +26,7 @@ import type {
   UpdateTodoTemplateInput
 } from '../shared/todo/todo-template'
 import type { TodoStatus } from '../shared/todo/todo-status'
+import type { MergeOutcome, MergePlan } from '../shared/todo/todo-merge'
 import type {
   BaseRefSearchResult,
   BaseRefDefaultResult,
@@ -4234,6 +4235,12 @@ const api = {
     review: {
       scanPorts: (input: { taskId: string }): Promise<WorkspacePort[]> =>
         ipcRenderer.invoke('todos:review.scanPorts', input)
+    },
+    merge: {
+      preview: (input: { taskId: string }): Promise<MergePlan> =>
+        ipcRenderer.invoke('todos:merge.preview', input),
+      execute: (input: { taskId: string }): Promise<MergeOutcome> =>
+        ipcRenderer.invoke('todos:merge.execute', input)
     }
   },
 

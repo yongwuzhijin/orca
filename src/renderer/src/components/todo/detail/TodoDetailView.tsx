@@ -8,6 +8,7 @@ import { TodoDetailOverview } from './TodoDetailOverview'
 import { InProgressPanel } from './InProgressPanel'
 import { EnterInProgressDialog } from './EnterInProgressDialog'
 import { HumanReviewPanel } from './HumanReviewPanel'
+import { MergingPanel } from './MergingPanel'
 
 type TodoDetailViewProps = {
   itemId: string
@@ -57,6 +58,8 @@ export function TodoDetailView({ itemId }: TodoDetailViewProps): React.JSX.Eleme
           <InProgressPanel item={item} />
         ) : item.status === 'human_review' ? (
           <HumanReviewPanel item={item} />
+        ) : item.status === 'merging' ? (
+          <MergingPanel item={item} />
         ) : (
           <TodoDetailOverview item={item} />
         )}
