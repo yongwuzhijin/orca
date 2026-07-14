@@ -1,5 +1,6 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../types'
+import { resolveLockedTodoActiveProjectId } from '../../../../shared/todo/todo-default-project'
 import type {
   TodoProject,
   CreateTodoProjectInput,
@@ -57,10 +58,12 @@ export const createTodosSlice: StateCreator<AppState, [], [], TodosSlice> = (set
 
   loadTodoProjects: async () => {
     const projects = await window.api.todos.projects.list()
-    const currentActive = get().todoActiveProjectId
-    // Auto-select the first project on initial load so the board has something to show.
-    const nextActive = currentActive ?? projects[0]?.id ?? null
-    set({ todoProjects: projects, todoActiveProjectId: nextActive, todoLoaded: true })
+    // Why: product locks Todos to the built-in default board; ignore legacy actives.
+    set({
+      todoProjects: projects,
+      todoActiveProjectId: resolveLockedTodoActiveProjectId(),
+      todoLoaded: true
+    })
   },
 
   setActiveTodoProject: async (projectId) => {
