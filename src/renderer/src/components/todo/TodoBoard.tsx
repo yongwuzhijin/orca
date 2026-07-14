@@ -1,9 +1,19 @@
 import React from 'react'
-import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCorners,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent
+} from '@dnd-kit/core'
 import type { TodoItem } from '../../../../shared/todo/todo-item'
 import type { TodoStatus } from '../../../../shared/todo/todo-status'
 import { getVisibleTodoStatuses } from './todo-status-catalog'
 import { orderKeyBetween } from '../../../../shared/todo/order-key'
+import { TodoCardPreview } from './TodoCard'
 import { TodoColumn } from './TodoColumn'
 
 export function TodoBoard({
@@ -21,17 +31,24 @@ export function TodoBoard({
   // getVisibleTodoStatuses returns TodoStatusMeta[] in catalog order; derive the id set for drop checks.
   const visibleMetas = getVisibleTodoStatuses()
   const visibleIds = new Set<TodoStatus>(visibleMetas.map((meta) => meta.id))
+  const [activeId, setActiveId] = React.useState<string | null>(null)
+  const activeItem = activeId ? (items.find((item) => item.id === activeId) ?? null) : null
+
+  const handleDragStart = (event: DragStartEvent): void => {
+    setActiveId(String(event.active.id))
+  }
 
   const handleDragEnd = (event: DragEndEvent): void => {
+    setActiveId(null)
     const { active, over } = event
     if (!over) {
       return
     }
-    const activeId = String(active.id)
+    const draggedId = String(active.id)
     const overId = String(over.id)
     // Dropping a card onto itself is a no-op; without this, resolveDropTarget
     // returns beforeId=activeId which columnItems excludes, sending it to the front.
-    if (activeId === overId) {
+    if (draggedId === overId) {
       return
     }
     const target = resolveDropTarget(overId, items, visibleIds)
@@ -39,7 +56,7 @@ export function TodoBoard({
       return
     }
     const columnItems = items
-      .filter((i) => i.status === target.status && i.id !== activeId)
+      .filter((i) => i.status === target.status && i.id !== draggedId)
       .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1))
     const index = target.beforeId
       ? columnItems.findIndex((i) => i.id === target.beforeId)
@@ -48,12 +65,27 @@ export function TodoBoard({
     const next =
       index >= 0 && index < columnItems.length ? (columnItems[index]?.orderKey ?? null) : null
     const orderKey = orderKeyBetween(prev, next)
-    onMove(activeId, target.status, orderKey)
+    onMove(draggedId, target.status, orderKey)
+  }
+
+  const handleDragCancel = (): void => {
+    setActiveId(null)
   }
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 overflow-x-auto p-4">
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <div
+        className="grid h-full min-h-0 gap-3 overflow-hidden p-3"
+        style={{
+          gridTemplateColumns: `repeat(${visibleMetas.length}, minmax(0, 1fr))`
+        }}
+      >
         {visibleMetas.map((meta) => (
           <TodoColumn
             key={meta.id}
@@ -66,6 +98,9 @@ export function TodoBoard({
           />
         ))}
       </div>
+      <DragOverlay dropAnimation={null}>
+        {activeItem ? <TodoCardPreview item={activeItem} /> : null}
+      </DragOverlay>
     </DndContext>
   )
 }

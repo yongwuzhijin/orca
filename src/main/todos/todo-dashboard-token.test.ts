@@ -24,6 +24,9 @@ function item(overrides: Partial<TodoItem> = {}): TodoItem {
     startedAt: '2026-07-01T00:00:00.000Z',
     completedAt: '2026-07-02T00:00:00.000Z',
     sessionId: null,
+    workspaceProjectId: null,
+    workspaceName: null,
+    preferredAgent: null,
     ...overrides
   }
 }

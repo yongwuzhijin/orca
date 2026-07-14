@@ -60,6 +60,9 @@ function mkItem(overrides: Partial<TodoItem> = {}): TodoItem {
     startedAt: null,
     completedAt: null,
     sessionId: null,
+    workspaceProjectId: null,
+    workspaceName: null,
+    preferredAgent: null,
     ...overrides
   }
 }

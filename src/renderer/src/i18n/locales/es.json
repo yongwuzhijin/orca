@@ -12982,8 +12982,8 @@
         "TodoPage": {
           "newTask": "New task",
           "empty": "Create a project to get started",
-          "tabBoard": "Board",
-          "tabData": "Data"
+          "tabBoard": "Tablero",
+          "tabData": "Datos"
         },
         "TodoColumn": {
           "addTask": "Add task",

@@ -3,6 +3,7 @@ import type { TodoPriority } from '../../shared/todo/todo-priority'
 import type { TodoProject } from '../../shared/todo/todo-project'
 import type { TodoStatus } from '../../shared/todo/todo-status'
 import type { TodoTemplate } from '../../shared/todo/todo-template'
+import { isAcpEngine } from '../../shared/acp/acp-session'
 
 // Snake_case shapes mirror the SQLite columns in todo-database.ts so the raw
 // prepared-statement rows map to domain entities without implicit casing magic.
@@ -42,6 +43,9 @@ export type TodoItemRow = {
   started_at: string | null
   completed_at: string | null
   session_id: string | null
+  workspace_project_id: string | null
+  workspace_name: string | null
+  preferred_agent: string | null
 }
 
 export function rowToProject(row: TodoProjectRow): TodoProject {
@@ -98,6 +102,10 @@ export function rowToTodoItem(row: TodoItemRow): TodoItem {
     updatedAt: row.updated_at,
     startedAt: row.started_at,
     completedAt: row.completed_at,
-    sessionId: row.session_id
+    sessionId: row.session_id,
+    workspaceProjectId: row.workspace_project_id,
+    workspaceName: row.workspace_name,
+    preferredAgent:
+      row.preferred_agent && isAcpEngine(row.preferred_agent) ? row.preferred_agent : null
   }
 }

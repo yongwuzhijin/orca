@@ -4,7 +4,8 @@ import Database from '../sqlite/sync-database'
 // migrate explicitly (CREATE TABLE IF NOT EXISTS is a no-op against an existing
 // DB). v2 adds todo_items.session_id, the pointer to the ACP execution session.
 // v3 adds todo_projects.default_working_dir, the project-level default cwd.
-export const SCHEMA_VERSION = 3
+// v4 adds workspace binding fields on todo_items for create-task → start-session.
+export const SCHEMA_VERSION = 4
 
 export class TodoDatabase {
   private db: Database.Database
@@ -64,7 +65,10 @@ export class TodoDatabase {
         updated_at TEXT NOT NULL,
         started_at TEXT,
         completed_at TEXT,
-        session_id TEXT
+        session_id TEXT,
+        workspace_project_id TEXT,
+        workspace_name TEXT,
+        preferred_agent TEXT
       );
 
       CREATE INDEX IF NOT EXISTS idx_todo_items_project_status
@@ -106,6 +110,18 @@ export class TodoDatabase {
       // v3: 项目级默认工作目录,新任务继承 / 启动弹窗预填。
       if (current < 3 && !this.hasColumn('todo_projects', 'default_working_dir')) {
         this.db.exec('ALTER TABLE todo_projects ADD COLUMN default_working_dir TEXT')
+      }
+      // v4: workspace project / name / agent selected at task creation.
+      if (current < 4) {
+        if (!this.hasColumn('todo_items', 'workspace_project_id')) {
+          this.db.exec('ALTER TABLE todo_items ADD COLUMN workspace_project_id TEXT')
+        }
+        if (!this.hasColumn('todo_items', 'workspace_name')) {
+          this.db.exec('ALTER TABLE todo_items ADD COLUMN workspace_name TEXT')
+        }
+        if (!this.hasColumn('todo_items', 'preferred_agent')) {
+          this.db.exec('ALTER TABLE todo_items ADD COLUMN preferred_agent TEXT')
+        }
       }
       this.db.pragma(`user_version = ${SCHEMA_VERSION}`)
       this.db.exec('COMMIT')

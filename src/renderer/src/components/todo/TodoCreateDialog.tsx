@@ -16,9 +16,14 @@ import { useAppStore } from '@/store'
 import type { CreateTodoItemInput } from '../../../../shared/todo/todo-item'
 import type { TodoPriority } from '../../../../shared/todo/todo-priority'
 import type { TodoStatus } from '../../../../shared/todo/todo-status'
+import { ACP_ENGINES, type AcpEngine } from '../../../../shared/acp/acp-session'
 import { TODO_STATUS_CATALOG } from './todo-status-catalog'
 import { TODO_PRIORITY_CATALOG } from './todo-priority-catalog'
 import { TodoTemplatePicker } from './todo-template-picker'
+import {
+  TodoCreateWorkspaceFields,
+  type TodoCreateWorkspaceFieldsValue
+} from './TodoCreateWorkspaceFields'
 
 export type CreateTodoFormValues = {
   projectId: string
@@ -30,6 +35,9 @@ export type CreateTodoFormValues = {
   estimate?: number | null
   labels?: string[]
   templateId?: string | null
+  workspaceProjectId?: string | null
+  workspaceName?: string | null
+  preferredAgent?: AcpEngine | null
 }
 
 const TEXTAREA_CLASS =
@@ -66,6 +74,15 @@ export function buildCreateTodoPayload(values: CreateTodoFormValues): CreateTodo
   if (values.templateId) {
     payload.templateId = values.templateId
   }
+  if (values.workspaceProjectId) {
+    payload.workspaceProjectId = values.workspaceProjectId
+  }
+  if (values.workspaceName?.trim()) {
+    payload.workspaceName = values.workspaceName.trim()
+  }
+  if (values.preferredAgent) {
+    payload.preferredAgent = values.preferredAgent
+  }
   return payload
 }
 
@@ -87,6 +104,13 @@ export function TodoCreateDialog({
   const [priority, setPriority] = React.useState<TodoPriority>('none')
   const [scheduledDate, setScheduledDate] = React.useState('')
   const [templateId, setTemplateId] = React.useState<string | null>(null)
+  const [workspaceFields, setWorkspaceFields] = React.useState<TodoCreateWorkspaceFieldsValue>(
+    () => ({
+      workspaceProjectId: null,
+      workspaceName: '',
+      preferredAgent: ACP_ENGINES[0]
+    })
+  )
 
   const canSubmit = title.trim().length > 0
 
@@ -105,7 +129,10 @@ export function TodoCreateDialog({
           status,
           priority,
           scheduledDate,
-          templateId
+          templateId,
+          workspaceProjectId: workspaceFields.workspaceProjectId,
+          workspaceName: workspaceFields.workspaceName,
+          preferredAgent: workspaceFields.preferredAgent
         })
       )
       onClose()
@@ -141,6 +168,8 @@ export function TodoCreateDialog({
               )}
             />
           </div>
+
+          <TodoCreateWorkspaceFields value={workspaceFields} onChange={setWorkspaceFields} />
 
           <div className="flex flex-col gap-1.5">
             <Label>

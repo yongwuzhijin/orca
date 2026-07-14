@@ -4,12 +4,36 @@ import '@testing-library/jest-dom/vitest'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import type { TodoItem } from '../../../../../shared/todo/todo-item'
 
 const mockState = {
   updateTodoItem: vi.fn().mockResolvedValue(undefined),
   executeTask: vi.fn().mockResolvedValue('s1'),
   openTodoDetail: vi.fn(),
+  addRepo: vi.fn(),
+  repos: [] as unknown[],
+  projects: [] as unknown[],
+  projectGroups: [] as unknown[],
+  projectHostSetups: [
+    {
+      id: 'setup-1',
+      projectId: 'wp-1',
+      hostId: 'local',
+      repoId: 'repo-1',
+      path: '/from-create',
+      displayName: 'wp',
+      setupState: 'ready' as const,
+      setupMethod: 'imported-existing-folder' as const,
+      createdAt: 1,
+      updatedAt: 1
+    }
+  ],
+  settings: null,
+  sshTargetLabels: new Map(),
+  sshConnectionStates: new Map(),
+  runtimeEnvironments: [],
+  runtimeStatusByEnvironmentId: new Map(),
   todoProjects: [
     {
       id: 'p1',
@@ -30,7 +54,11 @@ vi.mock('@/store', () => ({
 const { EnterInProgressDialog, buildBasePrompt, composePrompt } =
   await import('./EnterInProgressDialog')
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  mockState.todoProjects[0].defaultWorkingDir = '/repo'
+  vi.clearAllMocks()
+})
 
 function mkItem(overrides: Partial<TodoItem> = {}): TodoItem {
   return {
@@ -51,8 +79,19 @@ function mkItem(overrides: Partial<TodoItem> = {}): TodoItem {
     startedAt: null,
     completedAt: null,
     sessionId: null,
+    workspaceProjectId: null,
+    workspaceName: null,
+    preferredAgent: null,
     ...overrides
   }
+}
+
+function renderDialog(item: TodoItem = mkItem()): void {
+  render(
+    <TooltipProvider>
+      <EnterInProgressDialog item={item} onClose={vi.fn()} />
+    </TooltipProvider>
+  )
 }
 
 describe('prompt builders', () => {
@@ -66,15 +105,24 @@ describe('prompt builders', () => {
 })
 
 describe('EnterInProgressDialog', () => {
-  it('prefills cwd from the project default working dir', () => {
-    render(<EnterInProgressDialog item={mkItem()} onClose={vi.fn()} />)
-    expect(screen.getByLabelText(/working directory/i)).toHaveValue('/repo')
+  it('enables start when the create-time project has a ready cwd', () => {
+    renderDialog(mkItem({ workspaceProjectId: 'wp-1' }))
+    expect(screen.getByRole('button', { name: /start/i })).toBeEnabled()
   })
 
-  it('disables confirm when cwd is empty', () => {
-    const projectNoDir = { ...mockState.todoProjects[0], defaultWorkingDir: null }
-    mockState.todoProjects = [projectNoDir]
-    render(<EnterInProgressDialog item={mkItem()} onClose={vi.fn()} />)
+  it('falls back to the todo project default working dir when no workspace project', () => {
+    renderDialog(mkItem({ workspaceProjectId: null }))
+    expect(screen.getByRole('button', { name: /start/i })).toBeEnabled()
+  })
+
+  it('disables confirm when no cwd can be resolved', () => {
+    mockState.todoProjects[0].defaultWorkingDir = null
+    renderDialog(mkItem({ workspaceProjectId: null }))
     expect(screen.getByRole('button', { name: /start/i })).toBeDisabled()
+  })
+
+  it('defaults engine from preferredAgent', () => {
+    renderDialog(mkItem({ preferredAgent: 'cursor' }))
+    expect(screen.getByLabelText(/engine/i)).toHaveValue('cursor')
   })
 })

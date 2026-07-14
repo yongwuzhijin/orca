@@ -1,12 +1,15 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
-import { ACP_ENGINES, type AcpEngine } from '../../../../../shared/acp/acp-session'
+import { ACP_ENGINES, isAcpEngine, type AcpEngine } from '../../../../../shared/acp/acp-session'
 import type { TodoItem } from '../../../../../shared/todo/todo-item'
+import {
+  resolveWorkspaceProjectCwd,
+  TodoWorkspaceProjectPicker
+} from '../TodoWorkspaceProjectPicker'
 
 export function buildBasePrompt(item: TodoItem): string {
   return `${item.title}\n\n${item.description}`.trimEnd()
@@ -15,6 +18,12 @@ export function buildBasePrompt(item: TodoItem): string {
 export function composePrompt(base: string, extra: string): string {
   const trimmed = extra.trim()
   return trimmed ? `${base}\n\n${trimmed}` : base
+}
+
+function resolveInitialEngine(item: TodoItem): AcpEngine {
+  return item.preferredAgent && isAcpEngine(item.preferredAgent)
+    ? item.preferredAgent
+    : ACP_ENGINES[0]
 }
 
 type EnterInProgressDialogProps = {
@@ -30,16 +39,29 @@ export function EnterInProgressDialog({
   const executeTask = useAppStore((s) => s.executeTask)
   const openTodoDetail = useAppStore((s) => s.openTodoDetail)
   const project = useAppStore((s) => s.todoProjects.find((p) => p.id === item.projectId))
+  const projectHostSetups = useAppStore((s) => s.projectHostSetups)
 
-  const [engine, setEngine] = React.useState<AcpEngine>(ACP_ENGINES[0])
-  const [cwd, setCwd] = React.useState(project?.defaultWorkingDir ?? '')
+  const [engine, setEngine] = React.useState<AcpEngine>(() => resolveInitialEngine(item))
+  const [workspaceProjectId, setWorkspaceProjectId] = React.useState<string | null>(
+    () => item.workspaceProjectId
+  )
   const [extra, setExtra] = React.useState('')
 
+  const cwd = resolveWorkspaceProjectCwd(
+    workspaceProjectId,
+    projectHostSetups,
+    project?.defaultWorkingDir
+  )
   const base = buildBasePrompt(item)
+  const canStart = cwd.trim().length > 0
 
   const confirm = async (): Promise<void> => {
-    if (!cwd.trim()) {
+    if (!canStart) {
       return
+    }
+    // Persist the project choice so later restarts keep the same default.
+    if (workspaceProjectId !== item.workspaceProjectId) {
+      await updateTodoItem(item.id, { workspaceProjectId })
     }
     await updateTodoItem(item.id, { status: 'in_progress' })
     await executeTask({
@@ -50,13 +72,6 @@ export function EnterInProgressDialog({
     })
     openTodoDetail(item.id)
     onClose()
-  }
-
-  const pickDir = async (): Promise<void> => {
-    const picked = await window.api.shell.pickDirectory({ defaultPath: cwd || undefined })
-    if (picked) {
-      setCwd(picked)
-    }
   }
 
   return (
@@ -85,28 +100,16 @@ export function EnterInProgressDialog({
             </select>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="enter-cwd">
-              {translate(
-                'auto.components.todo.detail.EnterInProgressDialog.cwd',
-                'Working directory'
-              )}
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                id="enter-cwd"
-                value={cwd}
-                onChange={(e) => setCwd(e.target.value)}
-                placeholder={translate(
-                  'auto.components.todo.detail.EnterInProgressDialog.cwdPlaceholder',
-                  '/path/to/repo'
-                )}
-              />
-              <Button size="sm" variant="outline" onClick={() => void pickDir()}>
-                {translate('auto.components.todo.detail.EnterInProgressDialog.browse', 'Browse…')}
-              </Button>
-            </div>
-          </div>
+          {/* Why: reuse the New Task project picker and seed from workspaceProjectId
+              so Start Session continues from the project chosen at create time. */}
+          <TodoWorkspaceProjectPicker
+            value={workspaceProjectId}
+            onChange={setWorkspaceProjectId}
+            label={translate(
+              'auto.components.todo.detail.EnterInProgressDialog.cwd',
+              'Working directory'
+            )}
+          />
 
           <div className="flex flex-col gap-1.5">
             <Label>
@@ -139,7 +142,7 @@ export function EnterInProgressDialog({
             <Button size="sm" variant="outline" onClick={onClose}>
               {translate('auto.components.todo.detail.EnterInProgressDialog.cancel', 'Cancel')}
             </Button>
-            <Button size="sm" disabled={!cwd.trim()} onClick={() => void confirm()}>
+            <Button size="sm" disabled={!canStart} onClick={() => void confirm()}>
               {translate('auto.components.todo.detail.EnterInProgressDialog.start', 'Start')}
             </Button>
           </div>

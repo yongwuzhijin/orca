@@ -6,16 +6,16 @@ import type { TodoItem } from '../../../../shared/todo/todo-item'
 import { getTodoStatusMeta } from './todo-status-catalog'
 import { getTodoPriorityMeta } from './todo-priority-catalog'
 
-export function TodoCard({
-  item,
-  onOpen
-}: {
+type TodoCardFaceProps = {
   item: TodoItem
-  onOpen: (id: string) => void
-}): React.JSX.Element {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id
-  })
+  className?: string
+  style?: React.CSSProperties
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'className' | 'style'>
+
+const TodoCardFace = React.forwardRef<HTMLButtonElement, TodoCardFaceProps>(function TodoCardFace(
+  { item, className, style, ...props },
+  ref
+) {
   const statusMeta = getTodoStatusMeta(item.status)
   const priorityMeta = getTodoPriorityMeta(item.priority)
   const StatusIcon = statusMeta.icon
@@ -24,15 +24,13 @@ export function TodoCard({
   return (
     <button
       type="button"
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-      {...attributes}
-      {...listeners}
-      onClick={() => onOpen(item.id)}
+      ref={ref}
+      style={style}
       className={cn(
-        'flex w-full flex-col gap-1.5 rounded-md border border-border bg-card p-2.5 text-left transition-colors hover:border-ring',
-        isDragging && 'opacity-50'
+        'flex w-full flex-col gap-1.5 rounded-lg border border-border bg-card p-2.5 text-left shadow-xs transition-colors hover:border-ring',
+        className
       )}
+      {...props}
     >
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <StatusIcon className={cn('size-3.5', statusMeta.colorToken)} />
@@ -45,5 +43,33 @@ export function TodoCard({
         {item.labels.length > 0 ? <span>#{item.labels[0]}</span> : null}
       </div>
     </button>
+  )
+})
+
+export function TodoCardPreview({ item }: { item: TodoItem }): React.JSX.Element {
+  return <TodoCardFace item={item} className="shadow-md ring-1 ring-ring/40" />
+}
+
+export function TodoCard({
+  item,
+  onOpen
+}: {
+  item: TodoItem
+  onOpen: (id: string) => void
+}): React.JSX.Element {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id
+  })
+
+  return (
+    <TodoCardFace
+      item={item}
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      {...attributes}
+      {...listeners}
+      onClick={() => onOpen(item.id)}
+      className={cn(isDragging && 'opacity-40')}
+    />
   )
 }

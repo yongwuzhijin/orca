@@ -24,7 +24,10 @@ function item(id: string, status: TodoItem['status']): TodoItem {
     updatedAt: '2026-07-12T00:00:00.000Z',
     startedAt: '2026-07-10T00:00:00.000Z',
     completedAt: '2026-07-12T00:00:00.000Z',
-    sessionId: null
+    sessionId: null,
+    workspaceProjectId: null,
+    workspaceName: null,
+    preferredAgent: null
   }
 }
 

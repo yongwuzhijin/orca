@@ -26,10 +26,26 @@ describe('buildCreateTodoPayload', () => {
       templateId: 't1'
     })
   })
+  it('includes workspace binding fields when set', () => {
+    const payload = buildCreateTodoPayload({
+      projectId: 'p1',
+      title: 'Ship',
+      workspaceProjectId: 'proj-1',
+      workspaceName: '  feature-x  ',
+      preferredAgent: 'claude'
+    })
+    expect(payload.workspaceProjectId).toBe('proj-1')
+    expect(payload.workspaceName).toBe('feature-x')
+    expect(payload.preferredAgent).toBe('claude')
+  })
+
   it('omits empty optional fields', () => {
     const payload = buildCreateTodoPayload({ projectId: 'p1', title: 'Bare' })
     expect(payload.projectId).toBe('p1')
     expect(payload.title).toBe('Bare')
     expect(payload.scheduledDate ?? null).toBeNull()
+    expect(payload.workspaceProjectId).toBeUndefined()
+    expect(payload.workspaceName).toBeUndefined()
+    expect(payload.preferredAgent).toBeUndefined()
   })
 })

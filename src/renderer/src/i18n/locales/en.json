@@ -13024,6 +13024,14 @@
           "priorityLabel": "Priority",
           "scheduledLabel": "Scheduled"
         },
+        "TodoStatusMenu": {
+          "changeStatusAria": "Change status",
+          "changeStatusPlaceholder": "Change status..."
+        },
+        "TodoPriorityMenu": {
+          "setPriority": "Set priority",
+          "changePriorityAria": "Change priority"
+        },
         "TodoTemplatePicker": {
           "none": "No template",
           "manage": "Manage templates"

@@ -12982,8 +12982,8 @@
         "TodoPage": {
           "newTask": "新建任务",
           "empty": "创建一个项目开始使用",
-          "tabBoard": "Board",
-          "tabData": "Data"
+          "tabBoard": "看板",
+          "tabData": "数据"
         },
         "TodoColumn": {
           "addTask": "添加任务",
@@ -13024,6 +13024,14 @@
           "priorityLabel": "优先级",
           "scheduledLabel": "计划日期"
         },
+        "TodoStatusMenu": {
+          "changeStatusAria": "更改状态",
+          "changeStatusPlaceholder": "更改状态…"
+        },
+        "TodoPriorityMenu": {
+          "setPriority": "设置优先级",
+          "changePriorityAria": "更改优先级"
+        },
         "TodoTemplatePicker": {
           "none": "无模板",
           "manage": "管理模板"
@@ -13049,20 +13057,20 @@
         },
         "detail": {
           "EnterInProgressDialog": {
-            "title": "Start session",
-            "engine": "Engine",
-            "cwd": "Working directory",
-            "browse": "Browse…",
-            "basePrompt": "Base prompt",
-            "extra": "Additional prompt",
-            "cancel": "Cancel",
-            "start": "Start",
+            "title": "开始会话",
+            "engine": "引擎",
+            "cwd": "工作目录",
+            "browse": "浏览…",
+            "basePrompt": "基础提示词",
+            "extra": "附加提示词",
+            "cancel": "取消",
+            "start": "开始",
             "cwdPlaceholder": "/path/to/repo"
           },
           "InProgressPanel": {
-            "noSession": "No active session",
-            "start": "Start session",
-            "plan": "Plan"
+            "noSession": "暂无活动会话",
+            "start": "开始会话",
+            "plan": "计划"
           },
           "PlanChecklist": {
             "empty": "No plan yet"
