@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { DEFAULT_TODO_PROJECT_ID } from '../../../../shared/todo/todo-default-project'
 import TodoPage from './TodoPage'
 
 vi.mock('./TodoBoard', () => ({ TodoBoard: () => <div data-testid="board" /> }))
@@ -17,7 +18,7 @@ const fakeState = {
   loadTodoProjects: vi.fn(async () => {}),
   loadTodoTemplates: vi.fn(async () => {}),
   loadTodoItems: vi.fn(async () => {}),
-  todoActiveProjectId: 'p1',
+  todoActiveProjectId: DEFAULT_TODO_PROJECT_ID,
   todoItems: [],
   moveTodoItem: vi.fn(),
   todoDetailItemId: null,
@@ -40,5 +41,10 @@ describe('TodoPage viewMode', () => {
     expect(screen.getByTestId('board')).toBeInTheDocument()
     await user.click(screen.getByText(/data/i))
     await waitFor(() => expect(screen.getByTestId('dashboard')).toBeInTheDocument())
+  })
+
+  it('does not render the project switcher', () => {
+    render(<TodoPage />)
+    expect(screen.queryByTestId('switcher')).not.toBeInTheDocument()
   })
 })
