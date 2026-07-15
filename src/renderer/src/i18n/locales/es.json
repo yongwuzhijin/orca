@@ -13059,7 +13059,9 @@
             "extra": "Additional prompt",
             "cancel": "Cancel",
             "start": "Start",
-            "cwdPlaceholder": "/path/to/repo"
+            "cwdPlaceholder": "/path/to/repo",
+            "autoPilot": "AutoPilot (avanzar de forma autónoma)",
+            "maxTurns": "Turnos máximos"
           },
           "TodoDetailView": {
             "startTask": "Iniciar tarea"
@@ -13068,7 +13070,9 @@
             "noSession": "No active session",
             "start": "Start session",
             "plan": "Plan",
-            "restoring": "Restaurando sesión…"
+            "restoring": "Restaurando sesión…",
+            "autoPilotBadge": "AutoPilot",
+            "stopAutoPilot": "Detener AutoPilot"
           },
           "PlanChecklist": {
             "empty": "No plan yet"

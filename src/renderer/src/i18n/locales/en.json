@@ -13067,7 +13067,9 @@
             "extra": "Additional prompt",
             "cancel": "Cancel",
             "start": "Start",
-            "cwdPlaceholder": "/path/to/repo"
+            "cwdPlaceholder": "/path/to/repo",
+            "autoPilot": "AutoPilot (advance autonomously)",
+            "maxTurns": "Max turns"
           },
           "TodoDetailView": {
             "startTask": "Start task"
@@ -13076,7 +13078,9 @@
             "noSession": "No active session",
             "start": "Start session",
             "plan": "Plan",
-            "restoring": "Restoring session…"
+            "restoring": "Restoring session…",
+            "autoPilotBadge": "AutoPilot",
+            "stopAutoPilot": "Stop AutoPilot"
           },
           "PlanChecklist": {
             "empty": "No plan yet"

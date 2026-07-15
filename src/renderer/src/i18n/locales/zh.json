@@ -13067,7 +13067,9 @@
             "extra": "附加提示词",
             "cancel": "取消",
             "start": "开始",
-            "cwdPlaceholder": "/path/to/repo"
+            "cwdPlaceholder": "/path/to/repo",
+            "autoPilot": "AutoPilot（自主推进）",
+            "maxTurns": "最大轮次"
           },
           "TodoDetailView": {
             "startTask": "开始任务"
@@ -13076,7 +13078,9 @@
             "noSession": "暂无活动会话",
             "start": "开始会话",
             "plan": "计划",
-            "restoring": "正在恢复会话…"
+            "restoring": "正在恢复会话…",
+            "autoPilotBadge": "AutoPilot",
+            "stopAutoPilot": "停止自主推进"
           },
           "PlanChecklist": {
             "empty": "No plan yet"

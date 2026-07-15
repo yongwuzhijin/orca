@@ -13059,7 +13059,9 @@
             "extra": "Additional prompt",
             "cancel": "Cancel",
             "start": "Start",
-            "cwdPlaceholder": "/path/to/repo"
+            "cwdPlaceholder": "/path/to/repo",
+            "autoPilot": "AutoPilot(자동 진행)",
+            "maxTurns": "최대 턴 수"
           },
           "TodoDetailView": {
             "startTask": "작업 시작"
@@ -13068,7 +13070,9 @@
             "noSession": "No active session",
             "start": "Start session",
             "plan": "Plan",
-            "restoring": "세션 복원 중…"
+            "restoring": "세션 복원 중…",
+            "autoPilotBadge": "AutoPilot",
+            "stopAutoPilot": "AutoPilot 중지"
           },
           "PlanChecklist": {
             "empty": "No plan yet"
