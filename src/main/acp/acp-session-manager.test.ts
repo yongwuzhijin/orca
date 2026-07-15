@@ -267,3 +267,40 @@ describe('AcpSessionManager permission mode (P2b)', () => {
     expect(setPermissionMode).toHaveBeenCalledWith('s1', 'ask')
   })
 })
+
+describe('AcpSessionManager autoPilot flip suppression', () => {
+  it('does NOT flip in_progress→human_review when started with autoPilot', async () => {
+    const d = deps()
+    const mgr = makeManager(d)
+    await mgr.startPrompt({
+      taskId: 'task-1',
+      engine: 'claude',
+      prompt: 'hi',
+      cwd: '/tmp',
+      autoPilot: { maxTurns: 5 }
+    })
+    await mgr.waitForPrompt('eng-sess-1')
+    expect(d.todos.updateItem).not.toHaveBeenCalledWith('task-1', { status: 'human_review' })
+  })
+
+  it('flipToHumanReview flips only when task is still in_progress', () => {
+    const d = deps()
+    const mgr = makeManager(d)
+    d.todos.getItem.mockReturnValue({ id: 'task-1', status: 'in_progress' })
+    mgr.flipToHumanReview('task-1')
+    expect(d.todos.updateItem).toHaveBeenCalledWith('task-1', { status: 'human_review' })
+
+    d.todos.updateItem.mockClear()
+    d.todos.getItem.mockReturnValue({ id: 'task-1', status: 'done' })
+    mgr.flipToHumanReview('task-1')
+    expect(d.todos.updateItem).not.toHaveBeenCalled()
+  })
+
+  it('readLastOutcome reflects the finished turn', async () => {
+    const d = deps()
+    const mgr = makeManager(d)
+    await mgr.startPrompt({ taskId: 'task-1', engine: 'claude', prompt: 'hi', cwd: '/tmp' })
+    await mgr.waitForPrompt('eng-sess-1')
+    expect(mgr.readLastOutcome('eng-sess-1')).toBe('completed')
+  })
+})

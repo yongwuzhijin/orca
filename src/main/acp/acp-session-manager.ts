@@ -53,6 +53,8 @@ export class AcpSessionManager {
   private engineOf = new Map<string, AcpEngine>()
   private taskOf = new Map<string, string>()
   private canceled = new Set<string>()
+  private autoPilotSessions = new Set<string>()
+  private lastOutcome = new Map<string, 'completed' | 'error' | 'canceled'>()
 
   constructor(private readonly deps: AcpSessionManagerDeps) {}
 
@@ -93,6 +95,12 @@ export class AcpSessionManager {
         content: { type: 'text', text: prompt }
       }
     })
+
+    // AutoPilot must be marked before runPrompt starts so the mid-loop turn
+    // never flips the task to human_review; the runner owns the final flip.
+    if (opts.autoPilot) {
+      this.autoPilotSessions.add(sessionId)
+    }
 
     const run = this.runPrompt(taskId, sessionId, prompt, connection)
     this.activePrompts.set(sessionId, run)
@@ -137,20 +145,26 @@ export class AcpSessionManager {
         prompt: [{ type: 'text', text: prompt }]
       })
       if (this.canceled.has(sessionId) || stopReason === 'cancelled') {
+        this.lastOutcome.set(sessionId, 'canceled')
         this.deps.acpSessions.finish(sessionId, 'canceled', stopReason ?? 'cancelled')
         this.deps.broadcast('acp:task-outcome', { taskId, sessionId, result: 'canceled' }, taskId)
         return
       }
-      const task = this.deps.todos.getItem(taskId)
-      if (task?.status === 'in_progress') {
-        this.deps.todos.updateItem(taskId, { status: 'human_review' })
+      // AutoPilot suppresses the per-turn flip; the runner flips once at loop end.
+      if (!this.autoPilotSessions.has(sessionId)) {
+        const task = this.deps.todos.getItem(taskId)
+        if (task?.status === 'in_progress') {
+          this.deps.todos.updateItem(taskId, { status: 'human_review' })
+        }
       }
+      this.lastOutcome.set(sessionId, 'completed')
       this.deps.acpSessions.finish(sessionId, 'completed', stopReason)
       this.deps.broadcast('acp:complete', { sessionId, stopReason }, sessionId)
     } catch (err) {
       // Error/cancel are terminal-but-not-status-changing: surface to renderer,
       // record on the session row, leave the task where the user can retry.
       const message = err instanceof Error ? err.message : String(err)
+      this.lastOutcome.set(sessionId, 'error')
       this.deps.acpSessions.finish(sessionId, 'error', message)
       this.deps.broadcast('acp:error', { sessionId, message }, sessionId)
       this.deps.broadcast('acp:task-outcome', { taskId, sessionId, result: 'error' }, taskId)
@@ -226,5 +240,24 @@ export class AcpSessionManager {
 
   setPermissionMode(sessionId: string, mode: 'auto' | 'ask'): void {
     this.deps.permissionBridge.setPermissionMode(sessionId, mode)
+  }
+
+  markAutoPilot(sessionId: string): void {
+    this.autoPilotSessions.add(sessionId)
+  }
+
+  unmarkAutoPilot(sessionId: string): void {
+    this.autoPilotSessions.delete(sessionId)
+  }
+
+  readLastOutcome(sessionId: string): 'completed' | 'error' | 'canceled' | undefined {
+    return this.lastOutcome.get(sessionId)
+  }
+
+  flipToHumanReview(taskId: string): void {
+    const task = this.deps.todos.getItem(taskId)
+    if (task?.status === 'in_progress') {
+      this.deps.todos.updateItem(taskId, { status: 'human_review' })
+    }
   }
 }
