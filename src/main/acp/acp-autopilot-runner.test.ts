@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createAutoPilotRunner } from './acp-autopilot-runner'
+import { AUTOPILOT_PROTOCOL } from './autopilot-verdict'
 
 type Outcome = 'completed' | 'error' | 'canceled'
 
@@ -9,7 +10,7 @@ function makeSessionManager(turns: { text: string; outcome: Outcome }[]) {
     // Typed params here so `.mock.calls[0][0]` is accessible under vitest v4's
     // single-generic `vi.fn` signature (was two-arg `<Args, Return>` in v3).
     startPrompt: vi.fn(async (_opts: { prompt: string }) => ({ sessionId: 'sess-1' })),
-    promptExisting: vi.fn(async () => {
+    promptExisting: vi.fn(async (_sessionId: string, _prompt: string) => {
       turn++
     }),
     waitForPrompt: vi.fn(async () => {}),
@@ -53,6 +54,17 @@ describe('createAutoPilotRunner', () => {
     expect(sm.flipToHumanReview).toHaveBeenCalledTimes(1)
   })
 
+  it('never re-sends the sentinel protocol on continuation prompts', async () => {
+    const sm = makeSessionManager([
+      { text: 'AUTOPILOT: CONTINUE — more', outcome: 'completed' },
+      { text: 'AUTOPILOT: COMPLETE', outcome: 'completed' }
+    ])
+    const runner = createAutoPilotRunner({ sessionManager: sm as never })
+    await runner.run(opts)
+    const continuation = sm.promptExisting.mock.calls[0]![1]
+    expect(continuation).not.toContain(AUTOPILOT_PROTOCOL)
+  })
+
   it('stops at maxTurns and flips (fallback)', async () => {
     const sm = makeSessionManager(
       Array.from({ length: 6 }, () => ({
@@ -90,6 +102,16 @@ describe('createAutoPilotRunner', () => {
     expect(sent.prompt).toContain('do it')
     expect(sent.prompt).toContain('AUTOPILOT: COMPLETE')
     expect(sm.setPermissionMode).toHaveBeenCalledWith('sess-1', 'auto')
+  })
+
+  it('unmarks autopilot even when a turn throws', async () => {
+    const sm = makeSessionManager([{ text: 'AUTOPILOT: COMPLETE', outcome: 'completed' }])
+    sm.waitForPrompt = vi.fn(async () => {
+      throw new Error('boom')
+    })
+    const runner = createAutoPilotRunner({ sessionManager: sm as never })
+    await expect(runner.run(opts)).rejects.toThrow('boom')
+    expect(sm.unmarkAutoPilot).toHaveBeenCalledWith('sess-1')
   })
 
   it('broadcasts per-turn progress', async () => {
