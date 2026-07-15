@@ -41,11 +41,11 @@ describe('buildAcpKernel', () => {
           onSessionUpdate = update
           return {}
         },
-        connect: () => ({
+        connect: (() => ({
           connection: { initialize: async () => ({}) },
           onExit: () => {},
           dispose: () => {}
-        })
+        })) as never
       }
     })
     await kernel.connectionPool.getAcpConnection('claude')
