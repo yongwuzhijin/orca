@@ -14,6 +14,7 @@ const mockState = {
   permissionRequestsBySession: {} as Record<string, unknown[]>,
   permissionModeBySession: {} as Record<string, 'auto' | 'ask'>,
   sessionStatusBySession: {} as Record<string, string>,
+  autoPilotByTask: {} as Record<string, { turn: number; maxTurns: number } | null>,
   loadSessions: vi.fn().mockResolvedValue(undefined),
   sendFollowUp: vi.fn(),
   cancelSession: vi.fn(),
@@ -94,5 +95,42 @@ describe('InProgressPanel', () => {
     expect(container.firstChild).toHaveClass('min-w-0')
     expect(screen.getByTestId('session-conversation')).toHaveClass('min-w-0', 'w-full')
     expect(screen.getByRole('button', { name: /send/i })).toBeVisible()
+  })
+
+  it('shows the AutoPilot turn badge and stop button while running', async () => {
+    mockState.activeSessionByTask = { t1: 's1' }
+    mockState.activeSessionMetaByTask = { t1: { engine: 'claude', cwd: '/tmp' } }
+    mockState.eventsBySession = { s1: [] }
+    mockState.planBySession = { s1: [] }
+    mockState.permissionRequestsBySession = { s1: [] }
+    mockState.permissionModeBySession = { s1: 'auto' }
+    mockState.sessionStatusBySession = { s1: 'running' }
+    mockState.autoPilotByTask = { t1: { turn: 2, maxTurns: 5 } }
+    mockState.loadSessions.mockResolvedValue(undefined)
+
+    render(<InProgressPanel item={mkItem()} showPlan={false} />)
+    await screen.findByTestId('session-composer')
+
+    expect(screen.getByText(/2\/5/)).toBeVisible()
+    const stop = screen.getByRole('button', { name: /stop autopilot/i })
+    stop.click()
+    expect(mockState.cancelSession).toHaveBeenCalledWith('s1')
+  })
+
+  it('hides the AutoPilot badge once the session is no longer running', async () => {
+    mockState.activeSessionByTask = { t1: 's1' }
+    mockState.activeSessionMetaByTask = { t1: { engine: 'claude', cwd: '/tmp' } }
+    mockState.eventsBySession = { s1: [] }
+    mockState.planBySession = { s1: [] }
+    mockState.permissionRequestsBySession = { s1: [] }
+    mockState.permissionModeBySession = { s1: 'auto' }
+    mockState.sessionStatusBySession = { s1: 'complete' }
+    mockState.autoPilotByTask = { t1: { turn: 5, maxTurns: 5 } }
+    mockState.loadSessions.mockResolvedValue(undefined)
+
+    render(<InProgressPanel item={mkItem()} showPlan={false} />)
+    await screen.findByTestId('session-composer')
+
+    expect(screen.queryByRole('button', { name: /stop autopilot/i })).toBeNull()
   })
 })

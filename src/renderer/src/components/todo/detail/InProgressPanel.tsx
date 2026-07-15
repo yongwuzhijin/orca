@@ -37,6 +37,7 @@ export function InProgressPanel({
   const status = useAppStore((s) =>
     activeSessionId ? s.sessionStatusBySession[activeSessionId] : undefined
   )
+  const autoPilot = useAppStore((s) => s.autoPilotByTask[item.id] ?? null)
   const [launchOpen, setLaunchOpen] = React.useState(false)
   const [restoringSession, setRestoringSession] = React.useState(true)
 
@@ -106,21 +107,37 @@ export function InProgressPanel({
           <PlanChecklist entries={plan ?? []} />
         </aside>
       ) : null}
-      <SessionConversation
-        events={events ?? []}
-        permissionRequests={permissionRequests ?? []}
-        status={status ?? 'running'}
-        mode={mode ?? 'auto'}
-        onSend={(text) =>
-          void sendFollowUp(item.id, meta?.engine ?? 'claude', meta?.cwd ?? '', text)
-        }
-        onCancel={() => void cancelSession(activeSessionId)}
-        onModeChange={(next) => void setPermissionMode(activeSessionId, next)}
-        onResolvePermission={(requestId, optionId) =>
-          void resolvePermission(activeSessionId, requestId, optionId)
-        }
-        onSwitchAuto={() => void setPermissionMode(activeSessionId, 'auto')}
-      />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {autoPilot && status === 'running' ? (
+          <div className="mb-2 flex items-center gap-3">
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+              {translate('auto.components.todo.detail.InProgressPanel.autoPilotBadge', 'AutoPilot')}
+              {` ${autoPilot.turn}/${autoPilot.maxTurns}`}
+            </span>
+            <Button size="sm" variant="outline" onClick={() => void cancelSession(activeSessionId)}>
+              {translate(
+                'auto.components.todo.detail.InProgressPanel.stopAutoPilot',
+                'Stop AutoPilot'
+              )}
+            </Button>
+          </div>
+        ) : null}
+        <SessionConversation
+          events={events ?? []}
+          permissionRequests={permissionRequests ?? []}
+          status={status ?? 'running'}
+          mode={mode ?? 'auto'}
+          onSend={(text) =>
+            void sendFollowUp(item.id, meta?.engine ?? 'claude', meta?.cwd ?? '', text)
+          }
+          onCancel={() => void cancelSession(activeSessionId)}
+          onModeChange={(next) => void setPermissionMode(activeSessionId, next)}
+          onResolvePermission={(requestId, optionId) =>
+            void resolvePermission(activeSessionId, requestId, optionId)
+          }
+          onSwitchAuto={() => void setPermissionMode(activeSessionId, 'auto')}
+        />
+      </div>
     </div>
   )
 }
