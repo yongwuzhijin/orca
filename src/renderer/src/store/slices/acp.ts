@@ -24,6 +24,7 @@ export type ExecuteTaskInput = {
   prompt: string
   cwd: string
   resumeSessionId?: string
+  autoPilot?: { maxTurns: number }
 }
 
 export type AcpSlice = {
@@ -34,6 +35,7 @@ export type AcpSlice = {
   permissionModeBySession: Record<string, PermissionMode>
   sessionStatusBySession: Record<string, AcpSessionStatus>
   activeSessionMetaByTask: Record<string, { engine: AcpEngine; cwd: string }>
+  autoPilotByTask: Record<string, { turn: number; maxTurns: number } | null>
 
   executeTask: (input: ExecuteTaskInput) => Promise<string>
   sendFollowUp: (taskId: string, engine: AcpEngine, cwd: string, text: string) => Promise<void>
@@ -87,6 +89,7 @@ export const createAcpSlice: StateCreator<AppState, [], [], AcpSlice> = (set, ge
     permissionModeBySession: {},
     sessionStatusBySession: {},
     activeSessionMetaByTask: {},
+    autoPilotByTask: {},
 
     subscribeSession: (sessionId, _taskId) => {
       if (subscribed.has(sessionId)) {
@@ -127,6 +130,26 @@ export const createAcpSlice: StateCreator<AppState, [], [], AcpSlice> = (set, ge
     executeTask: async (input) => {
       const { sessionId } = (await window.api.acp.execute(input)) as { sessionId: string }
       get().subscribeSession(sessionId, input.taskId)
+      // Why: AutoPilot advances multiple turns unattended; seed + live-update the
+      // turn counter so the In Progress panel can show a running badge.
+      if (input.autoPilot) {
+        const maxTurns = input.autoPilot.maxTurns
+        set((s) => ({
+          autoPilotByTask: {
+            ...s.autoPilotByTask,
+            [input.taskId]: { turn: 0, maxTurns }
+          }
+        }))
+        window.api.acp.onAutoPilotProgress(input.taskId, (p) => {
+          const prog = p as { turn: number; maxTurns: number }
+          set((s) => ({
+            autoPilotByTask: {
+              ...s.autoPilotByTask,
+              [input.taskId]: { turn: prog.turn, maxTurns: prog.maxTurns }
+            }
+          }))
+        })
+      }
       // Why: ACP engines typically stream thoughts/tools but do not echo the
       // client-sent prompt as user_message_chunk, so the conversation would
       // otherwise open without the user's request.
