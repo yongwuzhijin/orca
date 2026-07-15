@@ -34,6 +34,8 @@ export type StartPromptOptions = {
   prompt: string
   cwd: string
   resumeSessionId?: string
+  // AutoPilot：存在时执行入口走续接循环，maxTurns 为自主推进的硬上限。
+  autoPilot?: { maxTurns: number }
 }
 
 export type StartPromptResult = {
