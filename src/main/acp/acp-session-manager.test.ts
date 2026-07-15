@@ -303,4 +303,43 @@ describe('AcpSessionManager autoPilot flip suppression', () => {
     await mgr.waitForPrompt('eng-sess-1')
     expect(mgr.readLastOutcome('eng-sess-1')).toBe('completed')
   })
+
+  it('readLastTurnText returns agent text only after the last user chunk', () => {
+    const d = deps()
+    // replaySessionEvents(sessionId, emit) drives emit with cached notifications.
+    d.connectionPool.replaySessionEvents.mockImplementation(
+      (_sessionId: string, emit: (n: unknown) => void) => {
+        emit({
+          update: {
+            sessionUpdate: 'user_message_chunk',
+            content: { type: 'text', text: 'turn1 prompt' }
+          }
+        })
+        emit({
+          update: { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'old' } }
+        })
+        emit({
+          update: {
+            sessionUpdate: 'user_message_chunk',
+            content: { type: 'text', text: 'turn2 prompt' }
+          }
+        })
+        emit({
+          update: {
+            sessionUpdate: 'agent_message_chunk',
+            content: { type: 'text', text: 'AUTOPILOT: ' }
+          }
+        })
+        emit({
+          update: {
+            sessionUpdate: 'agent_message_chunk',
+            content: { type: 'text', text: 'COMPLETE' }
+          }
+        })
+        return 5
+      }
+    )
+    const mgr = makeManager(d)
+    expect(mgr.readLastTurnText('sess-x')).toBe('AUTOPILOT: COMPLETE')
+  })
 })

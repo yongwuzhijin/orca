@@ -260,4 +260,34 @@ export class AcpSessionManager {
       this.deps.todos.updateItem(taskId, { status: 'human_review' })
     }
   }
+
+  // Why: verdict lives in the just-finished turn only. Collect from the pool's
+  // per-session event cache and keep agent text emitted after the last user
+  // chunk (each turn records a user_message_chunk before the agent responds).
+  readLastTurnText(sessionId: string): string {
+    const collected: { role: 'user' | 'agent'; text: string }[] = []
+    this.deps.connectionPool.replaySessionEvents(sessionId, (n) => {
+      const update = (n as { update?: { sessionUpdate?: string; content?: unknown } }).update
+      if (update?.sessionUpdate === 'user_message_chunk') {
+        collected.push({ role: 'user', text: '' })
+      } else if (update?.sessionUpdate === 'agent_message_chunk') {
+        const content = update.content as { type?: string; text?: string } | undefined
+        if (content?.type === 'text' && typeof content.text === 'string') {
+          collected.push({ role: 'agent', text: content.text })
+        }
+      }
+    })
+    let start = 0
+    for (let i = collected.length - 1; i >= 0; i--) {
+      if (collected[i].role === 'user') {
+        start = i + 1
+        break
+      }
+    }
+    return collected
+      .slice(start)
+      .filter((c) => c.role === 'agent')
+      .map((c) => c.text)
+      .join('')
+  }
 }
