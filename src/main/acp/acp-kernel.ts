@@ -2,6 +2,7 @@ import { AcpConnectionPool, type PoolDeps } from './acp-connection-pool'
 import { AcpPermissionBridge } from './acp-permission-bridge'
 import { AcpSessionManager } from './acp-session-manager'
 import { createExecuteRouter } from './acp-execute-router'
+import { createAutoPilotRunner } from './acp-autopilot-runner'
 
 type BroadcastFn = (channel: string, payload: unknown, scopeId?: string) => void
 
@@ -33,6 +34,10 @@ export function buildAcpKernel(deps: BuildAcpKernelDeps) {
     broadcast: deps.broadcast,
     now: deps.now
   })
-  const executeRouter = createExecuteRouter({ sessionManager })
-  return { connectionPool, permissionBridge, sessionManager, executeRouter }
+  const autoPilotRunner = createAutoPilotRunner({
+    sessionManager,
+    broadcast: deps.broadcast
+  })
+  const executeRouter = createExecuteRouter({ sessionManager, autoPilotRunner })
+  return { connectionPool, permissionBridge, sessionManager, executeRouter, autoPilotRunner }
 }
