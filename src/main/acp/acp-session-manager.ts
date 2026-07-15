@@ -3,6 +3,7 @@ import type {
   AcpConnection,
   AcpEngine,
   AcpNewSessionResult,
+  AcpSessionRecord,
   StartPromptOptions,
   StartPromptResult
 } from '../../shared/acp/acp-session'
@@ -12,7 +13,7 @@ type SessionNotification = { sessionId: string; update: unknown }
 type ConnectionPoolLike = {
   getAcpConnection: (engine: AcpEngine) => Promise<AcpConnection>
   trackSession: (engine: AcpEngine, sessionId: string) => void
-  replaySessionEvents: (sessionId: string, emit: (n: SessionNotification) => void) => void
+  replaySessionEvents: (sessionId: string, emit: (n: SessionNotification) => void) => number
   recordSessionUpdate: (engine: AcpEngine, sessionId: string, n: SessionNotification) => void
 }
 
@@ -20,7 +21,7 @@ type AcpSessionsLike = {
   create: (i: { taskId: string; engine: AcpEngine; sessionId: string; cwd: string }) => unknown
   finish: (sessionId: string, status: string, stopReason: string | null) => void
   listByTask: (taskId: string) => unknown[]
-  getBySessionId: (sessionId: string) => unknown
+  getBySessionId: (sessionId: string) => AcpSessionRecord | null | undefined
 }
 
 type TodosLike = {
@@ -103,7 +104,11 @@ export class AcpSessionManager {
           cwd: opts.cwd
         })
       } catch {
-        await connection.loadSession({ sessionId: opts.resumeSessionId, cwd: opts.cwd })
+        await connection.loadSession({
+          sessionId: opts.resumeSessionId,
+          cwd: opts.cwd,
+          mcpServers: []
+        })
         return { sessionId: opts.resumeSessionId }
       }
     }
@@ -176,10 +181,26 @@ export class AcpSessionManager {
     return this.activePrompts.get(sessionId) ?? Promise.resolve()
   }
 
-  loadHistory(sessionId: string): void {
-    this.deps.connectionPool.replaySessionEvents(sessionId, (n) =>
+  async loadHistory(sessionId: string): Promise<void> {
+    const replayed = this.deps.connectionPool.replaySessionEvents(sessionId, (n) =>
       this.deps.broadcast('acp:update', n, sessionId)
     )
+    if (replayed > 0) {
+      return
+    }
+
+    const record = this.deps.acpSessions.getBySessionId(sessionId)
+    if (!record) {
+      return
+    }
+
+    // Why: the pool cache is process-local. After an app restart, ask the
+    // engine to load its persisted session; ACP replays messages as updates.
+    const connection = await this.deps.connectionPool.getAcpConnection(record.engine)
+    this.engineOf.set(sessionId, record.engine)
+    this.taskOf.set(sessionId, record.taskId)
+    this.deps.connectionPool.trackSession(record.engine, sessionId)
+    await connection.loadSession({ sessionId, cwd: record.cwd, mcpServers: [] })
   }
 
   listSessions(taskId: string): unknown[] {

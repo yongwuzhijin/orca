@@ -12988,7 +12988,9 @@
         "TodoColumn": {
           "addTask": "Add task",
           "today": "Today",
-          "all": "All"
+          "all": "All",
+          "addTaskInStatus": "New task in {{status}}",
+          "empty": "Empty"
         },
         "TodoProjectSwitcher": {
           "projects": "Projects",
@@ -13049,7 +13051,7 @@
         },
         "detail": {
           "EnterInProgressDialog": {
-            "title": "Start session",
+            "title": "タスクを開始",
             "engine": "Engine",
             "cwd": "Working directory",
             "browse": "Browse…",
@@ -13059,10 +13061,14 @@
             "start": "Start",
             "cwdPlaceholder": "/path/to/repo"
           },
+          "TodoDetailView": {
+            "startTask": "タスクを開始"
+          },
           "InProgressPanel": {
             "noSession": "No active session",
             "start": "Start session",
-            "plan": "Plan"
+            "plan": "Plan",
+            "restoring": "セッションを復元しています…"
           },
           "PlanChecklist": {
             "empty": "No plan yet"
@@ -13070,11 +13076,23 @@
           "SessionConversation": {
             "askMode": "Ask before actions",
             "cancel": "Cancel",
-            "followUp": "Send a follow-up prompt…",
-            "send": "Send"
+            "followUp": "フォローアップの指示を送信…",
+            "send": "送信",
+            "automaticMode": "自動モード",
+            "confirmationMode": "確認モード",
+            "stop": "セッションを停止"
           },
           "session-event-item": {
-            "thought": "Thought"
+            "thought": "思考",
+            "changes": "変更",
+            "commandOutput": "コマンド出力",
+            "subagentResult": "サブエージェントの結果",
+            "details": "詳細",
+            "statusPending": "保留中",
+            "statusRunning": "実行中",
+            "statusCompleted": "完了",
+            "statusFailed": "失敗",
+            "statusCanceled": "キャンセル済み"
           },
           "ReviewBrowserPane": {
             "urlPlaceholder": "http://localhost:...",
@@ -13127,6 +13145,14 @@
             "coverage": "Attributed",
             "unavailable": "n/a"
           }
+        },
+        "TodoStatusMenu": {
+          "changeStatusAria": "Change status",
+          "changeStatusPlaceholder": "Change status..."
+        },
+        "TodoPriorityMenu": {
+          "setPriority": "Set priority",
+          "changePriorityAria": "Change priority"
         }
       }
     },

@@ -10,6 +10,13 @@ import { mapSessionUpdate } from './acp-session-event-mapping'
 
 export type AcpSessionStatus = 'running' | 'complete' | 'error' | 'canceled'
 type PermissionMode = 'auto' | 'ask'
+type PersistedAcpSessionStatus = 'running' | 'completed' | 'error' | 'canceled'
+
+function fromPersistedStatus(
+  status: PersistedAcpSessionStatus | undefined
+): AcpSessionStatus | undefined {
+  return status === 'completed' ? 'complete' : status
+}
 
 export type ExecuteTaskInput = {
   taskId: string
@@ -32,7 +39,7 @@ export type AcpSlice = {
   sendFollowUp: (taskId: string, engine: AcpEngine, cwd: string, text: string) => Promise<void>
   cancelSession: (sessionId: string) => Promise<void>
   loadSessions: (taskId: string) => Promise<void>
-  loadHistory: (sessionId: string) => void
+  loadHistory: (sessionId: string) => Promise<void>
   setPermissionMode: (sessionId: string, mode: PermissionMode) => Promise<void>
   resolvePermission: (sessionId: string, requestId: string, optionId: string) => Promise<void>
   subscribeSession: (sessionId: string, taskId: string) => void
@@ -135,27 +142,49 @@ export const createAcpSlice: StateCreator<AppState, [], [], AcpSlice> = (set, ge
         sessionId: string
         engine: AcpEngine
         cwd: string
+        status?: PersistedAcpSessionStatus
       }[]
-      const last = sessions.at(-1)
-      const active = last?.sessionId ?? null
-      if (active) {
-        get().subscribeSession(active, taskId)
-      }
+      // Why: listByTask returns newest-first (ORDER BY created_at DESC).
+      const latest = sessions[0]
+      const active = latest?.sessionId ?? null
+      const activeStatus = fromPersistedStatus(latest?.status)
       set((s) => ({
         activeSessionByTask: { ...s.activeSessionByTask, [taskId]: active },
-        ...(last
+        ...(active && activeStatus
+          ? {
+              sessionStatusBySession: {
+                ...s.sessionStatusBySession,
+                [active]: activeStatus
+              }
+            }
+          : {}),
+        ...(latest
           ? {
               activeSessionMetaByTask: {
                 ...s.activeSessionMetaByTask,
-                [taskId]: { engine: last.engine, cwd: last.cwd }
+                [taskId]: { engine: latest.engine, cwd: latest.cwd }
               }
             }
           : {})
       }))
+      if (active) {
+        get().subscribeSession(active, taskId)
+        // Why: on renderer reload the store is empty; on a regular remount,
+        // avoid appending the same cached events a second time.
+        if (!(get().eventsBySession[active]?.length > 0)) {
+          try {
+            await get().loadHistory(active)
+          } catch (error) {
+            // History is best-effort; keep the persisted session available for
+            // retry/cancel even when an engine cannot replay its transcript.
+            console.warn('[acp] failed to load session history:', error)
+          }
+        }
+      }
     },
 
-    loadHistory: (sessionId) => {
-      window.api.acp.loadHistory({ sessionId })
+    loadHistory: async (sessionId) => {
+      await window.api.acp.loadHistory({ sessionId })
     },
 
     setPermissionMode: async (sessionId, mode) => {

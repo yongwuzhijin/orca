@@ -109,6 +109,39 @@ describe('AcpSessionManager start + happy path', () => {
 })
 
 describe('AcpSessionManager cancel / concurrency / resume / error', () => {
+  it('loads persisted agent history when the in-memory event cache is empty', async () => {
+    const d = deps()
+    d.connectionPool.replaySessionEvents.mockReturnValue(0)
+    d.acpSessions.getBySessionId.mockReturnValue({
+      taskId: 'task-1',
+      engine: 'claude',
+      sessionId: 'eng-sess-1',
+      cwd: '/tmp'
+    })
+    const mgr = makeManager(d)
+
+    await mgr.loadHistory('eng-sess-1')
+
+    expect(d.connectionPool.getAcpConnection).toHaveBeenCalledWith('claude')
+    expect(d.connectionPool.trackSession).toHaveBeenCalledWith('claude', 'eng-sess-1')
+    expect(d.connection.loadSession).toHaveBeenCalledWith({
+      sessionId: 'eng-sess-1',
+      cwd: '/tmp',
+      mcpServers: []
+    })
+  })
+
+  it('uses cached history without loading the agent session again', async () => {
+    const d = deps()
+    d.connectionPool.replaySessionEvents.mockReturnValue(2)
+    const mgr = makeManager(d)
+
+    await mgr.loadHistory('eng-sess-1')
+
+    expect(d.acpSessions.getBySessionId).not.toHaveBeenCalled()
+    expect(d.connection.loadSession).not.toHaveBeenCalled()
+  })
+
   it('rejects a second prompt on the same session', async () => {
     const d = deps()
     let resolvePrompt: (v: { stopReason: string }) => void = () => {}

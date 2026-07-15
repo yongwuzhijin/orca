@@ -75,14 +75,38 @@ describe('acp slice', () => {
   })
 
   it('loadSessions backfills meta from the latest record', async () => {
+    // Newest-first, matching listByTask ORDER BY created_at DESC.
     ;(window.api.acp.listSessions as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
-      { sessionId: 's1', engine: 'claude', cwd: '/a' },
-      { sessionId: 's2', engine: 'cursor', cwd: '/b' }
+      { sessionId: 's2', engine: 'cursor', cwd: '/b', status: 'completed' },
+      { sessionId: 's1', engine: 'claude', cwd: '/a' }
     ])
     const { get } = makeStore()
     await get().loadSessions('t1')
     expect(get().activeSessionByTask.t1).toBe('s2')
     expect(get().activeSessionMetaByTask.t1).toEqual({ engine: 'cursor', cwd: '/b' })
+    expect(get().sessionStatusBySession.s2).toBe('complete')
+  })
+
+  it('loadSessions replays history for the active session', async () => {
+    ;(window.api.acp.listSessions as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      { sessionId: 's1', engine: 'claude', cwd: '/a' }
+    ])
+    const { get } = makeStore()
+    await get().loadSessions('t1')
+    expect(window.api.acp.loadHistory).toHaveBeenCalledWith({ sessionId: 's1' })
+  })
+
+  it('keeps the active session when history replay fails', async () => {
+    ;(window.api.acp.listSessions as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      { sessionId: 's1', engine: 'claude', cwd: '/a' }
+    ])
+    ;(window.api.acp.loadHistory as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error('invalid history params')
+    )
+    const { get } = makeStore()
+
+    await expect(get().loadSessions('t1')).resolves.toBeUndefined()
+    expect(get().activeSessionByTask.t1).toBe('s1')
   })
 
   it('live session-update appends normalized event', async () => {

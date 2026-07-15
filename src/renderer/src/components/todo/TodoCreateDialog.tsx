@@ -136,7 +136,8 @@ export function TodoCreateDialog({
         })
       )
       onClose()
-    } catch {
+    } catch (error) {
+      console.error('[TodoCreateDialog] createTodoItem failed', error)
       toast.error(
         translate('auto.components.todo.TodoCreateDialog.createError', 'Failed to create task')
       )

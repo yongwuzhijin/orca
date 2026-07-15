@@ -62,9 +62,19 @@ describe('InProgressPanel', () => {
     expect(mockState.loadSessions).toHaveBeenCalledWith('t1')
   })
 
-  it('shows the launch entry when there is no active session', () => {
+  it('shows loading while the session and history are being restored', () => {
+    mockState.activeSessionByTask = {}
+    mockState.loadSessions.mockImplementationOnce(() => new Promise(() => {}))
+
+    render(<InProgressPanel item={mkItem()} />)
+
+    expect(screen.getByRole('status', { name: /restoring session/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /start session/i })).not.toBeInTheDocument()
+  })
+
+  it('shows the launch entry when there is no active session', async () => {
     mockState.activeSessionByTask = {}
     render(<InProgressPanel item={mkItem()} />)
-    expect(screen.getByRole('button', { name: /start session/i })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /start session/i })).toBeInTheDocument()
   })
 })

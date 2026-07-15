@@ -13,6 +13,7 @@ import { InProgressPanel } from './InProgressPanel'
 import { EnterInProgressDialog } from './EnterInProgressDialog'
 import { HumanReviewPanel } from './HumanReviewPanel'
 import { MergingPanel } from './MergingPanel'
+import { ReviewDecisionBar } from './ReviewDecisionBar'
 
 type TodoDetailViewProps = {
   itemId: string
@@ -55,6 +56,12 @@ export function TodoDetailView({ itemId }: TodoDetailViewProps): React.JSX.Eleme
           <ArrowLeft className="size-4" />
         </Button>
         <span className="text-xs text-muted-foreground">{item.identifier}</span>
+        <div className="flex-1" />
+        {item.status === 'backlog' || item.status === 'todo' ? (
+          <Button size="sm" onClick={() => setEnterOpen(true)}>
+            {translate('auto.components.todo.detail.TodoDetailView.startTask', 'Start task')}
+          </Button>
+        ) : null}
       </header>
 
       <div className="flex min-h-0 flex-1">
@@ -95,16 +102,21 @@ export function TodoDetailView({ itemId }: TodoDetailViewProps): React.JSX.Eleme
             >
               {translate('auto.components.todo.TodoDetailDialog.scheduledLabel', 'Scheduled')}
             </label>
+            {/* Why: scheduled date is set at create time; detail rail is display-only. */}
             <Input
               id="todo-detail-date"
               type="date"
               className="h-8"
               value={item.scheduledDate ?? ''}
-              onChange={(e) =>
-                void updateTodoItem(item.id, { scheduledDate: e.target.value || null })
-              }
+              disabled
+              readOnly
             />
           </div>
+          {item.status === 'human_review' ? (
+            <div className="px-2 pt-3">
+              <ReviewDecisionBar item={item} />
+            </div>
+          ) : null}
         </aside>
       </div>
 

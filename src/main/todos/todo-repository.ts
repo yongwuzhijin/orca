@@ -27,6 +27,7 @@ import {
   renameTodoProject,
   updateTodoProject
 } from './todo-project-store'
+import { DEFAULT_TODO_PROJECT_ID } from '../../shared/todo/todo-default-project'
 import {
   rowToTemplate,
   rowToTodoItem,
@@ -148,6 +149,11 @@ export class TodoRepository {
   }
 
   createItem(input: CreateTodoItemInput): TodoItem {
+    // Why: UI locks creates to todo-default; ensure here so create still works
+    // if listProjects never ran (e.g. main/renderer skew after HMR).
+    if (input.projectId === DEFAULT_TODO_PROJECT_ID) {
+      ensureDefaultTodoProject(this.db)
+    }
     const timestamp = nowIso()
     const id = randomUUID()
     const status: TodoStatus = input.status ?? 'backlog'

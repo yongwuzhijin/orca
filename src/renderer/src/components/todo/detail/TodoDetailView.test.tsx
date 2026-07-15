@@ -28,6 +28,12 @@ vi.mock('./HumanReviewPanel', () => ({
 vi.mock('./MergingPanel', () => ({
   MergingPanel: () => <div>merging-panel</div>
 }))
+vi.mock('./EnterInProgressDialog', () => ({
+  EnterInProgressDialog: () => <div data-testid="enter-in-progress-dialog" />
+}))
+vi.mock('./ReviewDecisionBar', () => ({
+  ReviewDecisionBar: () => <div data-testid="review-decision-bar">decision-bar</div>
+}))
 // MarkdownPreview reads a deep slice of the real store; stub it for the same reason.
 vi.mock('@/components/editor/MarkdownPreview', () => ({
   default: () => <div>markdown-preview</div>
@@ -96,5 +102,44 @@ describe('TodoDetailView', () => {
     items = []
     render(<TodoDetailView itemId="ghost" />)
     expect(mockState.closeTodoDetail).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows Start task in the header for backlog and todo only', () => {
+    items = [mkItem({ status: 'backlog' })]
+    const { rerender } = render(<TodoDetailView itemId="t1" />)
+    expect(screen.getByRole('button', { name: /start task/i })).toBeInTheDocument()
+
+    items = [mkItem({ status: 'todo' })]
+    rerender(<TodoDetailView itemId="t1" />)
+    expect(screen.getByRole('button', { name: /start task/i })).toBeInTheDocument()
+
+    items = [mkItem({ status: 'in_progress' })]
+    rerender(<TodoDetailView itemId="t1" />)
+    expect(screen.queryByRole('button', { name: /start task/i })).not.toBeInTheDocument()
+  })
+
+  it('opens EnterInProgressDialog from the Start task header button', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup()
+    items = [mkItem({ status: 'todo' })]
+    render(<TodoDetailView itemId="t1" />)
+    await user.click(screen.getByRole('button', { name: /start task/i }))
+    expect(screen.getByTestId('enter-in-progress-dialog')).toBeInTheDocument()
+  })
+
+  it('keeps the scheduled date input read-only', () => {
+    items = [mkItem({ status: 'todo', scheduledDate: '2026-07-14' })]
+    render(<TodoDetailView itemId="t1" />)
+    const dateInput = screen.getByLabelText(/scheduled/i)
+    expect(dateInput).toBeDisabled()
+  })
+
+  it('shows Reject/Approve under scheduled date only for human_review', () => {
+    items = [mkItem({ status: 'todo' })]
+    const { rerender } = render(<TodoDetailView itemId="t1" />)
+    expect(screen.queryByTestId('review-decision-bar')).not.toBeInTheDocument()
+
+    items = [mkItem({ status: 'human_review' })]
+    rerender(<TodoDetailView itemId="t1" />)
+    expect(screen.getByTestId('review-decision-bar')).toBeInTheDocument()
   })
 })

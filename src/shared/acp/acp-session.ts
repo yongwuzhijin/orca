@@ -51,7 +51,7 @@ export type AcpTaskOutcome = {
 export type AcpConnection = {
   newSession(params: { cwd: string; mcpServers: [] }): Promise<AcpNewSessionResult>
   resumeSession(params: { sessionId: string; cwd: string }): Promise<AcpNewSessionResult>
-  loadSession(params: { sessionId: string; cwd: string }): Promise<unknown>
+  loadSession(params: { sessionId: string; cwd: string; mcpServers: [] }): Promise<unknown>
   prompt(params: {
     sessionId: string
     prompt: { type: 'text'; text: string }[]

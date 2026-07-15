@@ -12,7 +12,13 @@ import {
 } from '../TodoWorkspaceProjectPicker'
 
 export function buildBasePrompt(item: TodoItem): string {
-  return `${item.title}\n\n${item.description}`.trimEnd()
+  const title = item.title.trimEnd()
+  const description = item.description.trim()
+  // Why: create flow often seeds description from title; concatenating both duplicates the prompt.
+  if (!description || description === title.trim()) {
+    return title
+  }
+  return `${title}\n\n${description}`
 }
 
 export function composePrompt(base: string, extra: string): string {
@@ -79,7 +85,7 @@ export function EnterInProgressDialog({
       <DialogContent className="max-w-xl">
         <div className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold">
-            {translate('auto.components.todo.detail.EnterInProgressDialog.title', 'Start session')}
+            {translate('auto.components.todo.detail.EnterInProgressDialog.title', 'Start task')}
           </h2>
 
           <div className="flex flex-col gap-1.5">

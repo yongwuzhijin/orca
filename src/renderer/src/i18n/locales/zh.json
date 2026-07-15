@@ -12988,7 +12988,9 @@
         "TodoColumn": {
           "addTask": "添加任务",
           "today": "今天",
-          "all": "全部"
+          "all": "全部",
+          "addTaskInStatus": "New task in {{status}}",
+          "empty": "Empty"
         },
         "TodoProjectSwitcher": {
           "projects": "项目",
@@ -13057,7 +13059,7 @@
         },
         "detail": {
           "EnterInProgressDialog": {
-            "title": "开始会话",
+            "title": "开始任务",
             "engine": "引擎",
             "cwd": "工作目录",
             "browse": "浏览…",
@@ -13067,10 +13069,14 @@
             "start": "开始",
             "cwdPlaceholder": "/path/to/repo"
           },
+          "TodoDetailView": {
+            "startTask": "开始任务"
+          },
           "InProgressPanel": {
             "noSession": "暂无活动会话",
             "start": "开始会话",
-            "plan": "计划"
+            "plan": "计划",
+            "restoring": "正在恢复会话…"
           },
           "PlanChecklist": {
             "empty": "No plan yet"
@@ -13078,11 +13084,23 @@
           "SessionConversation": {
             "askMode": "Ask before actions",
             "cancel": "Cancel",
-            "followUp": "Send a follow-up prompt…",
-            "send": "Send"
+            "followUp": "发送后续提示词…",
+            "send": "发送",
+            "automaticMode": "自动模式",
+            "confirmationMode": "确认模式",
+            "stop": "停止会话"
           },
           "session-event-item": {
-            "thought": "Thought"
+            "thought": "思考",
+            "changes": "修改",
+            "commandOutput": "命令输出",
+            "subagentResult": "子代理结果",
+            "details": "详情",
+            "statusPending": "等待中",
+            "statusRunning": "运行中",
+            "statusCompleted": "已完成",
+            "statusFailed": "失败",
+            "statusCanceled": "已取消"
           },
           "ReviewBrowserPane": {
             "urlPlaceholder": "http://localhost:...",

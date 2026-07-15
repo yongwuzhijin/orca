@@ -98,6 +98,19 @@ describe('prompt builders', () => {
   it('buildBasePrompt joins title and description', () => {
     expect(buildBasePrompt(mkItem())).toBe('Ship feature\n\nthe body')
   })
+
+  it('buildBasePrompt does not duplicate when title and description match', () => {
+    expect(buildBasePrompt(mkItem({ title: '生成CLAUDE.md', description: '生成CLAUDE.md' }))).toBe(
+      '生成CLAUDE.md'
+    )
+  })
+
+  it('buildBasePrompt uses title alone when description is blank', () => {
+    expect(buildBasePrompt(mkItem({ title: 'Ship feature', description: '  ' }))).toBe(
+      'Ship feature'
+    )
+  })
+
   it('composePrompt appends extra when present', () => {
     expect(composePrompt('base', '  more  ')).toBe('base\n\nmore')
     expect(composePrompt('base', '   ')).toBe('base')

@@ -7,7 +7,7 @@ type ExecuteRouterLike = {
 type SessionManagerLike = {
   cancelSession: (sessionId: string) => Promise<{ ok: boolean }>
   listSessions: (taskId: string) => unknown[]
-  loadHistory: (sessionId: string) => void
+  loadHistory: (sessionId: string) => Promise<void>
   setPermissionMode: (sessionId: string, mode: 'auto' | 'ask') => void
 }
 type PermissionBridgeLike = {
@@ -40,9 +40,9 @@ export function registerAcpHandlers(
   ipcMain.handle('acp:list-sessions', (_e, arg: { taskId: string }) =>
     deps.sessionManager.listSessions(arg.taskId)
   )
-  ipcMain.handle('acp:load-history', (_e, arg: { sessionId: string }) => {
+  ipcMain.handle('acp:load-history', (_e, arg: { sessionId: string }) =>
     deps.sessionManager.loadHistory(arg.sessionId)
-  })
+  )
   ipcMain.handle(
     'acp:set-permission-mode',
     (_e, arg: { sessionId: string; mode: 'auto' | 'ask' }) => {

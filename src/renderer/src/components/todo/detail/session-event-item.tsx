@@ -1,15 +1,17 @@
 import React from 'react'
-import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import type { SessionEvent } from '../../../../../shared/acp/session-event'
+import { SessionDisclosure } from './SessionDisclosure'
+import { SessionToolDetails } from './SessionToolDetails'
 
 type SessionEventItemProps = {
+  eventKey: React.Key
   event: SessionEvent
 }
 
 // Why: renderer only consumes the normalized SessionEvent union (Phase D),
 // so this component maps each kind to a presentation without ACP specifics.
-export function SessionEventItem({ event }: SessionEventItemProps): React.JSX.Element {
+function SessionEventItemComponent({ eventKey, event }: SessionEventItemProps): React.JSX.Element {
   if (event.kind === 'agent_message') {
     return <div className="whitespace-pre-wrap text-sm text-foreground">{event.text}</div>
   }
@@ -21,38 +23,21 @@ export function SessionEventItem({ event }: SessionEventItemProps): React.JSX.El
     )
   }
   if (event.kind === 'thought') {
-    // Why: static "Thought" summary label (not the text itself) so the body is
-    // the single place the thought text renders — avoids duplicate DOM matches.
     return (
-      <details className="text-xs text-muted-foreground">
-        <summary className="cursor-pointer select-none">
-          {translate('auto.components.todo.detail.session-event-item.thought', 'Thought')}
-        </summary>
-        <div className="mt-1 whitespace-pre-wrap">{event.text}</div>
-      </details>
+      <SessionDisclosure
+        entryKey={`thought:${String(eventKey)}`}
+        title={
+          <span className="text-muted-foreground">
+            {translate('auto.components.todo.detail.session-event-item.thought', 'Thought')}
+          </span>
+        }
+      >
+        <div className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">{event.text}</div>
+      </SessionDisclosure>
     )
   }
   if (event.kind === 'tool_call') {
-    return (
-      <details className="rounded-md border border-border px-3 py-2 text-xs">
-        <summary className="flex cursor-pointer select-none items-center gap-2">
-          <span className="font-medium text-foreground">{event.title}</span>
-          {event.status ? (
-            <span className={cn('text-muted-foreground')}>· {event.status}</span>
-          ) : null}
-        </summary>
-        {event.rawInput !== undefined ? (
-          <pre className="mt-2 overflow-x-auto whitespace-pre-wrap text-muted-foreground">
-            {JSON.stringify(event.rawInput, null, 2)}
-          </pre>
-        ) : null}
-        {event.content !== undefined ? (
-          <pre className="mt-2 overflow-x-auto whitespace-pre-wrap text-muted-foreground">
-            {JSON.stringify(event.content, null, 2)}
-          </pre>
-        ) : null}
-      </details>
-    )
+    return <SessionToolDetails event={event} />
   }
   // ext: fallthrough badge for cursor-proprietary notifications.
   return (
@@ -61,3 +46,13 @@ export function SessionEventItem({ event }: SessionEventItemProps): React.JSX.El
     </div>
   )
 }
+
+// Tool payloads can be large; draft-only parent renders must not rebuild their presentation.
+// Other event kinds stay live for locale and disclosure context updates.
+export const SessionEventItem = React.memo(
+  SessionEventItemComponent,
+  (previous, next) =>
+    previous.event.kind === 'tool_call' &&
+    previous.event === next.event &&
+    previous.eventKey === next.eventKey
+)
