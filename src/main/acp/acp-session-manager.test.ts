@@ -84,6 +84,29 @@ describe('AcpSessionManager start + happy path', () => {
     )
   })
 
+  // Why: engines rarely echo client prompts as user_message_chunk; cache the
+  // outbound prompt so loadHistory can restore it within the process lifetime.
+  it('startPrompt records the outbound prompt as a user_message_chunk before prompting', async () => {
+    const d = deps()
+    const mgr = makeManager(d)
+    await mgr.startPrompt({
+      taskId: 'task-1',
+      engine: 'claude',
+      prompt: '生成CLAUDE.md',
+      cwd: '/tmp'
+    })
+    expect(d.connectionPool.recordSessionUpdate).toHaveBeenCalledWith('claude', 'eng-sess-1', {
+      sessionId: 'eng-sess-1',
+      update: {
+        sessionUpdate: 'user_message_chunk',
+        content: { type: 'text', text: '生成CLAUDE.md' }
+      }
+    })
+    const recordOrder = d.connectionPool.recordSessionUpdate.mock.invocationCallOrder[0]
+    const promptOrder = d.connection.prompt.mock.invocationCallOrder[0]
+    expect(recordOrder).toBeLessThan(promptOrder)
+  })
+
   it('successful runPrompt flips in_progress task to human_review and finishes session completed', async () => {
     const d = deps()
     const mgr = makeManager(d)

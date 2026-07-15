@@ -77,4 +77,22 @@ describe('InProgressPanel', () => {
     render(<InProgressPanel item={mkItem()} />)
     expect(await screen.findByRole('button', { name: /start session/i })).toBeInTheDocument()
   })
+
+  it('keeps the conversation pane width-bounded when the plan rail is hidden', async () => {
+    mockState.activeSessionByTask = { t1: 's1' }
+    mockState.activeSessionMetaByTask = { t1: { engine: 'claude', cwd: '/tmp' } }
+    mockState.eventsBySession = { s1: [] }
+    mockState.planBySession = { s1: [] }
+    mockState.permissionRequestsBySession = { s1: [] }
+    mockState.permissionModeBySession = { s1: 'auto' }
+    mockState.sessionStatusBySession = { s1: 'complete' }
+    mockState.loadSessions.mockResolvedValue(undefined)
+
+    const { container } = render(<InProgressPanel item={mkItem()} showPlan={false} />)
+    await screen.findByTestId('session-composer')
+
+    expect(container.firstChild).toHaveClass('min-w-0')
+    expect(screen.getByTestId('session-conversation')).toHaveClass('min-w-0', 'w-full')
+    expect(screen.getByRole('button', { name: /send/i })).toBeVisible()
+  })
 })

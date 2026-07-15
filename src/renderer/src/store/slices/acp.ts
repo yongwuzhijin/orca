@@ -49,12 +49,25 @@ export const createAcpSlice: StateCreator<AppState, [], [], AcpSlice> = (set, ge
   const subscribed = new Set<string>()
 
   const appendEvent = (sessionId: string, event: SessionEvent): void =>
-    set((s) => ({
-      eventsBySession: {
-        ...s.eventsBySession,
-        [sessionId]: [...(s.eventsBySession[sessionId] ?? []), event]
+    set((s) => {
+      const existing = s.eventsBySession[sessionId] ?? []
+      const last = existing.at(-1)
+      // Why: we surface the outbound prompt ourselves; engines that also echo
+      // user_message_chunk for the same text must not create a duplicate bubble.
+      if (
+        event.kind === 'user_message' &&
+        last?.kind === 'user_message' &&
+        last.text === event.text
+      ) {
+        return s
       }
-    }))
+      return {
+        eventsBySession: {
+          ...s.eventsBySession,
+          [sessionId]: [...existing, event]
+        }
+      }
+    })
 
   const ingestUpdate = (sessionId: string, payload: unknown): void => {
     const update = (payload as { update?: unknown })?.update ?? payload
@@ -114,6 +127,10 @@ export const createAcpSlice: StateCreator<AppState, [], [], AcpSlice> = (set, ge
     executeTask: async (input) => {
       const { sessionId } = (await window.api.acp.execute(input)) as { sessionId: string }
       get().subscribeSession(sessionId, input.taskId)
+      // Why: ACP engines typically stream thoughts/tools but do not echo the
+      // client-sent prompt as user_message_chunk, so the conversation would
+      // otherwise open without the user's request.
+      appendEvent(sessionId, { kind: 'user_message', text: input.prompt })
       set((s) => ({
         activeSessionByTask: { ...s.activeSessionByTask, [input.taskId]: sessionId },
         activeSessionMetaByTask: {

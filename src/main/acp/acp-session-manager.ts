@@ -84,6 +84,16 @@ export class AcpSessionManager {
       sessionId
     )
 
+    // Why: engines rarely echo the client-sent prompt as user_message_chunk.
+    // Cache it before prompting so in-process history replay can restore it.
+    this.deps.connectionPool.recordSessionUpdate(engine, sessionId, {
+      sessionId,
+      update: {
+        sessionUpdate: 'user_message_chunk',
+        content: { type: 'text', text: prompt }
+      }
+    })
+
     const run = this.runPrompt(taskId, sessionId, prompt, connection)
     this.activePrompts.set(sessionId, run)
     void run.finally(() => this.activePrompts.delete(sessionId))
@@ -157,6 +167,13 @@ export class AcpSessionManager {
       throw new Error('Unknown session')
     }
     const connection = await this.deps.connectionPool.getAcpConnection(engine)
+    this.deps.connectionPool.recordSessionUpdate(engine, sessionId, {
+      sessionId,
+      update: {
+        sessionUpdate: 'user_message_chunk',
+        content: { type: 'text', text: prompt }
+      }
+    })
     const run = this.runPrompt(taskId, sessionId, prompt, connection)
     this.activePrompts.set(sessionId, run)
     void run.finally(() => this.activePrompts.delete(sessionId))

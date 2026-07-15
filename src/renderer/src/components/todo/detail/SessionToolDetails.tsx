@@ -36,14 +36,16 @@ function FileDetail({
   presentation: Extract<AcpToolPresentation, { kind: 'file' }>
 }): React.JSX.Element {
   return (
-    <div className="mt-1 max-h-64 overflow-auto rounded-md bg-accent font-mono text-xs scrollbar-sleek">
+    <div className="mt-1 max-h-64 min-w-0 max-w-full overflow-auto rounded-md bg-accent font-mono text-xs scrollbar-sleek">
       {presentation.lines.map((line, index) => (
         <div
           key={`${index}-${line.text}`}
           className={`grid grid-cols-[2.5rem_minmax(0,1fr)] gap-2 px-2 py-0.5 ${diffLineClass(line.kind)}`}
         >
           <span className="select-none text-right text-muted-foreground">{index + 1}</span>
-          <span className="whitespace-pre">{line.text}</span>
+          <span className="min-w-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+            {line.text}
+          </span>
         </div>
       ))}
     </div>
@@ -56,9 +58,11 @@ function CommandDetail({
   presentation: Extract<AcpToolPresentation, { kind: 'command' }>
 }): React.JSX.Element {
   return (
-    <div className="mt-1 max-h-48 overflow-auto rounded-md bg-accent font-mono text-xs scrollbar-sleek">
+    <div className="mt-1 max-h-48 min-w-0 max-w-full overflow-auto rounded-md bg-accent font-mono text-xs scrollbar-sleek">
       {presentation.command ? (
-        <div className="whitespace-pre px-2 py-1">{presentation.command}</div>
+        <div className="min-w-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere] px-2 py-1">
+          {presentation.command}
+        </div>
       ) : null}
       {presentation.output ? (
         <pre
@@ -66,7 +70,7 @@ function CommandDetail({
             'auto.components.todo.detail.session-event-item.commandOutput',
             'Command output'
           )}
-          className="whitespace-pre-wrap border-t border-border px-2 py-1 text-muted-foreground"
+          className="min-w-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere] border-t border-border px-2 py-1 text-muted-foreground"
         >
           {presentation.output}
         </pre>
@@ -181,7 +185,7 @@ function DetailContent({
           'auto.components.todo.detail.session-event-item.subagentResult',
           'Subagent result'
         )}
-        className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded-md bg-accent px-2 py-1 text-xs text-muted-foreground scrollbar-sleek"
+        className="mt-1 max-h-48 min-w-0 max-w-full overflow-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] rounded-md bg-accent px-2 py-1 text-xs text-muted-foreground scrollbar-sleek"
       >
         {presentation.result}
       </pre>
@@ -190,7 +194,7 @@ function DetailContent({
   return presentation.detail ? (
     <pre
       aria-label={translate('auto.components.todo.detail.session-event-item.details', 'Details')}
-      className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded-md bg-accent px-2 py-1 font-mono text-xs text-muted-foreground scrollbar-sleek"
+      className="mt-1 max-h-48 min-w-0 max-w-full overflow-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] rounded-md bg-accent px-2 py-1 font-mono text-xs text-muted-foreground scrollbar-sleek"
     >
       {presentation.detail}
     </pre>

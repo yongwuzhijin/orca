@@ -64,8 +64,17 @@ export function SessionConversation({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2">
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto scrollbar-sleek pr-1">
+    <div
+      data-testid="session-conversation"
+      className="@container/session-conversation flex min-h-0 min-w-0 w-full flex-1 flex-col gap-2"
+    >
+      {/* Why: overflow-y-auto alone makes browsers compute overflow-x as auto,
+          which surfaces a horizontal scrollbar for long paths. Above 600px the
+          transcript should clip horizontally and rely on wrapping instead. */}
+      <div
+        data-testid="session-transcript"
+        className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-x-auto overflow-y-auto pr-1 scrollbar-sleek @[600px]/session-conversation:overflow-x-hidden"
+      >
         {timeline.map((event, i) => {
           const eventKey =
             event.kind === 'tool_call' && event.toolCallId ? `tool:${event.toolCallId}` : i
@@ -103,7 +112,7 @@ export function SessionConversation({
             }
           }}
         />
-        <div className="mt-1 flex items-center gap-2">
+        <div className="mt-1 flex min-w-0 items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -133,12 +142,12 @@ export function SessionConversation({
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-          <div className="flex-1" />
+          <div className="min-w-0 flex-1" />
           {running ? (
             <Button
               type="button"
               size="icon-xs"
-              className="rounded-full"
+              className="shrink-0 rounded-full"
               aria-label={translate(
                 'auto.components.todo.detail.SessionConversation.stop',
                 'Stop session'
@@ -151,7 +160,7 @@ export function SessionConversation({
             <Button
               type="button"
               size="icon-xs"
-              className="rounded-full"
+              className="shrink-0 rounded-full"
               disabled={!draft.trim()}
               aria-label={translate('auto.components.todo.detail.SessionConversation.send', 'Send')}
               onClick={submit}

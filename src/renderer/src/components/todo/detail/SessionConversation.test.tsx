@@ -38,6 +38,43 @@ describe('SessionConversation', () => {
     expect(screen.getByTestId('session-composer')).toHaveClass('shrink-0', 'border-border')
   })
 
+  // Why: long unbreakable agent/tool text must not expand the column past the
+  // overflow-hidden detail pane, or the composer send/stop control is clipped.
+  it('constrains the conversation column so composer actions stay visible', () => {
+    const { container } = render(<SessionConversation {...baseProps} onSend={vi.fn()} />)
+    expect(container.firstChild).toHaveClass('min-w-0', 'w-full')
+    expect(screen.getByRole('button', { name: /send/i })).toBeVisible()
+  })
+
+  // Why: overflow-y-auto alone computes overflow-x to auto; above 600px the
+  // transcript should wrap instead of showing a horizontal scrollbar.
+  it('hides horizontal overflow in the transcript once the pane is wider than 600px', () => {
+    render(
+      <SessionConversation
+        {...baseProps}
+        events={[
+          {
+            kind: 'agent_message',
+            text: `${'very-long-path/'.repeat(40)}file.ts`
+          }
+        ]}
+        onSend={vi.fn()}
+      />
+    )
+    const conversation = screen.getByTestId('session-conversation')
+    const transcript = screen.getByTestId('session-transcript')
+    expect(conversation).toHaveClass('@container/session-conversation')
+    expect(transcript).toHaveClass(
+      'overflow-y-auto',
+      'overflow-x-auto',
+      '@[600px]/session-conversation:overflow-x-hidden'
+    )
+    expect(screen.getByText(/very-long-path/)).toHaveClass(
+      'break-words',
+      '[overflow-wrap:anywhere]'
+    )
+  })
+
   it('renders one engine-neutral timeline for mixed ACP events', () => {
     render(
       <SessionConversation

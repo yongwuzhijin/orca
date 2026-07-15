@@ -13,11 +13,15 @@ type SessionEventItemProps = {
 // so this component maps each kind to a presentation without ACP specifics.
 function SessionEventItemComponent({ eventKey, event }: SessionEventItemProps): React.JSX.Element {
   if (event.kind === 'agent_message') {
-    return <div className="whitespace-pre-wrap text-sm text-foreground">{event.text}</div>
+    return (
+      <div className="max-w-full min-w-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm text-foreground">
+        {event.text}
+      </div>
+    )
   }
   if (event.kind === 'user_message') {
     return (
-      <div className="whitespace-pre-wrap rounded-md bg-accent px-3 py-2 text-sm text-foreground">
+      <div className="max-w-full min-w-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere] rounded-md bg-accent px-3 py-2 text-sm text-foreground">
         {event.text}
       </div>
     )
@@ -32,7 +36,9 @@ function SessionEventItemComponent({ eventKey, event }: SessionEventItemProps): 
           </span>
         }
       >
-        <div className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">{event.text}</div>
+        <div className="mt-1 min-w-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-xs text-muted-foreground">
+          {event.text}
+        </div>
       </SessionDisclosure>
     )
   }

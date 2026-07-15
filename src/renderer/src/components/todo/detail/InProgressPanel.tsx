@@ -93,7 +93,9 @@ export function InProgressPanel({
   return (
     <div
       className={
-        showPlan ? 'grid h-full min-h-0 grid-cols-[16rem_1fr] gap-4' : 'flex h-full min-h-0'
+        showPlan
+          ? 'grid h-full min-h-0 min-w-0 grid-cols-[16rem_minmax(0,1fr)] gap-4'
+          : 'flex h-full min-h-0 min-w-0 flex-col'
       }
     >
       {showPlan ? (
