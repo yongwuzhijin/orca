@@ -12982,13 +12982,15 @@
         "TodoPage": {
           "newTask": "New task",
           "empty": "Create a project to get started",
-          "tabBoard": "Board",
-          "tabData": "Data"
+          "tabBoard": "Tablero",
+          "tabData": "Datos"
         },
         "TodoColumn": {
           "addTask": "Add task",
           "today": "Today",
-          "all": "All"
+          "all": "All",
+          "addTaskInStatus": "New task in {{status}}",
+          "empty": "Empty"
         },
         "TodoProjectSwitcher": {
           "projects": "Projects",
@@ -13049,7 +13051,7 @@
         },
         "detail": {
           "EnterInProgressDialog": {
-            "title": "Start session",
+            "title": "Iniciar tarea",
             "engine": "Engine",
             "cwd": "Working directory",
             "browse": "Browse…",
@@ -13057,12 +13059,20 @@
             "extra": "Additional prompt",
             "cancel": "Cancel",
             "start": "Start",
-            "cwdPlaceholder": "/path/to/repo"
+            "cwdPlaceholder": "/path/to/repo",
+            "autoPilot": "AutoPilot (avanzar de forma autónoma)",
+            "maxTurns": "Turnos máximos"
+          },
+          "TodoDetailView": {
+            "startTask": "Iniciar tarea"
           },
           "InProgressPanel": {
             "noSession": "No active session",
             "start": "Start session",
-            "plan": "Plan"
+            "plan": "Plan",
+            "restoring": "Restaurando sesión…",
+            "autoPilotBadge": "AutoPilot",
+            "stopAutoPilot": "Detener AutoPilot"
           },
           "PlanChecklist": {
             "empty": "No plan yet"
@@ -13070,11 +13080,23 @@
           "SessionConversation": {
             "askMode": "Ask before actions",
             "cancel": "Cancel",
-            "followUp": "Send a follow-up prompt…",
-            "send": "Send"
+            "followUp": "Enviar una instrucción de seguimiento…",
+            "send": "Enviar",
+            "automaticMode": "Modo automático",
+            "confirmationMode": "Modo de confirmación",
+            "stop": "Detener sesión"
           },
           "session-event-item": {
-            "thought": "Thought"
+            "thought": "Razonamiento",
+            "changes": "Cambios",
+            "commandOutput": "Salida del comando",
+            "subagentResult": "Resultado del subagente",
+            "details": "Detalles",
+            "statusPending": "Pendiente",
+            "statusRunning": "En curso",
+            "statusCompleted": "Completado",
+            "statusFailed": "Fallido",
+            "statusCanceled": "Cancelado"
           },
           "ReviewBrowserPane": {
             "urlPlaceholder": "http://localhost:...",
@@ -13127,6 +13149,14 @@
             "coverage": "Attributed",
             "unavailable": "n/a"
           }
+        },
+        "TodoStatusMenu": {
+          "changeStatusAria": "Change status",
+          "changeStatusPlaceholder": "Change status..."
+        },
+        "TodoPriorityMenu": {
+          "setPriority": "Set priority",
+          "changePriorityAria": "Change priority"
         }
       }
     },

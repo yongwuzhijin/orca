@@ -12982,13 +12982,15 @@
         "TodoPage": {
           "newTask": "New task",
           "empty": "Create a project to get started",
-          "tabBoard": "Board",
-          "tabData": "Data"
+          "tabBoard": "보드",
+          "tabData": "데이터"
         },
         "TodoColumn": {
           "addTask": "Add task",
           "today": "Today",
-          "all": "All"
+          "all": "All",
+          "addTaskInStatus": "New task in {{status}}",
+          "empty": "Empty"
         },
         "TodoProjectSwitcher": {
           "projects": "Projects",
@@ -13049,7 +13051,7 @@
         },
         "detail": {
           "EnterInProgressDialog": {
-            "title": "Start session",
+            "title": "작업 시작",
             "engine": "Engine",
             "cwd": "Working directory",
             "browse": "Browse…",
@@ -13057,12 +13059,20 @@
             "extra": "Additional prompt",
             "cancel": "Cancel",
             "start": "Start",
-            "cwdPlaceholder": "/path/to/repo"
+            "cwdPlaceholder": "/path/to/repo",
+            "autoPilot": "AutoPilot(자동 진행)",
+            "maxTurns": "최대 턴 수"
+          },
+          "TodoDetailView": {
+            "startTask": "작업 시작"
           },
           "InProgressPanel": {
             "noSession": "No active session",
             "start": "Start session",
-            "plan": "Plan"
+            "plan": "Plan",
+            "restoring": "세션 복원 중…",
+            "autoPilotBadge": "AutoPilot",
+            "stopAutoPilot": "AutoPilot 중지"
           },
           "PlanChecklist": {
             "empty": "No plan yet"
@@ -13070,11 +13080,23 @@
           "SessionConversation": {
             "askMode": "Ask before actions",
             "cancel": "Cancel",
-            "followUp": "Send a follow-up prompt…",
-            "send": "Send"
+            "followUp": "후속 프롬프트 보내기…",
+            "send": "보내기",
+            "automaticMode": "자동 모드",
+            "confirmationMode": "확인 모드",
+            "stop": "세션 중지"
           },
           "session-event-item": {
-            "thought": "Thought"
+            "thought": "생각",
+            "changes": "변경 사항",
+            "commandOutput": "명령 출력",
+            "subagentResult": "하위 에이전트 결과",
+            "details": "세부 정보",
+            "statusPending": "대기 중",
+            "statusRunning": "실행 중",
+            "statusCompleted": "완료",
+            "statusFailed": "실패",
+            "statusCanceled": "취소됨"
           },
           "ReviewBrowserPane": {
             "urlPlaceholder": "http://localhost:...",
@@ -13127,6 +13149,14 @@
             "coverage": "Attributed",
             "unavailable": "n/a"
           }
+        },
+        "TodoStatusMenu": {
+          "changeStatusAria": "Change status",
+          "changeStatusPlaceholder": "Change status..."
+        },
+        "TodoPriorityMenu": {
+          "setPriority": "Set priority",
+          "changePriorityAria": "Change priority"
         }
       }
     },

@@ -3,6 +3,7 @@ import type {
   AcpConnection,
   AcpEngine,
   AcpNewSessionResult,
+  AcpSessionRecord,
   StartPromptOptions,
   StartPromptResult
 } from '../../shared/acp/acp-session'
@@ -12,7 +13,7 @@ type SessionNotification = { sessionId: string; update: unknown }
 type ConnectionPoolLike = {
   getAcpConnection: (engine: AcpEngine) => Promise<AcpConnection>
   trackSession: (engine: AcpEngine, sessionId: string) => void
-  replaySessionEvents: (sessionId: string, emit: (n: SessionNotification) => void) => void
+  replaySessionEvents: (sessionId: string, emit: (n: SessionNotification) => void) => number
   recordSessionUpdate: (engine: AcpEngine, sessionId: string, n: SessionNotification) => void
 }
 
@@ -20,7 +21,7 @@ type AcpSessionsLike = {
   create: (i: { taskId: string; engine: AcpEngine; sessionId: string; cwd: string }) => unknown
   finish: (sessionId: string, status: string, stopReason: string | null) => void
   listByTask: (taskId: string) => unknown[]
-  getBySessionId: (sessionId: string) => unknown
+  getBySessionId: (sessionId: string) => AcpSessionRecord | null | undefined
 }
 
 type TodosLike = {
@@ -52,6 +53,8 @@ export class AcpSessionManager {
   private engineOf = new Map<string, AcpEngine>()
   private taskOf = new Map<string, string>()
   private canceled = new Set<string>()
+  private autoPilotSessions = new Set<string>()
+  private lastOutcome = new Map<string, 'completed' | 'error' | 'canceled'>()
 
   constructor(private readonly deps: AcpSessionManagerDeps) {}
 
@@ -83,6 +86,22 @@ export class AcpSessionManager {
       sessionId
     )
 
+    // Why: engines rarely echo the client-sent prompt as user_message_chunk.
+    // Cache it before prompting so in-process history replay can restore it.
+    this.deps.connectionPool.recordSessionUpdate(engine, sessionId, {
+      sessionId,
+      update: {
+        sessionUpdate: 'user_message_chunk',
+        content: { type: 'text', text: prompt }
+      }
+    })
+
+    // AutoPilot must be marked before runPrompt starts so the mid-loop turn
+    // never flips the task to human_review; the runner owns the final flip.
+    if (opts.autoPilot) {
+      this.autoPilotSessions.add(sessionId)
+    }
+
     const run = this.runPrompt(taskId, sessionId, prompt, connection)
     this.activePrompts.set(sessionId, run)
     void run.finally(() => this.activePrompts.delete(sessionId))
@@ -103,7 +122,11 @@ export class AcpSessionManager {
           cwd: opts.cwd
         })
       } catch {
-        await connection.loadSession({ sessionId: opts.resumeSessionId, cwd: opts.cwd })
+        await connection.loadSession({
+          sessionId: opts.resumeSessionId,
+          cwd: opts.cwd,
+          mcpServers: []
+        })
         return { sessionId: opts.resumeSessionId }
       }
     }
@@ -122,20 +145,26 @@ export class AcpSessionManager {
         prompt: [{ type: 'text', text: prompt }]
       })
       if (this.canceled.has(sessionId) || stopReason === 'cancelled') {
+        this.lastOutcome.set(sessionId, 'canceled')
         this.deps.acpSessions.finish(sessionId, 'canceled', stopReason ?? 'cancelled')
         this.deps.broadcast('acp:task-outcome', { taskId, sessionId, result: 'canceled' }, taskId)
         return
       }
-      const task = this.deps.todos.getItem(taskId)
-      if (task?.status === 'in_progress') {
-        this.deps.todos.updateItem(taskId, { status: 'human_review' })
+      // AutoPilot suppresses the per-turn flip; the runner flips once at loop end.
+      if (!this.autoPilotSessions.has(sessionId)) {
+        const task = this.deps.todos.getItem(taskId)
+        if (task?.status === 'in_progress') {
+          this.deps.todos.updateItem(taskId, { status: 'human_review' })
+        }
       }
+      this.lastOutcome.set(sessionId, 'completed')
       this.deps.acpSessions.finish(sessionId, 'completed', stopReason)
       this.deps.broadcast('acp:complete', { sessionId, stopReason }, sessionId)
     } catch (err) {
       // Error/cancel are terminal-but-not-status-changing: surface to renderer,
       // record on the session row, leave the task where the user can retry.
       const message = err instanceof Error ? err.message : String(err)
+      this.lastOutcome.set(sessionId, 'error')
       this.deps.acpSessions.finish(sessionId, 'error', message)
       this.deps.broadcast('acp:error', { sessionId, message }, sessionId)
       this.deps.broadcast('acp:task-outcome', { taskId, sessionId, result: 'error' }, taskId)
@@ -152,6 +181,13 @@ export class AcpSessionManager {
       throw new Error('Unknown session')
     }
     const connection = await this.deps.connectionPool.getAcpConnection(engine)
+    this.deps.connectionPool.recordSessionUpdate(engine, sessionId, {
+      sessionId,
+      update: {
+        sessionUpdate: 'user_message_chunk',
+        content: { type: 'text', text: prompt }
+      }
+    })
     const run = this.runPrompt(taskId, sessionId, prompt, connection)
     this.activePrompts.set(sessionId, run)
     void run.finally(() => this.activePrompts.delete(sessionId))
@@ -176,10 +212,26 @@ export class AcpSessionManager {
     return this.activePrompts.get(sessionId) ?? Promise.resolve()
   }
 
-  loadHistory(sessionId: string): void {
-    this.deps.connectionPool.replaySessionEvents(sessionId, (n) =>
+  async loadHistory(sessionId: string): Promise<void> {
+    const replayed = this.deps.connectionPool.replaySessionEvents(sessionId, (n) =>
       this.deps.broadcast('acp:update', n, sessionId)
     )
+    if (replayed > 0) {
+      return
+    }
+
+    const record = this.deps.acpSessions.getBySessionId(sessionId)
+    if (!record) {
+      return
+    }
+
+    // Why: the pool cache is process-local. After an app restart, ask the
+    // engine to load its persisted session; ACP replays messages as updates.
+    const connection = await this.deps.connectionPool.getAcpConnection(record.engine)
+    this.engineOf.set(sessionId, record.engine)
+    this.taskOf.set(sessionId, record.taskId)
+    this.deps.connectionPool.trackSession(record.engine, sessionId)
+    await connection.loadSession({ sessionId, cwd: record.cwd, mcpServers: [] })
   }
 
   listSessions(taskId: string): unknown[] {
@@ -188,5 +240,54 @@ export class AcpSessionManager {
 
   setPermissionMode(sessionId: string, mode: 'auto' | 'ask'): void {
     this.deps.permissionBridge.setPermissionMode(sessionId, mode)
+  }
+
+  markAutoPilot(sessionId: string): void {
+    this.autoPilotSessions.add(sessionId)
+  }
+
+  unmarkAutoPilot(sessionId: string): void {
+    this.autoPilotSessions.delete(sessionId)
+  }
+
+  readLastOutcome(sessionId: string): 'completed' | 'error' | 'canceled' | undefined {
+    return this.lastOutcome.get(sessionId)
+  }
+
+  flipToHumanReview(taskId: string): void {
+    const task = this.deps.todos.getItem(taskId)
+    if (task?.status === 'in_progress') {
+      this.deps.todos.updateItem(taskId, { status: 'human_review' })
+    }
+  }
+
+  // Why: verdict lives in the just-finished turn only. Collect from the pool's
+  // per-session event cache and keep agent text emitted after the last user
+  // chunk (each turn records a user_message_chunk before the agent responds).
+  readLastTurnText(sessionId: string): string {
+    const collected: { role: 'user' | 'agent'; text: string }[] = []
+    this.deps.connectionPool.replaySessionEvents(sessionId, (n) => {
+      const update = (n as { update?: { sessionUpdate?: string; content?: unknown } }).update
+      if (update?.sessionUpdate === 'user_message_chunk') {
+        collected.push({ role: 'user', text: '' })
+      } else if (update?.sessionUpdate === 'agent_message_chunk') {
+        const content = update.content as { type?: string; text?: string } | undefined
+        if (content?.type === 'text' && typeof content.text === 'string') {
+          collected.push({ role: 'agent', text: content.text })
+        }
+      }
+    })
+    let start = 0
+    for (let i = collected.length - 1; i >= 0; i--) {
+      if (collected[i].role === 'user') {
+        start = i + 1
+        break
+      }
+    }
+    return collected
+      .slice(start)
+      .filter((c) => c.role === 'agent')
+      .map((c) => c.text)
+      .join('')
   }
 }

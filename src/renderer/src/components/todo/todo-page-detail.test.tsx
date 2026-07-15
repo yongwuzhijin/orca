@@ -24,6 +24,10 @@ const mockState = {
 vi.mock('@/store', () => ({
   useAppStore: (selector: (s: typeof mockState) => unknown) => selector(mockState)
 }))
+vi.mock('./TodoBoard', () => ({ TodoBoard: () => <div data-testid="board" /> }))
+vi.mock('./dashboard/TodoDashboard', () => ({
+  TodoDashboard: () => <div data-testid="dashboard" />
+}))
 vi.mock('./detail/TodoDetailView', () => ({
   TodoDetailView: ({ itemId }: { itemId: string }) => <div>detail-view:{itemId}</div>
 }))

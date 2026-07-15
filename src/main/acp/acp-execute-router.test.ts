@@ -27,4 +27,29 @@ describe('acp-execute-router', () => {
       })
     ).rejects.toThrow(EngineFallbackNotWired)
   })
+
+  it('delegates to autoPilotRunner when opts.autoPilot is present', async () => {
+    const sessionManager = { startPrompt: vi.fn(async () => ({ sessionId: 's1' })) }
+    const autoPilotRunner = { run: vi.fn(async () => ({ sessionId: 's2' })) }
+    const router = createExecuteRouter({ sessionManager, autoPilotRunner } as never)
+    const res = await router.executeEnginePrompt({
+      taskId: 't1',
+      engine: 'claude',
+      prompt: 'x',
+      cwd: '/tmp',
+      autoPilot: { maxTurns: 4 }
+    })
+    expect(autoPilotRunner.run).toHaveBeenCalledOnce()
+    expect(sessionManager.startPrompt).not.toHaveBeenCalled()
+    expect(res.sessionId).toBe('s2')
+  })
+
+  it('uses startPrompt when autoPilot is absent', async () => {
+    const sessionManager = { startPrompt: vi.fn(async () => ({ sessionId: 's1' })) }
+    const autoPilotRunner = { run: vi.fn() }
+    const router = createExecuteRouter({ sessionManager, autoPilotRunner } as never)
+    await router.executeEnginePrompt({ taskId: 't1', engine: 'claude', prompt: 'x', cwd: '/tmp' })
+    expect(sessionManager.startPrompt).toHaveBeenCalledOnce()
+    expect(autoPilotRunner.run).not.toHaveBeenCalled()
+  })
 })

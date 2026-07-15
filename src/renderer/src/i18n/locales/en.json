@@ -12988,7 +12988,9 @@
         "TodoColumn": {
           "addTask": "Add task",
           "today": "Today",
-          "all": "All"
+          "all": "All",
+          "addTaskInStatus": "New task in {{status}}",
+          "empty": "Empty"
         },
         "TodoProjectSwitcher": {
           "projects": "Projects",
@@ -13024,6 +13026,14 @@
           "priorityLabel": "Priority",
           "scheduledLabel": "Scheduled"
         },
+        "TodoStatusMenu": {
+          "changeStatusAria": "Change status",
+          "changeStatusPlaceholder": "Change status..."
+        },
+        "TodoPriorityMenu": {
+          "setPriority": "Set priority",
+          "changePriorityAria": "Change priority"
+        },
         "TodoTemplatePicker": {
           "none": "No template",
           "manage": "Manage templates"
@@ -13049,7 +13059,7 @@
         },
         "detail": {
           "EnterInProgressDialog": {
-            "title": "Start session",
+            "title": "Start task",
             "engine": "Engine",
             "cwd": "Working directory",
             "browse": "Browse…",
@@ -13057,12 +13067,20 @@
             "extra": "Additional prompt",
             "cancel": "Cancel",
             "start": "Start",
-            "cwdPlaceholder": "/path/to/repo"
+            "cwdPlaceholder": "/path/to/repo",
+            "autoPilot": "AutoPilot (advance autonomously)",
+            "maxTurns": "Max turns"
+          },
+          "TodoDetailView": {
+            "startTask": "Start task"
           },
           "InProgressPanel": {
             "noSession": "No active session",
             "start": "Start session",
-            "plan": "Plan"
+            "plan": "Plan",
+            "restoring": "Restoring session…",
+            "autoPilotBadge": "AutoPilot",
+            "stopAutoPilot": "Stop AutoPilot"
           },
           "PlanChecklist": {
             "empty": "No plan yet"
@@ -13071,10 +13089,22 @@
             "askMode": "Ask before actions",
             "cancel": "Cancel",
             "followUp": "Send a follow-up prompt…",
-            "send": "Send"
+            "send": "Send",
+            "automaticMode": "Automatic mode",
+            "confirmationMode": "Confirmation mode",
+            "stop": "Stop session"
           },
           "session-event-item": {
-            "thought": "Thought"
+            "thought": "Thought",
+            "changes": "Changes",
+            "commandOutput": "Command output",
+            "subagentResult": "Subagent result",
+            "details": "Details",
+            "statusPending": "Pending",
+            "statusRunning": "Running",
+            "statusCompleted": "Completed",
+            "statusFailed": "Failed",
+            "statusCanceled": "Canceled"
           },
           "ReviewBrowserPane": {
             "urlPlaceholder": "http://localhost:...",

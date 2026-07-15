@@ -1,0 +1,14 @@
+---
+description: UI changes must be localized across all locale files
+alwaysApply: true
+---
+
+# Localization Required for UI Work
+
+When adding or changing user-visible product UI (labels, tabs, buttons, empty states, errors, aria-labels):
+
+1. Use `translate('key', 'English fallback')` — no hardcoded English-only JSX copy.
+2. Update **every** locale under `src/renderer/src/i18n/locales/` (`en`, `zh`, `ja`, `ko`, `es`, …) with real translations (not English pasted into `zh`/`ja`/…).
+3. Run localization verify/sync scripts when catalog coverage applies; fix before calling the work done.
+
+Localization is part of feature completion, not a later TODO.

@@ -55,3 +55,12 @@ Source-control and review changes must consider GitLab and other supported git p
 Be mindful of the user's `gh` CLI API rate limit — batch requests where possible and avoid unnecessary calls. All code, commands, and scripts must be compatible with macOS, Linux, and Windows.
 
 ## Type Declarations: Prefer `.ts` Over `.d.ts`
+
+## Localization (Required for UI Work)
+
+Any user-visible string added or changed in product UI must be localized — do not ship English-only copy when the app supports other locales.
+
+- Wrap UI text with `translate('…', 'English fallback')` (or the project's established i18n helper). Hardcoded English in JSX/TSX for labels, buttons, tabs, empty states, errors, and aria-labels is not done.
+- After adding keys, update **all** locale files under `src/renderer/src/i18n/locales/` (`en`, `zh`, `ja`, `ko`, `es`, …). Non-English locales must get real translations, not English leftovers.
+- Run `pnpm run sync:localization-catalog` / `pnpm run verify:localization-catalog` and `pnpm run verify:localization-coverage` when the change touches cataloged strings, and fix failures before claiming the work complete.
+- Treat localization as part of the feature Definition of Done, same as tests — not a follow-up.

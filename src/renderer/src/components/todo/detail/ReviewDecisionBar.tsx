@@ -12,17 +12,23 @@ type ReviewDecisionBarProps = {
 
 export function ReviewDecisionBar({ item }: ReviewDecisionBarProps): React.JSX.Element {
   const updateTodoItem = useAppStore((s) => s.updateTodoItem)
+  // Why: sits in the property rail under Scheduled — stack vertically to match the rail.
   return (
-    <div className="flex items-center justify-end gap-2 border-t border-border px-3 py-2">
+    <div className="flex flex-col gap-2">
       <Button
         size="sm"
         variant="outline"
+        className="w-full justify-center"
         onClick={() => void updateTodoItem(item.id, { status: 'rework' })}
       >
         <X className="mr-1 size-4" />
         {translate('auto.components.todo.detail.ReviewDecisionBar.reject', 'Reject')}
       </Button>
-      <Button size="sm" onClick={() => void updateTodoItem(item.id, { status: 'merging' })}>
+      <Button
+        size="sm"
+        className="w-full justify-center"
+        onClick={() => void updateTodoItem(item.id, { status: 'merging' })}
+      >
         <Check className="mr-1 size-4" />
         {translate('auto.components.todo.detail.ReviewDecisionBar.approve', 'Approve')}
       </Button>

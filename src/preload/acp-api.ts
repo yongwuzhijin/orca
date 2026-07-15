@@ -39,7 +39,9 @@ export function createAcpApi(ipc: IpcRendererLike) {
     onPermissionRequest: (sessionId: string, cb: (p: unknown) => void) =>
       subscribe(ipc, `acp:permission-request:${sessionId}`, cb),
     onTaskOutcome: (taskId: string, cb: (p: unknown) => void) =>
-      subscribe(ipc, `acp:task-outcome:${taskId}`, cb)
+      subscribe(ipc, `acp:task-outcome:${taskId}`, cb),
+    onAutoPilotProgress: (taskId: string, cb: (p: unknown) => void) =>
+      subscribe(ipc, `acp:autopilot-progress:${taskId}`, cb)
   }
 }
 

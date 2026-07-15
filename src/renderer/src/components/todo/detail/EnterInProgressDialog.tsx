@@ -1,20 +1,35 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
-import { ACP_ENGINES, type AcpEngine } from '../../../../../shared/acp/acp-session'
+import { ACP_ENGINES, isAcpEngine, type AcpEngine } from '../../../../../shared/acp/acp-session'
 import type { TodoItem } from '../../../../../shared/todo/todo-item'
+import {
+  resolveWorkspaceProjectCwd,
+  TodoWorkspaceProjectPicker
+} from '../TodoWorkspaceProjectPicker'
 
 export function buildBasePrompt(item: TodoItem): string {
-  return `${item.title}\n\n${item.description}`.trimEnd()
+  const title = item.title.trimEnd()
+  const description = item.description.trim()
+  // Why: create flow often seeds description from title; concatenating both duplicates the prompt.
+  if (!description || description === title.trim()) {
+    return title
+  }
+  return `${title}\n\n${description}`
 }
 
 export function composePrompt(base: string, extra: string): string {
   const trimmed = extra.trim()
   return trimmed ? `${base}\n\n${trimmed}` : base
+}
+
+function resolveInitialEngine(item: TodoItem): AcpEngine {
+  return item.preferredAgent && isAcpEngine(item.preferredAgent)
+    ? item.preferredAgent
+    : ACP_ENGINES[0]
 }
 
 type EnterInProgressDialogProps = {
@@ -30,33 +45,42 @@ export function EnterInProgressDialog({
   const executeTask = useAppStore((s) => s.executeTask)
   const openTodoDetail = useAppStore((s) => s.openTodoDetail)
   const project = useAppStore((s) => s.todoProjects.find((p) => p.id === item.projectId))
+  const projectHostSetups = useAppStore((s) => s.projectHostSetups)
 
-  const [engine, setEngine] = React.useState<AcpEngine>(ACP_ENGINES[0])
-  const [cwd, setCwd] = React.useState(project?.defaultWorkingDir ?? '')
+  const [engine, setEngine] = React.useState<AcpEngine>(() => resolveInitialEngine(item))
+  const [workspaceProjectId, setWorkspaceProjectId] = React.useState<string | null>(
+    () => item.workspaceProjectId
+  )
   const [extra, setExtra] = React.useState('')
+  const [autoPilotOn, setAutoPilotOn] = React.useState(true)
+  const [maxTurns, setMaxTurns] = React.useState(10)
 
+  const cwd = resolveWorkspaceProjectCwd(
+    workspaceProjectId,
+    projectHostSetups,
+    project?.defaultWorkingDir
+  )
   const base = buildBasePrompt(item)
+  const canStart = cwd.trim().length > 0
 
   const confirm = async (): Promise<void> => {
-    if (!cwd.trim()) {
+    if (!canStart) {
       return
+    }
+    // Persist the project choice so later restarts keep the same default.
+    if (workspaceProjectId !== item.workspaceProjectId) {
+      await updateTodoItem(item.id, { workspaceProjectId })
     }
     await updateTodoItem(item.id, { status: 'in_progress' })
     await executeTask({
       taskId: item.id,
       engine,
       prompt: composePrompt(base, extra),
-      cwd: cwd.trim()
+      cwd: cwd.trim(),
+      autoPilot: autoPilotOn ? { maxTurns } : undefined
     })
     openTodoDetail(item.id)
     onClose()
-  }
-
-  const pickDir = async (): Promise<void> => {
-    const picked = await window.api.shell.pickDirectory({ defaultPath: cwd || undefined })
-    if (picked) {
-      setCwd(picked)
-    }
   }
 
   return (
@@ -64,7 +88,7 @@ export function EnterInProgressDialog({
       <DialogContent className="max-w-xl">
         <div className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold">
-            {translate('auto.components.todo.detail.EnterInProgressDialog.title', 'Start session')}
+            {translate('auto.components.todo.detail.EnterInProgressDialog.title', 'Start task')}
           </h2>
 
           <div className="flex flex-col gap-1.5">
@@ -85,28 +109,16 @@ export function EnterInProgressDialog({
             </select>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="enter-cwd">
-              {translate(
-                'auto.components.todo.detail.EnterInProgressDialog.cwd',
-                'Working directory'
-              )}
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                id="enter-cwd"
-                value={cwd}
-                onChange={(e) => setCwd(e.target.value)}
-                placeholder={translate(
-                  'auto.components.todo.detail.EnterInProgressDialog.cwdPlaceholder',
-                  '/path/to/repo'
-                )}
-              />
-              <Button size="sm" variant="outline" onClick={() => void pickDir()}>
-                {translate('auto.components.todo.detail.EnterInProgressDialog.browse', 'Browse…')}
-              </Button>
-            </div>
-          </div>
+          {/* Why: reuse the New Task project picker and seed from workspaceProjectId
+              so Start Session continues from the project chosen at create time. */}
+          <TodoWorkspaceProjectPicker
+            value={workspaceProjectId}
+            onChange={setWorkspaceProjectId}
+            label={translate(
+              'auto.components.todo.detail.EnterInProgressDialog.cwd',
+              'Working directory'
+            )}
+          />
 
           <div className="flex flex-col gap-1.5">
             <Label>
@@ -135,11 +147,45 @@ export function EnterInProgressDialog({
             />
           </div>
 
+          <div className="flex items-center gap-3">
+            <input
+              id="enter-autopilot"
+              type="checkbox"
+              className="size-4"
+              checked={autoPilotOn}
+              onChange={(e) => setAutoPilotOn(e.target.checked)}
+            />
+            <Label htmlFor="enter-autopilot" className="cursor-pointer">
+              {translate(
+                'auto.components.todo.detail.EnterInProgressDialog.autoPilot',
+                'AutoPilot (advance autonomously)'
+              )}
+            </Label>
+            {autoPilotOn ? (
+              <div className="ml-auto flex items-center gap-2">
+                <Label htmlFor="enter-max-turns" className="text-xs text-muted-foreground">
+                  {translate(
+                    'auto.components.todo.detail.EnterInProgressDialog.maxTurns',
+                    'Max turns'
+                  )}
+                </Label>
+                <input
+                  id="enter-max-turns"
+                  type="number"
+                  min={1}
+                  className="h-8 w-16 rounded-md border border-input bg-transparent px-2 text-sm"
+                  value={maxTurns}
+                  onChange={(e) => setMaxTurns(Math.max(1, Number(e.target.value) || 1))}
+                />
+              </div>
+            ) : null}
+          </div>
+
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="outline" onClick={onClose}>
               {translate('auto.components.todo.detail.EnterInProgressDialog.cancel', 'Cancel')}
             </Button>
-            <Button size="sm" disabled={!cwd.trim()} onClick={() => void confirm()}>
+            <Button size="sm" disabled={!canStart} onClick={() => void confirm()}>
               {translate('auto.components.todo.detail.EnterInProgressDialog.start', 'Start')}
             </Button>
           </div>

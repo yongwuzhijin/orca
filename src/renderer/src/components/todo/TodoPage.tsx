@@ -8,7 +8,6 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TodoBoard } from './TodoBoard'
 import { TodoCreateDialog } from './TodoCreateDialog'
 import { TodoDetailView } from './detail/TodoDetailView'
-import { TodoProjectSwitcher } from './TodoProjectSwitcher'
 import { TodoDashboard } from './dashboard/TodoDashboard'
 
 export default function TodoPage(): React.JSX.Element {
@@ -47,7 +46,6 @@ export default function TodoPage(): React.JSX.Element {
   return (
     <div className="flex h-full flex-col">
       <header className="flex items-center gap-2 border-b border-border px-4 py-2.5">
-        <TodoProjectSwitcher />
         <Tabs value={viewMode} onValueChange={(next) => setViewMode(next as 'board' | 'dashboard')}>
           <TabsList variant="line">
             <TabsTrigger value="board">
@@ -72,11 +70,7 @@ export default function TodoPage(): React.JSX.Element {
         </Button>
       </header>
       <div className="min-h-0 flex-1 overflow-hidden">
-        {!activeProjectId ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            {translate('auto.components.todo.TodoPage.empty', 'Create a project to get started')}
-          </div>
-        ) : viewMode === 'dashboard' ? (
+        {viewMode === 'dashboard' && activeProjectId ? (
           <TodoDashboard projectId={activeProjectId} />
         ) : (
           <TodoBoard

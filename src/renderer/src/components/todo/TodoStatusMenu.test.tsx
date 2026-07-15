@@ -1,14 +1,14 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
-import { TodoStatusMenu } from './TodoStatusMenu'
+import { TodoStatusMenu, TodoStatusOptionList } from './TodoStatusMenu'
 
 afterEach(cleanup)
 
-describe('TodoStatusMenu', () => {
+describe('TodoStatusOptionList', () => {
   it('renders all nine statuses in order', () => {
-    render(<TodoStatusMenu value="backlog" onChange={() => {}} />)
+    render(<TodoStatusOptionList value="backlog" onChange={() => {}} />)
     const labels = [
       'Backlog',
       'Todo',
@@ -26,9 +26,19 @@ describe('TodoStatusMenu', () => {
   })
 
   it('shows order numbers 1..9', () => {
-    render(<TodoStatusMenu value="backlog" onChange={() => {}} />)
+    render(<TodoStatusOptionList value="backlog" onChange={() => {}} />)
     for (let n = 1; n <= 9; n++) {
       expect(screen.getByText(String(n))).toBeInTheDocument()
     }
+  })
+})
+
+describe('TodoStatusMenu', () => {
+  it('shows the current status on the trigger and opens the dropdown', () => {
+    render(<TodoStatusMenu value="in_progress" onChange={() => {}} />)
+    expect(screen.getByRole('button', { name: /change status/i })).toHaveTextContent('In Progress')
+    fireEvent.click(screen.getByRole('button', { name: /change status/i }))
+    expect(screen.getByPlaceholderText(/change status/i)).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /todo/i })).toBeInTheDocument()
   })
 })

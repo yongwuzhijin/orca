@@ -35,7 +35,7 @@ describe('TodoDatabase', () => {
   it('sets user_version to SCHEMA_VERSION', () => {
     const d = createDb()
     const version = d.raw.pragma('user_version', { simple: true }) as number
-    expect(SCHEMA_VERSION).toBe(3)
+    expect(SCHEMA_VERSION).toBe(4)
     expect(version).toBe(SCHEMA_VERSION)
   })
 
@@ -74,14 +74,17 @@ describe('TodoDatabase', () => {
     expect(row.next_sequence).toBe(1)
   })
 
-  it('ships schema version 3 with session_id column on a fresh db', () => {
+  it('ships schema version 4 with workspace binding columns on a fresh db', () => {
     const d = createDb()
-    expect(SCHEMA_VERSION).toBe(3)
+    expect(SCHEMA_VERSION).toBe(4)
     const cols = (d.raw.pragma('table_info(todo_items)') as { name: string }[]).map((c) => c.name)
     expect(cols).toContain('session_id')
+    expect(cols).toContain('workspace_project_id')
+    expect(cols).toContain('workspace_name')
+    expect(cols).toContain('preferred_agent')
   })
 
-  it('adds session_id to an on-disk legacy v1 db when reopened as v2', () => {
+  it('adds workspace binding columns to an on-disk legacy v1 db when reopened', () => {
     // Why: Orca uses Electron's built-in node:sqlite (DatabaseSync), not the
     // better-sqlite3 native addon, so the legacy fixture must use the same driver.
     const file = join(mkdtempSync(join(tmpdir(), 'orca-todo-mig-')), 'todo.db')
@@ -105,13 +108,16 @@ describe('TodoDatabase', () => {
     const cols = (db.raw.pragma('table_info(todo_items)') as { name: string }[]).map((c) => c.name)
     const version = db.raw.pragma('user_version', { simple: true }) as number
     expect(cols).toContain('session_id')
-    expect(version).toBe(3)
+    expect(cols).toContain('workspace_project_id')
+    expect(cols).toContain('workspace_name')
+    expect(cols).toContain('preferred_agent')
+    expect(version).toBe(4)
   })
 
   it('migrates todo_projects with default_working_dir (v3, P2b)', () => {
     const d = createDb()
     const cols = d.raw.pragma('table_info(todo_projects)') as { name: string }[]
     expect(cols.some((c) => c.name === 'default_working_dir')).toBe(true)
-    expect(d.raw.pragma('user_version', { simple: true })).toBe(3)
+    expect(d.raw.pragma('user_version', { simple: true })).toBe(4)
   })
 })

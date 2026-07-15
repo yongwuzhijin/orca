@@ -43,5 +43,7 @@ describe('getTodoStatusMeta', () => {
     expect(done.id).toBe('done')
     expect(done.terminal).toBe(true)
     expect(done.order).toBe(7)
+    expect(done.laneBorder).toBeTruthy()
+    expect(done.laneTint).toBeTruthy()
   })
 })

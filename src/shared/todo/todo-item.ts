@@ -1,3 +1,4 @@
+import type { AcpEngine } from '../acp/acp-session'
 import type { TodoPriority } from './todo-priority'
 import type { TodoStatus } from './todo-status'
 
@@ -13,6 +14,12 @@ export type TodoItem = {
   estimate: number | null
   labels: string[]
   templateId: string | null
+  /** Orca Project id bound for workspace creation when the task starts. */
+  workspaceProjectId: string | null
+  /** Optional worktree/workspace name hint for later creation. */
+  workspaceName: string | null
+  /** Preferred ACP engine when entering in-progress. */
+  preferredAgent: AcpEngine | null
   orderKey: string
   createdAt: string
   updatedAt: string
@@ -31,6 +38,9 @@ export type CreateTodoItemInput = {
   estimate?: number | null
   labels?: string[]
   templateId?: string | null
+  workspaceProjectId?: string | null
+  workspaceName?: string | null
+  preferredAgent?: AcpEngine | null
 }
 
 export type UpdateTodoItemPatch = {
@@ -42,4 +52,7 @@ export type UpdateTodoItemPatch = {
   estimate?: number | null
   labels?: string[]
   templateId?: string | null
+  workspaceProjectId?: string | null
+  workspaceName?: string | null
+  preferredAgent?: AcpEngine | null
 }

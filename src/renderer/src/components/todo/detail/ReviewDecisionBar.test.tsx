@@ -37,7 +37,10 @@ function mkItem(): TodoItem {
     updatedAt: '',
     startedAt: null,
     completedAt: null,
-    sessionId: null
+    sessionId: null,
+    workspaceProjectId: null,
+    workspaceName: null,
+    preferredAgent: null
   }
 }
 

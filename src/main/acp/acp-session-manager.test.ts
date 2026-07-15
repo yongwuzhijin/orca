@@ -84,6 +84,29 @@ describe('AcpSessionManager start + happy path', () => {
     )
   })
 
+  // Why: engines rarely echo client prompts as user_message_chunk; cache the
+  // outbound prompt so loadHistory can restore it within the process lifetime.
+  it('startPrompt records the outbound prompt as a user_message_chunk before prompting', async () => {
+    const d = deps()
+    const mgr = makeManager(d)
+    await mgr.startPrompt({
+      taskId: 'task-1',
+      engine: 'claude',
+      prompt: '生成CLAUDE.md',
+      cwd: '/tmp'
+    })
+    expect(d.connectionPool.recordSessionUpdate).toHaveBeenCalledWith('claude', 'eng-sess-1', {
+      sessionId: 'eng-sess-1',
+      update: {
+        sessionUpdate: 'user_message_chunk',
+        content: { type: 'text', text: '生成CLAUDE.md' }
+      }
+    })
+    const recordOrder = d.connectionPool.recordSessionUpdate.mock.invocationCallOrder[0]
+    const promptOrder = d.connection.prompt.mock.invocationCallOrder[0]
+    expect(recordOrder).toBeLessThan(promptOrder)
+  })
+
   it('successful runPrompt flips in_progress task to human_review and finishes session completed', async () => {
     const d = deps()
     const mgr = makeManager(d)
@@ -109,6 +132,39 @@ describe('AcpSessionManager start + happy path', () => {
 })
 
 describe('AcpSessionManager cancel / concurrency / resume / error', () => {
+  it('loads persisted agent history when the in-memory event cache is empty', async () => {
+    const d = deps()
+    d.connectionPool.replaySessionEvents.mockReturnValue(0)
+    d.acpSessions.getBySessionId.mockReturnValue({
+      taskId: 'task-1',
+      engine: 'claude',
+      sessionId: 'eng-sess-1',
+      cwd: '/tmp'
+    })
+    const mgr = makeManager(d)
+
+    await mgr.loadHistory('eng-sess-1')
+
+    expect(d.connectionPool.getAcpConnection).toHaveBeenCalledWith('claude')
+    expect(d.connectionPool.trackSession).toHaveBeenCalledWith('claude', 'eng-sess-1')
+    expect(d.connection.loadSession).toHaveBeenCalledWith({
+      sessionId: 'eng-sess-1',
+      cwd: '/tmp',
+      mcpServers: []
+    })
+  })
+
+  it('uses cached history without loading the agent session again', async () => {
+    const d = deps()
+    d.connectionPool.replaySessionEvents.mockReturnValue(2)
+    const mgr = makeManager(d)
+
+    await mgr.loadHistory('eng-sess-1')
+
+    expect(d.acpSessions.getBySessionId).not.toHaveBeenCalled()
+    expect(d.connection.loadSession).not.toHaveBeenCalled()
+  })
+
   it('rejects a second prompt on the same session', async () => {
     const d = deps()
     let resolvePrompt: (v: { stopReason: string }) => void = () => {}
@@ -209,5 +265,81 @@ describe('AcpSessionManager permission mode (P2b)', () => {
     } as never)
     manager.setPermissionMode('s1', 'ask')
     expect(setPermissionMode).toHaveBeenCalledWith('s1', 'ask')
+  })
+})
+
+describe('AcpSessionManager autoPilot flip suppression', () => {
+  it('does NOT flip in_progress→human_review when started with autoPilot', async () => {
+    const d = deps()
+    const mgr = makeManager(d)
+    await mgr.startPrompt({
+      taskId: 'task-1',
+      engine: 'claude',
+      prompt: 'hi',
+      cwd: '/tmp',
+      autoPilot: { maxTurns: 5 }
+    })
+    await mgr.waitForPrompt('eng-sess-1')
+    expect(d.todos.updateItem).not.toHaveBeenCalledWith('task-1', { status: 'human_review' })
+  })
+
+  it('flipToHumanReview flips only when task is still in_progress', () => {
+    const d = deps()
+    const mgr = makeManager(d)
+    d.todos.getItem.mockReturnValue({ id: 'task-1', status: 'in_progress' })
+    mgr.flipToHumanReview('task-1')
+    expect(d.todos.updateItem).toHaveBeenCalledWith('task-1', { status: 'human_review' })
+
+    d.todos.updateItem.mockClear()
+    d.todos.getItem.mockReturnValue({ id: 'task-1', status: 'done' })
+    mgr.flipToHumanReview('task-1')
+    expect(d.todos.updateItem).not.toHaveBeenCalled()
+  })
+
+  it('readLastOutcome reflects the finished turn', async () => {
+    const d = deps()
+    const mgr = makeManager(d)
+    await mgr.startPrompt({ taskId: 'task-1', engine: 'claude', prompt: 'hi', cwd: '/tmp' })
+    await mgr.waitForPrompt('eng-sess-1')
+    expect(mgr.readLastOutcome('eng-sess-1')).toBe('completed')
+  })
+
+  it('readLastTurnText returns agent text only after the last user chunk', () => {
+    const d = deps()
+    // replaySessionEvents(sessionId, emit) drives emit with cached notifications.
+    d.connectionPool.replaySessionEvents.mockImplementation(
+      (_sessionId: string, emit: (n: unknown) => void) => {
+        emit({
+          update: {
+            sessionUpdate: 'user_message_chunk',
+            content: { type: 'text', text: 'turn1 prompt' }
+          }
+        })
+        emit({
+          update: { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'old' } }
+        })
+        emit({
+          update: {
+            sessionUpdate: 'user_message_chunk',
+            content: { type: 'text', text: 'turn2 prompt' }
+          }
+        })
+        emit({
+          update: {
+            sessionUpdate: 'agent_message_chunk',
+            content: { type: 'text', text: 'AUTOPILOT: ' }
+          }
+        })
+        emit({
+          update: {
+            sessionUpdate: 'agent_message_chunk',
+            content: { type: 'text', text: 'COMPLETE' }
+          }
+        })
+        return 5
+      }
+    )
+    const mgr = makeManager(d)
+    expect(mgr.readLastTurnText('sess-x')).toBe('AUTOPILOT: COMPLETE')
   })
 })

@@ -20,7 +20,15 @@ import type {
 import { orderKeyBetween } from '../../shared/todo/order-key'
 import type { TodoDatabase } from './todo-database'
 import {
-  rowToProject,
+  createTodoProject,
+  deleteTodoProject,
+  ensureDefaultTodoProject,
+  listTodoProjects,
+  renameTodoProject,
+  updateTodoProject
+} from './todo-project-store'
+import { DEFAULT_TODO_PROJECT_ID } from '../../shared/todo/todo-default-project'
+import {
   rowToTemplate,
   rowToTodoItem,
   type TodoItemRow,
@@ -55,53 +63,28 @@ export class TodoRepository {
 
   // --- Projects ---
 
+  ensureDefaultProject(): TodoProject {
+    return ensureDefaultTodoProject(this.db)
+  }
+
   listProjects(): TodoProject[] {
-    const rows = this.db
-      .prepare('SELECT * FROM todo_projects ORDER BY created_at ASC')
-      .all() as TodoProjectRow[]
-    return rows.map(rowToProject)
+    return listTodoProjects(this.db)
   }
 
   createProject(input: CreateTodoProjectInput): TodoProject {
-    const timestamp = nowIso()
-    const id = randomUUID()
-    this.db
-      .prepare(
-        `INSERT INTO todo_projects (id, name, identifier_prefix, next_sequence, created_at, updated_at)
-         VALUES (?, ?, ?, 1, ?, ?)`
-      )
-      .run(id, input.name, input.identifierPrefix, timestamp, timestamp)
-    return this.requireProject(id)
+    return createTodoProject(this.db, input)
   }
 
   renameProject(input: RenameTodoProjectInput): TodoProject {
-    this.db
-      .prepare('UPDATE todo_projects SET name = ?, updated_at = ? WHERE id = ?')
-      .run(input.name, nowIso(), input.id)
-    return this.requireProject(input.id)
+    return renameTodoProject(this.db, input)
   }
 
   updateProject(input: UpdateTodoProjectInput): TodoProject {
-    if (input.defaultWorkingDir !== undefined) {
-      this.db
-        .prepare('UPDATE todo_projects SET default_working_dir = ?, updated_at = ? WHERE id = ?')
-        .run(input.defaultWorkingDir, nowIso(), input.id)
-    }
-    return this.requireProject(input.id)
+    return updateTodoProject(this.db, input)
   }
 
   deleteProject(id: string): void {
-    this.db.prepare('DELETE FROM todo_projects WHERE id = ?').run(id)
-  }
-
-  private requireProject(id: string): TodoProject {
-    const row = this.db.prepare('SELECT * FROM todo_projects WHERE id = ?').get(id) as
-      | TodoProjectRow
-      | undefined
-    if (!row) {
-      throw new Error(`TodoRepository: project not found: ${id}`)
-    }
-    return rowToProject(row)
+    deleteTodoProject(this.db, id)
   }
 
   // --- Templates ---
@@ -166,6 +149,11 @@ export class TodoRepository {
   }
 
   createItem(input: CreateTodoItemInput): TodoItem {
+    // Why: UI locks creates to todo-default; ensure here so create still works
+    // if listProjects never ran (e.g. main/renderer skew after HMR).
+    if (input.projectId === DEFAULT_TODO_PROJECT_ID) {
+      ensureDefaultTodoProject(this.db)
+    }
     const timestamp = nowIso()
     const id = randomUUID()
     const status: TodoStatus = input.status ?? 'backlog'
@@ -175,6 +163,9 @@ export class TodoRepository {
     const scheduledDate = input.scheduledDate ?? null
     const estimate = input.estimate ?? null
     const templateId = input.templateId ?? null
+    const workspaceProjectId = input.workspaceProjectId ?? null
+    const workspaceName = input.workspaceName?.trim() ? input.workspaceName.trim() : null
+    const preferredAgent = input.preferredAgent ?? null
     const { startedAt, completedAt } = deriveTimestamps(status, null, null, timestamp)
 
     this.db.exec('BEGIN')
@@ -206,8 +197,9 @@ export class TodoRepository {
           `INSERT INTO todo_items (
             id, identifier, project_id, title, description, status, priority,
             scheduled_date, estimate, labels, template_id, order_key,
-            created_at, updated_at, started_at, completed_at, session_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            created_at, updated_at, started_at, completed_at, session_id,
+            workspace_project_id, workspace_name, preferred_agent
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           id,
@@ -227,7 +219,10 @@ export class TodoRepository {
           startedAt,
           completedAt,
           // New items start with no ACP session; setSessionId links one later.
-          null
+          null,
+          workspaceProjectId,
+          workspaceName,
+          preferredAgent
         )
 
       this.db.exec('COMMIT')
@@ -252,6 +247,16 @@ export class TodoRepository {
     const templateId = patch.templateId !== undefined ? patch.templateId : current.templateId
     const labels = patch.labels ?? current.labels
     const status = patch.status ?? current.status
+    const workspaceProjectId =
+      patch.workspaceProjectId !== undefined ? patch.workspaceProjectId : current.workspaceProjectId
+    const workspaceName =
+      patch.workspaceName !== undefined
+        ? patch.workspaceName?.trim()
+          ? patch.workspaceName.trim()
+          : null
+        : current.workspaceName
+    const preferredAgent =
+      patch.preferredAgent !== undefined ? patch.preferredAgent : current.preferredAgent
 
     // Only re-derive lifecycle stamps when the status actually changes; a plain
     // field edit must not disturb startedAt/completedAt.
@@ -265,6 +270,7 @@ export class TodoRepository {
         `UPDATE todo_items SET
           title = ?, description = ?, status = ?, priority = ?,
           scheduled_date = ?, estimate = ?, labels = ?, template_id = ?,
+          workspace_project_id = ?, workspace_name = ?, preferred_agent = ?,
           updated_at = ?, started_at = ?, completed_at = ?
         WHERE id = ?`
       )
@@ -277,6 +283,9 @@ export class TodoRepository {
         estimate,
         JSON.stringify(labels),
         templateId,
+        workspaceProjectId,
+        workspaceName,
+        preferredAgent,
         timestamp,
         timestamps.startedAt,
         timestamps.completedAt,

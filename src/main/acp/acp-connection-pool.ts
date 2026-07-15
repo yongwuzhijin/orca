@@ -126,10 +126,12 @@ export class AcpConnectionPool {
     this.eventCache.set(sessionId, list)
   }
 
-  replaySessionEvents(sessionId: string, emit: (n: SessionNotification) => void): void {
-    for (const n of this.eventCache.get(sessionId) ?? []) {
+  replaySessionEvents(sessionId: string, emit: (n: SessionNotification) => void): number {
+    const events = this.eventCache.get(sessionId) ?? []
+    for (const n of events) {
       emit(n)
     }
+    return events.length
   }
 
   trackSession(engine: AcpEngine, sessionId: string): void {

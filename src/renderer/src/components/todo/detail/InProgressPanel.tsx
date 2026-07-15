@@ -1,4 +1,5 @@
 import React from 'react'
+import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
@@ -9,9 +10,13 @@ import { EnterInProgressDialog } from './EnterInProgressDialog'
 
 type InProgressPanelProps = {
   item: TodoItem
+  showPlan?: boolean
 }
 
-export function InProgressPanel({ item }: InProgressPanelProps): React.JSX.Element {
+export function InProgressPanel({
+  item,
+  showPlan = true
+}: InProgressPanelProps): React.JSX.Element {
   const loadSessions = useAppStore((s) => s.loadSessions)
   const sendFollowUp = useAppStore((s) => s.sendFollowUp)
   const cancelSession = useAppStore((s) => s.cancelSession)
@@ -32,11 +37,43 @@ export function InProgressPanel({ item }: InProgressPanelProps): React.JSX.Eleme
   const status = useAppStore((s) =>
     activeSessionId ? s.sessionStatusBySession[activeSessionId] : undefined
   )
+  const autoPilot = useAppStore((s) => s.autoPilotByTask[item.id] ?? null)
   const [launchOpen, setLaunchOpen] = React.useState(false)
+  const [restoringSession, setRestoringSession] = React.useState(true)
 
   React.useEffect(() => {
+    let mounted = true
+    setRestoringSession(true)
     void loadSessions(item.id)
+      .catch((error: unknown) => {
+        console.warn('[acp] failed to restore task session:', error)
+      })
+      .finally(() => {
+        if (mounted) {
+          setRestoringSession(false)
+        }
+      })
+    return () => {
+      mounted = false
+    }
   }, [item.id, loadSessions])
+
+  if (restoringSession) {
+    const label = translate(
+      'auto.components.todo.detail.InProgressPanel.restoring',
+      'Restoring session…'
+    )
+    return (
+      <div
+        role="status"
+        aria-label={label}
+        className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground"
+      >
+        <Loader2 className="size-5 animate-spin" aria-hidden />
+        <span className="text-sm">{label}</span>
+      </div>
+    )
+  }
 
   if (!activeSessionId) {
     return (
@@ -55,28 +92,52 @@ export function InProgressPanel({ item }: InProgressPanelProps): React.JSX.Eleme
   }
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-[16rem_1fr] gap-4">
-      <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto scrollbar-sleek border-r border-border pr-3">
-        <h3 className="text-xs font-medium uppercase text-muted-foreground">
-          {translate('auto.components.todo.detail.InProgressPanel.plan', 'Plan')}
-        </h3>
-        <PlanChecklist entries={plan ?? []} />
-      </aside>
-      <SessionConversation
-        events={events ?? []}
-        permissionRequests={permissionRequests ?? []}
-        status={status ?? 'running'}
-        mode={mode ?? 'auto'}
-        onSend={(text) =>
-          void sendFollowUp(item.id, meta?.engine ?? 'claude', meta?.cwd ?? '', text)
-        }
-        onCancel={() => void cancelSession(activeSessionId)}
-        onModeChange={(next) => void setPermissionMode(activeSessionId, next)}
-        onResolvePermission={(requestId, optionId) =>
-          void resolvePermission(activeSessionId, requestId, optionId)
-        }
-        onSwitchAuto={() => void setPermissionMode(activeSessionId, 'auto')}
-      />
+    <div
+      className={
+        showPlan
+          ? 'grid h-full min-h-0 min-w-0 grid-cols-[16rem_minmax(0,1fr)] gap-4'
+          : 'flex h-full min-h-0 min-w-0 flex-col'
+      }
+    >
+      {showPlan ? (
+        <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto scrollbar-sleek border-r border-border pr-3">
+          <h3 className="text-xs font-medium uppercase text-muted-foreground">
+            {translate('auto.components.todo.detail.InProgressPanel.plan', 'Plan')}
+          </h3>
+          <PlanChecklist entries={plan ?? []} />
+        </aside>
+      ) : null}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {autoPilot && status === 'running' ? (
+          <div className="mb-2 flex items-center gap-3">
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+              {translate('auto.components.todo.detail.InProgressPanel.autoPilotBadge', 'AutoPilot')}
+              {` ${autoPilot.turn}/${autoPilot.maxTurns}`}
+            </span>
+            <Button size="sm" variant="outline" onClick={() => void cancelSession(activeSessionId)}>
+              {translate(
+                'auto.components.todo.detail.InProgressPanel.stopAutoPilot',
+                'Stop AutoPilot'
+              )}
+            </Button>
+          </div>
+        ) : null}
+        <SessionConversation
+          events={events ?? []}
+          permissionRequests={permissionRequests ?? []}
+          status={status ?? 'running'}
+          mode={mode ?? 'auto'}
+          onSend={(text) =>
+            void sendFollowUp(item.id, meta?.engine ?? 'claude', meta?.cwd ?? '', text)
+          }
+          onCancel={() => void cancelSession(activeSessionId)}
+          onModeChange={(next) => void setPermissionMode(activeSessionId, next)}
+          onResolvePermission={(requestId, optionId) =>
+            void resolvePermission(activeSessionId, requestId, optionId)
+          }
+          onSwitchAuto={() => void setPermissionMode(activeSessionId, 'auto')}
+        />
+      </div>
     </div>
   )
 }

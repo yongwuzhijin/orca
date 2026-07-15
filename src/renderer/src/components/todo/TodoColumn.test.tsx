@@ -4,6 +4,7 @@ import '@testing-library/jest-dom/vitest'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { DndContext } from '@dnd-kit/core'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { TodoColumn } from './TodoColumn'
 import { getTodoStatusMeta } from './todo-status-catalog'
 import type { TodoItem } from '../../../../shared/todo/todo-item'
@@ -31,16 +32,21 @@ function mkItem(id: string, status: TodoStatus, scheduledDate: string | null): T
     updatedAt: '2026-07-11T00:00:00.000Z',
     startedAt: null,
     completedAt: null,
-    sessionId: null
+    sessionId: null,
+    workspaceProjectId: null,
+    workspaceName: null,
+    preferredAgent: null
   }
 }
 
 // TodoCard's useSortable expects a DndContext; provide a bare one so cards render.
 function renderColumn(meta: ReturnType<typeof getTodoStatusMeta>, items: TodoItem[]): void {
   render(
-    <DndContext>
-      <TodoColumn meta={meta} items={items} onOpenItem={() => {}} onCreate={() => {}} />
-    </DndContext>
+    <TooltipProvider>
+      <DndContext>
+        <TodoColumn meta={meta} items={items} onOpenItem={() => {}} onCreate={() => {}} />
+      </DndContext>
+    </TooltipProvider>
   )
 }
 

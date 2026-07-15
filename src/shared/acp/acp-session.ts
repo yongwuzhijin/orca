@@ -34,6 +34,8 @@ export type StartPromptOptions = {
   prompt: string
   cwd: string
   resumeSessionId?: string
+  // AutoPilot：存在时执行入口走续接循环，maxTurns 为自主推进的硬上限。
+  autoPilot?: { maxTurns: number }
 }
 
 export type StartPromptResult = {
@@ -51,7 +53,7 @@ export type AcpTaskOutcome = {
 export type AcpConnection = {
   newSession(params: { cwd: string; mcpServers: [] }): Promise<AcpNewSessionResult>
   resumeSession(params: { sessionId: string; cwd: string }): Promise<AcpNewSessionResult>
-  loadSession(params: { sessionId: string; cwd: string }): Promise<unknown>
+  loadSession(params: { sessionId: string; cwd: string; mcpServers: [] }): Promise<unknown>
   prompt(params: {
     sessionId: string
     prompt: { type: 'text'; text: string }[]

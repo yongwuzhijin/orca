@@ -74,15 +74,65 @@ describe('acp slice', () => {
     expect(get().activeSessionMetaByTask.t1).toEqual({ engine: 'cursor', cwd: '/w' })
   })
 
+  // Why: ACP engines often omit user_message_chunk for client-sent prompts, so the
+  // renderer must surface the outbound prompt itself for the conversation timeline.
+  it('executeTask appends the outbound prompt as a user_message', async () => {
+    const { get } = makeStore()
+    await get().executeTask({
+      taskId: 't1',
+      engine: 'cursor',
+      prompt: '生成CLAUDE.md',
+      cwd: '/w'
+    })
+    expect(get().eventsBySession.s1).toEqual([{ kind: 'user_message', text: '生成CLAUDE.md' }])
+  })
+
+  it('does not duplicate an identical consecutive user_message echo', async () => {
+    const { get } = makeStore()
+    await get().executeTask({ taskId: 't1', engine: 'cursor', prompt: 'hello', cwd: '/w' })
+    emit('acp:session-update', 's1', {
+      sessionId: 's1',
+      update: {
+        sessionUpdate: 'user_message_chunk',
+        content: { type: 'text', text: 'hello' }
+      }
+    })
+    expect(get().eventsBySession.s1).toEqual([{ kind: 'user_message', text: 'hello' }])
+  })
+
   it('loadSessions backfills meta from the latest record', async () => {
+    // Newest-first, matching listByTask ORDER BY created_at DESC.
     ;(window.api.acp.listSessions as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
-      { sessionId: 's1', engine: 'claude', cwd: '/a' },
-      { sessionId: 's2', engine: 'cursor', cwd: '/b' }
+      { sessionId: 's2', engine: 'cursor', cwd: '/b', status: 'completed' },
+      { sessionId: 's1', engine: 'claude', cwd: '/a' }
     ])
     const { get } = makeStore()
     await get().loadSessions('t1')
     expect(get().activeSessionByTask.t1).toBe('s2')
     expect(get().activeSessionMetaByTask.t1).toEqual({ engine: 'cursor', cwd: '/b' })
+    expect(get().sessionStatusBySession.s2).toBe('complete')
+  })
+
+  it('loadSessions replays history for the active session', async () => {
+    ;(window.api.acp.listSessions as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      { sessionId: 's1', engine: 'claude', cwd: '/a' }
+    ])
+    const { get } = makeStore()
+    await get().loadSessions('t1')
+    expect(window.api.acp.loadHistory).toHaveBeenCalledWith({ sessionId: 's1' })
+  })
+
+  it('keeps the active session when history replay fails', async () => {
+    ;(window.api.acp.listSessions as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      { sessionId: 's1', engine: 'claude', cwd: '/a' }
+    ])
+    ;(window.api.acp.loadHistory as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error('invalid history params')
+    )
+    const { get } = makeStore()
+
+    await expect(get().loadSessions('t1')).resolves.toBeUndefined()
+    expect(get().activeSessionByTask.t1).toBe('s1')
   })
 
   it('live session-update appends normalized event', async () => {
@@ -92,7 +142,10 @@ describe('acp slice', () => {
       sessionId: 's1',
       update: { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'hey' } }
     })
-    expect(get().eventsBySession.s1).toEqual([{ kind: 'agent_message', text: 'hey' }])
+    expect(get().eventsBySession.s1).toEqual([
+      { kind: 'user_message', text: 'p' },
+      { kind: 'agent_message', text: 'hey' }
+    ])
   })
 
   it('plan update writes planBySession', async () => {

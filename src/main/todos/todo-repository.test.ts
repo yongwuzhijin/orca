@@ -1,4 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import {
+  DEFAULT_TODO_PROJECT_ID,
+  DEFAULT_TODO_PROJECT_NAME,
+  DEFAULT_TODO_PROJECT_PREFIX
+} from '../../shared/todo/todo-default-project'
 import { TodoDatabase } from './todo-database'
 import { TodoRepository } from './todo-repository'
 
@@ -30,12 +35,12 @@ describe('TodoRepository', () => {
       expect(project.updatedAt).toBeTruthy()
     })
 
-    it('listProjects returns created projects', () => {
+    it('listProjects returns created projects and ensures the default', () => {
       const repo = createRepo()
       const project = makeProject(repo)
       const list = repo.listProjects()
-      expect(list).toHaveLength(1)
-      expect(list[0].id).toBe(project.id)
+      expect(list.some((entry) => entry.id === project.id)).toBe(true)
+      expect(list.some((entry) => entry.id === DEFAULT_TODO_PROJECT_ID)).toBe(true)
     })
 
     it('renameProject changes name and updatedAt', () => {
@@ -46,11 +51,13 @@ describe('TodoRepository', () => {
       expect(renamed.updatedAt >= project.updatedAt).toBe(true)
     })
 
-    it('deleteProject removes it', () => {
+    it('deleteProject removes a non-default project; list still ensures default', () => {
       const repo = createRepo()
       const project = makeProject(repo)
       repo.deleteProject(project.id)
-      expect(repo.listProjects()).toHaveLength(0)
+      const list = repo.listProjects()
+      expect(list.some((entry) => entry.id === project.id)).toBe(false)
+      expect(list.some((entry) => entry.id === DEFAULT_TODO_PROJECT_ID)).toBe(true)
     })
 
     it('createProject defaults defaultWorkingDir to null (P2b)', () => {
@@ -64,6 +71,35 @@ describe('TodoRepository', () => {
       const p = repo.createProject({ name: 'P', identifierPrefix: 'P' })
       const updated = repo.updateProject({ id: p.id, defaultWorkingDir: '/tmp/w' })
       expect(updated.defaultWorkingDir).toBe('/tmp/w')
+    })
+
+    it('ensureDefaultProject creates the default project when missing', () => {
+      const repo = createRepo()
+      const project = repo.ensureDefaultProject()
+      expect(project).toEqual(
+        expect.objectContaining({
+          id: DEFAULT_TODO_PROJECT_ID,
+          name: DEFAULT_TODO_PROJECT_NAME,
+          identifierPrefix: DEFAULT_TODO_PROJECT_PREFIX,
+          nextSequence: 1,
+          defaultWorkingDir: null
+        })
+      )
+    })
+
+    it('ensureDefaultProject is idempotent and preserves defaultWorkingDir', () => {
+      const repo = createRepo()
+      repo.ensureDefaultProject()
+      repo.updateProject({ id: DEFAULT_TODO_PROJECT_ID, defaultWorkingDir: '/work' })
+      const again = repo.ensureDefaultProject()
+      expect(again.defaultWorkingDir).toBe('/work')
+      expect(repo.listProjects().filter((p) => p.id === DEFAULT_TODO_PROJECT_ID)).toHaveLength(1)
+    })
+
+    it('listProjects ensures the default project exists on an empty db', () => {
+      const repo = createRepo()
+      const list = repo.listProjects()
+      expect(list.some((p) => p.id === DEFAULT_TODO_PROJECT_ID)).toBe(true)
     })
   })
 
@@ -190,6 +226,31 @@ describe('TodoRepository', () => {
       const updated = repo.setSessionId(item.id, 'sess-1')
       expect(updated.sessionId).toBe('sess-1')
       expect(repo.getItem(item.id)?.sessionId).toBe('sess-1')
+    })
+  })
+
+  describe('items — workspace binding', () => {
+    it('persists workspace project, name, and preferred agent', () => {
+      const repo = createRepo()
+      const project = makeProject(repo)
+      const item = repo.createItem({
+        projectId: project.id,
+        title: 'T',
+        workspaceProjectId: 'proj-1',
+        workspaceName: 'feature-x',
+        preferredAgent: 'claude'
+      })
+      expect(item.workspaceProjectId).toBe('proj-1')
+      expect(item.workspaceName).toBe('feature-x')
+      expect(item.preferredAgent).toBe('claude')
+
+      const updated = repo.updateItem(item.id, {
+        workspaceName: 'feature-y',
+        preferredAgent: null
+      })
+      expect(updated.workspaceProjectId).toBe('proj-1')
+      expect(updated.workspaceName).toBe('feature-y')
+      expect(updated.preferredAgent).toBeNull()
     })
   })
 
