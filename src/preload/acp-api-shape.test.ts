@@ -29,4 +29,15 @@ describe('createAcpApi', () => {
     cleanup()
     expect(removeListener).toHaveBeenCalledWith('acp:complete:s1', expect.any(Function))
   })
+
+  it('subscribes autoPilot progress on the task-scoped channel', () => {
+    const invoke = vi.fn()
+    const on = vi.fn()
+    const removeListener = vi.fn()
+    const api = createAcpApi({ invoke, on, removeListener } as never)
+    const cleanup = api.onAutoPilotProgress('t1', vi.fn())
+    expect(on).toHaveBeenCalledWith('acp:autopilot-progress:t1', expect.any(Function))
+    cleanup()
+    expect(removeListener).toHaveBeenCalledWith('acp:autopilot-progress:t1', expect.any(Function))
+  })
 })
