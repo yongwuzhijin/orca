@@ -52,6 +52,8 @@ export function EnterInProgressDialog({
     () => item.workspaceProjectId
   )
   const [extra, setExtra] = React.useState('')
+  const [autoPilotOn, setAutoPilotOn] = React.useState(true)
+  const [maxTurns, setMaxTurns] = React.useState(10)
 
   const cwd = resolveWorkspaceProjectCwd(
     workspaceProjectId,
@@ -74,7 +76,8 @@ export function EnterInProgressDialog({
       taskId: item.id,
       engine,
       prompt: composePrompt(base, extra),
-      cwd: cwd.trim()
+      cwd: cwd.trim(),
+      autoPilot: autoPilotOn ? { maxTurns } : undefined
     })
     openTodoDetail(item.id)
     onClose()
@@ -142,6 +145,40 @@ export function EnterInProgressDialog({
               value={extra}
               onChange={(e) => setExtra(e.target.value)}
             />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <input
+              id="enter-autopilot"
+              type="checkbox"
+              className="size-4"
+              checked={autoPilotOn}
+              onChange={(e) => setAutoPilotOn(e.target.checked)}
+            />
+            <Label htmlFor="enter-autopilot" className="cursor-pointer">
+              {translate(
+                'auto.components.todo.detail.EnterInProgressDialog.autoPilot',
+                'AutoPilot (advance autonomously)'
+              )}
+            </Label>
+            {autoPilotOn ? (
+              <div className="ml-auto flex items-center gap-2">
+                <Label htmlFor="enter-max-turns" className="text-xs text-muted-foreground">
+                  {translate(
+                    'auto.components.todo.detail.EnterInProgressDialog.maxTurns',
+                    'Max turns'
+                  )}
+                </Label>
+                <input
+                  id="enter-max-turns"
+                  type="number"
+                  min={1}
+                  className="h-8 w-16 rounded-md border border-input bg-transparent px-2 text-sm"
+                  value={maxTurns}
+                  onChange={(e) => setMaxTurns(Math.max(1, Number(e.target.value) || 1))}
+                />
+              </div>
+            ) : null}
           </div>
 
           <div className="flex justify-end gap-2">

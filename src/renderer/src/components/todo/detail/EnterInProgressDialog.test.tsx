@@ -4,6 +4,7 @@ import '@testing-library/jest-dom/vitest'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import type { TodoItem } from '../../../../../shared/todo/todo-item'
 
@@ -137,5 +138,22 @@ describe('EnterInProgressDialog', () => {
   it('defaults engine from preferredAgent', () => {
     renderDialog(mkItem({ preferredAgent: 'cursor' }))
     expect(screen.getByLabelText(/engine/i)).toHaveValue('cursor')
+  })
+
+  it('passes autoPilot with default maxTurns when the toggle is on', async () => {
+    renderDialog(mkItem({ workspaceProjectId: 'wp-1' }))
+    await userEvent.click(screen.getByRole('button', { name: /start/i }))
+    expect(mockState.executeTask).toHaveBeenCalledWith(
+      expect.objectContaining({ autoPilot: { maxTurns: 10 } })
+    )
+  })
+
+  it('omits autoPilot when the toggle is off', async () => {
+    renderDialog(mkItem({ workspaceProjectId: 'wp-1' }))
+    await userEvent.click(screen.getByLabelText(/autopilot/i))
+    await userEvent.click(screen.getByRole('button', { name: /start/i }))
+    expect(mockState.executeTask).toHaveBeenCalledWith(
+      expect.objectContaining({ autoPilot: undefined })
+    )
   })
 })
