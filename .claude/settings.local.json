@@ -6,7 +6,10 @@
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k,'=',v\\) for k,v in d.get\\('scripts',{}\\).items\\(\\) if any\\(x in k for x in ['test','lint','check','i18n','local','type']\\)]\")",
       "Bash(pnpm run *)",
       "Bash(npx vitest *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Read(//Users/eleme/Downloads/symphony-main 2/**)",
+      "Bash(grep -n \"^#\\\\{1,3\\\\} \" SPEC.md)",
+      "Bash(grep -nA25 \"executeTask\" src/renderer/src/store/slices/acp.ts)"
     ]
   }
 }
