@@ -120,19 +120,42 @@ describe('TodoDatabase', () => {
     expect(cols.some((c) => c.name === 'default_working_dir')).toBe(true)
     expect(d.raw.pragma('user_version', { simple: true })).toBe(5)
   })
-})
 
-describe('TodoDatabase autopilot migration (v5)', () => {
-  it('exposes auto_pilot columns on a fresh DB', () => {
-    const db = new TodoDatabase(':memory:')
-    const cols = db.raw.pragma('table_info(todo_items)') as { name: string }[]
-    const names = cols.map((c) => c.name)
-    expect(names).toContain('auto_pilot_enabled')
-    expect(names).toContain('auto_pilot_max_turns')
-    db.close()
+  it('exposes auto_pilot columns on a fresh db', () => {
+    const d = createDb()
+    const cols = (d.raw.pragma('table_info(todo_items)') as { name: string }[]).map((c) => c.name)
+    expect(cols).toContain('auto_pilot_enabled')
+    expect(cols).toContain('auto_pilot_max_turns')
   })
 
-  it('bumps SCHEMA_VERSION to 5', () => {
-    expect(SCHEMA_VERSION).toBe(5)
+  it('adds auto_pilot columns to an on-disk v4 db when reopened', () => {
+    // Why: exercise migrate()'s `if (current < 5)` ALTER TABLE branch. A v4 db
+    // already carries the workspace binding columns but lacks the autopilot ones,
+    // so reopening must add auto_pilot_enabled / auto_pilot_max_turns. Uses the
+    // same DatabaseSync fixture as the legacy-v1 test above.
+    const file = join(mkdtempSync(join(tmpdir(), 'orca-todo-mig-v5-')), 'todo.db')
+    const raw = new DatabaseSync(file)
+    raw.exec(`CREATE TABLE todo_items (id TEXT PRIMARY KEY, identifier TEXT NOT NULL,
+      project_id TEXT NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'backlog', priority TEXT NOT NULL DEFAULT 'none',
+      scheduled_date TEXT, estimate INTEGER, labels TEXT NOT NULL DEFAULT '[]',
+      template_id TEXT, order_key TEXT NOT NULL, created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL, started_at TEXT, completed_at TEXT, session_id TEXT,
+      workspace_project_id TEXT, workspace_name TEXT, preferred_agent TEXT);`)
+    raw.exec(`CREATE TABLE todo_projects (id TEXT PRIMARY KEY, name TEXT NOT NULL,
+      identifier_prefix TEXT NOT NULL, next_sequence INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL, default_working_dir TEXT);`)
+    raw.exec(`CREATE TABLE todo_templates (id TEXT PRIMARY KEY, name TEXT NOT NULL,
+      body TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);`)
+    raw.exec('PRAGMA user_version = 4')
+    raw.close()
+
+    // Track on the shared `db` handle so afterEach closes it exactly once.
+    db = new TodoDatabase(file)
+    const cols = (db.raw.pragma('table_info(todo_items)') as { name: string }[]).map((c) => c.name)
+    const version = db.raw.pragma('user_version', { simple: true }) as number
+    expect(cols).toContain('auto_pilot_enabled')
+    expect(cols).toContain('auto_pilot_max_turns')
+    expect(version).toBe(5)
   })
 })
