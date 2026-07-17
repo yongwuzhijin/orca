@@ -35,7 +35,7 @@ describe('TodoDatabase', () => {
   it('sets user_version to SCHEMA_VERSION', () => {
     const d = createDb()
     const version = d.raw.pragma('user_version', { simple: true }) as number
-    expect(SCHEMA_VERSION).toBe(4)
+    expect(SCHEMA_VERSION).toBe(5)
     expect(version).toBe(SCHEMA_VERSION)
   })
 
@@ -74,9 +74,9 @@ describe('TodoDatabase', () => {
     expect(row.next_sequence).toBe(1)
   })
 
-  it('ships schema version 4 with workspace binding columns on a fresh db', () => {
+  it('ships schema version 5 with workspace binding columns on a fresh db', () => {
     const d = createDb()
-    expect(SCHEMA_VERSION).toBe(4)
+    expect(SCHEMA_VERSION).toBe(5)
     const cols = (d.raw.pragma('table_info(todo_items)') as { name: string }[]).map((c) => c.name)
     expect(cols).toContain('session_id')
     expect(cols).toContain('workspace_project_id')
@@ -111,13 +111,28 @@ describe('TodoDatabase', () => {
     expect(cols).toContain('workspace_project_id')
     expect(cols).toContain('workspace_name')
     expect(cols).toContain('preferred_agent')
-    expect(version).toBe(4)
+    expect(version).toBe(5)
   })
 
   it('migrates todo_projects with default_working_dir (v3, P2b)', () => {
     const d = createDb()
     const cols = d.raw.pragma('table_info(todo_projects)') as { name: string }[]
     expect(cols.some((c) => c.name === 'default_working_dir')).toBe(true)
-    expect(d.raw.pragma('user_version', { simple: true })).toBe(4)
+    expect(d.raw.pragma('user_version', { simple: true })).toBe(5)
+  })
+})
+
+describe('TodoDatabase autopilot migration (v5)', () => {
+  it('exposes auto_pilot columns on a fresh DB', () => {
+    const db = new TodoDatabase(':memory:')
+    const cols = db.raw.pragma('table_info(todo_items)') as { name: string }[]
+    const names = cols.map((c) => c.name)
+    expect(names).toContain('auto_pilot_enabled')
+    expect(names).toContain('auto_pilot_max_turns')
+    db.close()
+  })
+
+  it('bumps SCHEMA_VERSION to 5', () => {
+    expect(SCHEMA_VERSION).toBe(5)
   })
 })

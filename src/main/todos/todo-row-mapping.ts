@@ -46,6 +46,8 @@ export type TodoItemRow = {
   workspace_project_id: string | null
   workspace_name: string | null
   preferred_agent: string | null
+  auto_pilot_enabled: number
+  auto_pilot_max_turns: number | null
 }
 
 export function rowToProject(row: TodoProjectRow): TodoProject {
@@ -106,6 +108,8 @@ export function rowToTodoItem(row: TodoItemRow): TodoItem {
     workspaceProjectId: row.workspace_project_id,
     workspaceName: row.workspace_name,
     preferredAgent:
-      row.preferred_agent && isAcpEngine(row.preferred_agent) ? row.preferred_agent : null
+      row.preferred_agent && isAcpEngine(row.preferred_agent) ? row.preferred_agent : null,
+    autoPilotEnabled: row.auto_pilot_enabled === 1,
+    autoPilotMaxTurns: row.auto_pilot_max_turns
   }
 }
