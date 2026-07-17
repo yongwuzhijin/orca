@@ -142,7 +142,8 @@ export class TodoRepository {
   }
 
   // Why: the orchestrator picks across all projects — status must be 'todo'
-  // (backlog is not ready) and eligible; the service applies the priority sort.
+  // (backlog is not ready) and eligible. order_key is only a stable secondary;
+  // the service applies the full priority sort.
   listAutoPilotCandidates(): TodoItem[] {
     const rows = this.db
       .prepare(
