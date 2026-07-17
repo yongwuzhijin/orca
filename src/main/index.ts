@@ -181,6 +181,7 @@ import {
 import type { AgentStatusState } from '../shared/agent-status-types'
 import { resolveTuiAgentPermissionMode } from '../shared/tui-agent-permissions'
 import type { TerminalSideEffectBatch } from '../shared/terminal-side-effect-facts'
+import type { TodoOrchestratorService } from './todos/todo-orchestrator-service'
 import { KeybindingService } from './keybindings/keybinding-service'
 import { applyElectronProxySettings } from './network/proxy-settings'
 import { preserveAgentAuthBeforeRestart } from './agent-auth-restart-preservation'
@@ -216,6 +217,7 @@ let unsubscribeSystemResumeBroadcast: (() => void) | null = null
 let watcherShutdownPromise: Promise<void> | null = null
 let watcherShutdownDone = false
 let automations: AutomationService | null = null
+let todoOrchestrator: TodoOrchestratorService | null = null
 let keybindings: KeybindingService | null = null
 // Why: a reload/teardown intent set for one renderer must not leak to a later load.
 // The recovery reload re-fires did-finish-load, so its flag lets the local-PTY orphan
@@ -949,6 +951,7 @@ function openMainWindow(): BrowserWindow {
   )
   automations.setWebContents(window.webContents)
   automations.start()
+  todoOrchestrator?.start()
   attachMainWindowServices(
     window,
     store,
@@ -1865,6 +1868,10 @@ app.whenReady().then(async () => {
       : undefined
   })
   runtimeService.setAutomationService(automations)
+  // Why: assemble alongside automations so both share the ready runtime; start()
+  // is gated by GlobalSettings.todoOrchestrator.enabled (default off), so this is
+  // inert until the user opts in.
+  todoOrchestrator = runtimeService.getTodoOrchestratorService()
   runtimeService.setAccountServices({ claudeAccounts, codexAccounts, rateLimits })
   runtimeService.setCommitMessageAgentEnvironmentResolvers({
     // Why: local Codex hooks and auth now live in Orca's managed runtime home
@@ -2127,6 +2134,7 @@ app.whenReady().then(async () => {
     }
     // Why: headless serve never opens a renderer, so arm scheduled automation dispatch here.
     automations.start()
+    todoOrchestrator?.start()
     await printServeReady(serveOptions)
     return
   }
@@ -2211,6 +2219,7 @@ app.on('will-quit', (e) => {
   // so without this ordering, running agents would produce orphaned
   // agent_start events with no matching stops.
   automations?.stop()
+  todoOrchestrator?.stop()
   setUnreadDockBadgeCount(0)
   agentHookServer.stop()
   // Why: cancels relay restart/reinstall timers and kills wsl.exe children
