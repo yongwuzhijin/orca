@@ -29,6 +29,7 @@ import type {
   SourceControlAiSettings
 } from './source-control-ai-types'
 import type { StartupCommandDelivery } from './codex-startup-delivery'
+import type { TodoOrchestratorConfig } from './todo/todo-orchestrator-config'
 import type { AgentKind, LaunchSource, RequestKind } from './telemetry-events'
 import type { SleepingAgentLaunchConfig, SleepingAgentSessionRecord } from './agent-session-resume'
 import type { ClaudeAgentTeamsMode } from './claude-agent-teams-tmux-compat'
@@ -2860,6 +2861,8 @@ export type GlobalSettings = {
   confirmClosePinnedTab: boolean
   /** When true, Orca requests local awake assertions while hook-reported agents are working. */
   keepComputerAwakeWhileAgentsRun: boolean
+  /** Autonomous TODO orchestrator loop config (Symphony #1). Off by default. */
+  todoOrchestrator: TodoOrchestratorConfig
   /** Why: macOS terminals must choose between letting Option compose layout
    *  characters (@ on German, € on French) or treating Option as Meta/Esc for
    *  readline shortcuts. Mirrors Ghostty's macos-option-as-alt setting — and

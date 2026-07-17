@@ -42,7 +42,9 @@ function mkItem(id: string, status: TodoItem['status']): TodoItem {
     sessionId: null,
     workspaceProjectId: null,
     workspaceName: null,
-    preferredAgent: null
+    preferredAgent: null,
+    autoPilotEnabled: false,
+    autoPilotMaxTurns: null
   }
 }
 

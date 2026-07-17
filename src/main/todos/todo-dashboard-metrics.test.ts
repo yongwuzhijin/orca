@@ -27,6 +27,8 @@ function done(overrides: Partial<TodoItem> = {}): TodoItem {
     workspaceProjectId: null,
     workspaceName: null,
     preferredAgent: null,
+    autoPilotEnabled: false,
+    autoPilotMaxTurns: null,
     ...overrides
   }
 }

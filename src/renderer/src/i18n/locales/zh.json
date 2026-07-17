@@ -13072,7 +13072,10 @@
             "maxTurns": "最大轮次"
           },
           "TodoDetailView": {
-            "startTask": "开始任务"
+            "startTask": "开始任务",
+            "autoPilotEligible": "AutoPilot 自动执行",
+            "autoPilotMaxTurns": "最大轮次",
+            "autoPilotMaxTurnsPlaceholder": "全局默认"
           },
           "InProgressPanel": {
             "noSession": "暂无活动会话",
@@ -13172,6 +13175,14 @@
           "a2c6d9e0f7": "合并请求",
           "91b5c8d7e6": "GitLab"
         }
+      }
+    },
+    "settings": {
+      "todoOrchestrator": {
+        "enable": "自主任务编排器",
+        "enableDescription": "自动拾取标记为 AutoPilot 的任务并派发到空闲槽位。",
+        "maxConcurrent": "最大并发任务数",
+        "maxConcurrentDescription": "编排器同时运行任务数量的上限。"
       }
     }
   },

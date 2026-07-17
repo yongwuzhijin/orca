@@ -13064,7 +13064,10 @@
             "maxTurns": "Turnos máximos"
           },
           "TodoDetailView": {
-            "startTask": "Iniciar tarea"
+            "startTask": "Iniciar tarea",
+            "autoPilotEligible": "Apto para AutoPilot",
+            "autoPilotMaxTurns": "Turnos máximos",
+            "autoPilotMaxTurnsPlaceholder": "Valor predeterminado global"
           },
           "InProgressPanel": {
             "noSession": "No active session",
@@ -13172,6 +13175,14 @@
           "a2c6d9e0f7": "Solicitud de fusión",
           "91b5c8d7e6": "GitLab"
         }
+      }
+    },
+    "settings": {
+      "todoOrchestrator": {
+        "enable": "Orquestador de tareas autónomo",
+        "enableDescription": "Toma automáticamente las tareas aptas para AutoPilot y las asigna a espacios disponibles.",
+        "maxConcurrent": "Máximo de tareas simultáneas",
+        "maxConcurrentDescription": "Límite máximo de tareas que el orquestador ejecuta a la vez."
       }
     }
   },

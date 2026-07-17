@@ -1,7 +1,9 @@
 import React from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
 import type { TodoStatus } from '../../../../../shared/todo/todo-status'
@@ -111,6 +113,55 @@ export function TodoDetailView({ itemId }: TodoDetailViewProps): React.JSX.Eleme
               disabled
               readOnly
             />
+          </div>
+          <div className="flex flex-col gap-1 px-2 pt-1">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="todo-autopilot-eligible"
+                checked={item.autoPilotEnabled}
+                onCheckedChange={(checked) =>
+                  void updateTodoItem(item.id, { autoPilotEnabled: checked === true })
+                }
+              />
+              <Label
+                htmlFor="todo-autopilot-eligible"
+                className="cursor-pointer text-[11px] font-medium text-muted-foreground"
+              >
+                {translate(
+                  'auto.components.todo.detail.TodoDetailView.autoPilotEligible',
+                  'AutoPilot eligible'
+                )}
+              </Label>
+            </div>
+            {item.autoPilotEnabled ? (
+              <div className="flex flex-col gap-0.5 pt-1">
+                <label
+                  htmlFor="todo-autopilot-max-turns"
+                  className="text-[11px] font-medium text-muted-foreground"
+                >
+                  {translate(
+                    'auto.components.todo.detail.TodoDetailView.autoPilotMaxTurns',
+                    'Max turns'
+                  )}
+                </label>
+                <Input
+                  id="todo-autopilot-max-turns"
+                  type="number"
+                  min={1}
+                  className="h-8"
+                  value={item.autoPilotMaxTurns ?? ''}
+                  placeholder={translate(
+                    'auto.components.todo.detail.TodoDetailView.autoPilotMaxTurnsPlaceholder',
+                    'Global default'
+                  )}
+                  onChange={(e) => {
+                    const raw = e.target.value.trim()
+                    const next = raw === '' ? null : Math.max(1, Math.floor(Number(raw) || 1))
+                    void updateTodoItem(item.id, { autoPilotMaxTurns: next })
+                  }}
+                />
+              </div>
+            ) : null}
           </div>
           {item.status === 'human_review' ? (
             <div className="px-2 pt-3">

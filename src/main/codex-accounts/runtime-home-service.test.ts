@@ -16,6 +16,7 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { GlobalSettings } from '../../shared/types'
+import { DEFAULT_TODO_ORCHESTRATOR_CONFIG } from '../../shared/todo/todo-orchestrator-config'
 
 const testState = {
   userDataDir: '',
@@ -133,6 +134,7 @@ function createSettings(overrides: Partial<GlobalSettings> = {}): GlobalSettings
     geminiCliOAuthEnabled: false,
     agentCmdOverrides: {},
     keepComputerAwakeWhileAgentsRun: false,
+    todoOrchestrator: { ...DEFAULT_TODO_ORCHESTRATOR_CONFIG },
     confirmClosePinnedTab: true,
     terminalMacOptionAsAlt: 'false',
     terminalMacOptionAsAltMigrated: true,

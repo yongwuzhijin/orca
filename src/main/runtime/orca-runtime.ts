@@ -73,6 +73,9 @@ import { OrchestrationDb } from './orchestration/db'
 import { formatMessagesForInjection } from './orchestration/formatter'
 import { TodoDatabase } from '../todos/todo-database'
 import { TodoRepository } from '../todos/todo-repository'
+import { TodoOrchestratorService } from '../todos/todo-orchestrator-service'
+import { resolveWorkspaceProjectCwd } from '../../shared/todo/workspace-project-cwd'
+import { DEFAULT_TODO_ORCHESTRATOR_CONFIG } from '../../shared/todo/todo-orchestrator-config'
 import { AcpSessionDatabase } from '../acp/acp-session-database'
 import { AcpSessionRepository } from '../acp/acp-session-repository'
 import { buildAcpKernel } from '../acp/acp-kernel'
@@ -873,6 +876,7 @@ type RuntimeStore = {
     terminalMainSideEffectAuthority?: GlobalSettings['terminalMainSideEffectAuthority']
     terminalHiddenDeliveryGate?: GlobalSettings['terminalHiddenDeliveryGate']
     terminalModelQueryAuthority?: GlobalSettings['terminalModelQueryAuthority']
+    todoOrchestrator?: GlobalSettings['todoOrchestrator']
   }
   // Why: narrow to `unknown` return so test mocks can return void without
   // a cast. The runtime never reads the return value — the persisted value
@@ -2168,6 +2172,7 @@ export class OrcaRuntimeService {
   private ptyDelayedForegroundSnapshotTitleObservations = new Map<string, number>()
   private _orchestrationDb: OrchestrationDb | null = null
   private _todoRepository: TodoRepository | null = null
+  private _todoOrchestratorService: TodoOrchestratorService | null = null
   private _acpSessionRepository: AcpSessionRepository | null = null
   private _acpKernel: ReturnType<typeof buildAcpKernel> | null = null
   private messageWaitersByHandle = new Map<string, Set<MessageWaiter>>()
@@ -2954,6 +2959,35 @@ export class OrcaRuntimeService {
       })
     }
     return this._acpKernel
+  }
+
+  // Why: assembled in main-process land so the loop runs headless/SSH-friendly,
+  // calling executeRouter directly (no renderer round-trip). Config lives in
+  // GlobalSettings so a single global switch gates all autonomous pickup.
+  getTodoOrchestratorService(): TodoOrchestratorService {
+    if (!this._todoOrchestratorService) {
+      const repo = this.getTodoRepository()
+      const kernel = this.getAcpKernel()
+      this._todoOrchestratorService = new TodoOrchestratorService({
+        listCandidates: () => repo.listAutoPilotCandidates(),
+        updateStatus: (id, status) => {
+          repo.updateItem(id, { status })
+        },
+        resolveCwd: (item) => {
+          const project = repo.listProjects().find((p) => p.id === item.projectId)
+          const cwd = resolveWorkspaceProjectCwd(
+            item.workspaceProjectId,
+            this.store?.getProjectHostSetups?.() ?? [],
+            project?.defaultWorkingDir ?? null
+          )
+          return cwd.trim().length > 0 ? cwd : null
+        },
+        dispatch: (input) => kernel.executeRouter.executeEnginePrompt(input),
+        getConfig: () =>
+          this.store?.getSettings().todoOrchestrator ?? DEFAULT_TODO_ORCHESTRATOR_CONFIG
+      })
+    }
+    return this._todoOrchestratorService
   }
 
   setAutomationService(service: AutomationService): void {

@@ -26,6 +26,10 @@ export type TodoItem = {
   startedAt: string | null
   completedAt: string | null
   sessionId: string | null
+  /** Whether this task participates in autonomous orchestrator pickup. Default false. */
+  autoPilotEnabled: boolean
+  /** Per-task continuation turn cap; null falls back to the global default. */
+  autoPilotMaxTurns: number | null
 }
 
 export type CreateTodoItemInput = {
@@ -41,6 +45,8 @@ export type CreateTodoItemInput = {
   workspaceProjectId?: string | null
   workspaceName?: string | null
   preferredAgent?: AcpEngine | null
+  autoPilotEnabled?: boolean
+  autoPilotMaxTurns?: number | null
 }
 
 export type UpdateTodoItemPatch = {
@@ -55,4 +61,6 @@ export type UpdateTodoItemPatch = {
   workspaceProjectId?: string | null
   workspaceName?: string | null
   preferredAgent?: AcpEngine | null
+  autoPilotEnabled?: boolean
+  autoPilotMaxTurns?: number | null
 }

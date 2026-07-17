@@ -254,6 +254,55 @@ describe('TodoRepository', () => {
     })
   })
 
+  describe('items — autoPilot fields', () => {
+    it('defaults autoPilotEnabled=false and autoPilotMaxTurns=null on create', () => {
+      const repo = createRepo()
+      const project = makeProject(repo)
+      const item = repo.createItem({ projectId: project.id, title: 'x' })
+      expect(item.autoPilotEnabled).toBe(false)
+      expect(item.autoPilotMaxTurns).toBeNull()
+    })
+
+    it('round-trips autoPilot fields through create + update', () => {
+      const repo = createRepo()
+      const project = makeProject(repo)
+      const created = repo.createItem({
+        projectId: project.id,
+        title: 'x',
+        autoPilotEnabled: true,
+        autoPilotMaxTurns: 7
+      })
+      expect(created.autoPilotEnabled).toBe(true)
+      expect(created.autoPilotMaxTurns).toBe(7)
+      const updated = repo.updateItem(created.id, {
+        autoPilotEnabled: false,
+        autoPilotMaxTurns: null
+      })
+      expect(updated.autoPilotEnabled).toBe(false)
+      expect(updated.autoPilotMaxTurns).toBeNull()
+    })
+
+    it('listAutoPilotCandidates returns only status=todo && autoPilotEnabled across projects', () => {
+      const repo = createRepo()
+      const project = makeProject(repo)
+      const eligible = repo.createItem({
+        projectId: project.id,
+        title: 'eligible',
+        status: 'todo',
+        autoPilotEnabled: true
+      })
+      repo.createItem({ projectId: project.id, title: 'todo-no-flag', status: 'todo' })
+      repo.createItem({
+        projectId: project.id,
+        title: 'backlog-flag',
+        status: 'backlog',
+        autoPilotEnabled: true
+      })
+      const candidates = repo.listAutoPilotCandidates()
+      expect(candidates.map((c) => c.id)).toEqual([eligible.id])
+    })
+  })
+
   describe('templates CRUD', () => {
     it('creates, lists, updates and deletes templates', () => {
       const repo = createRepo()

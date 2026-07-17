@@ -11,20 +11,9 @@ import {
   TodoWorkspaceProjectPicker
 } from '../TodoWorkspaceProjectPicker'
 
-export function buildBasePrompt(item: TodoItem): string {
-  const title = item.title.trimEnd()
-  const description = item.description.trim()
-  // Why: create flow often seeds description from title; concatenating both duplicates the prompt.
-  if (!description || description === title.trim()) {
-    return title
-  }
-  return `${title}\n\n${description}`
-}
+import { buildBasePrompt, composePrompt } from '../../../../../shared/todo/todo-base-prompt'
 
-export function composePrompt(base: string, extra: string): string {
-  const trimmed = extra.trim()
-  return trimmed ? `${base}\n\n${trimmed}` : base
-}
+export { buildBasePrompt, composePrompt }
 
 function resolveInitialEngine(item: TodoItem): AcpEngine {
   return item.preferredAgent && isAcpEngine(item.preferredAgent)

@@ -5,7 +5,8 @@ import Database from '../sqlite/sync-database'
 // DB). v2 adds todo_items.session_id, the pointer to the ACP execution session.
 // v3 adds todo_projects.default_working_dir, the project-level default cwd.
 // v4 adds workspace binding fields on todo_items for create-task → start-session.
-export const SCHEMA_VERSION = 4
+// v5 adds auto_pilot_enabled / auto_pilot_max_turns on todo_items for the orchestrator.
+export const SCHEMA_VERSION = 5
 
 export class TodoDatabase {
   private db: Database.Database
@@ -68,7 +69,9 @@ export class TodoDatabase {
         session_id TEXT,
         workspace_project_id TEXT,
         workspace_name TEXT,
-        preferred_agent TEXT
+        preferred_agent TEXT,
+        auto_pilot_enabled INTEGER NOT NULL DEFAULT 0,
+        auto_pilot_max_turns INTEGER
       );
 
       CREATE INDEX IF NOT EXISTS idx_todo_items_project_status
@@ -121,6 +124,17 @@ export class TodoDatabase {
         }
         if (!this.hasColumn('todo_items', 'preferred_agent')) {
           this.db.exec('ALTER TABLE todo_items ADD COLUMN preferred_agent TEXT')
+        }
+      }
+      // v5: orchestrator eligibility + per-task turn cap.
+      if (current < 5) {
+        if (!this.hasColumn('todo_items', 'auto_pilot_enabled')) {
+          this.db.exec(
+            'ALTER TABLE todo_items ADD COLUMN auto_pilot_enabled INTEGER NOT NULL DEFAULT 0'
+          )
+        }
+        if (!this.hasColumn('todo_items', 'auto_pilot_max_turns')) {
+          this.db.exec('ALTER TABLE todo_items ADD COLUMN auto_pilot_max_turns INTEGER')
         }
       }
       this.db.pragma(`user_version = ${SCHEMA_VERSION}`)

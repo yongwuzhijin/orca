@@ -9,23 +9,8 @@ import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { buildExecutionHostRegistry } from '../../../../shared/execution-host-registry'
 import { getHostDisplayLabelOverrides } from '../../../../shared/host-setting-overrides'
-import type { ProjectHostSetup } from '../../../../shared/types'
 
-export function resolveWorkspaceProjectCwd(
-  workspaceProjectId: string | null,
-  projectHostSetups: readonly ProjectHostSetup[],
-  fallbackCwd?: string | null
-): string {
-  if (workspaceProjectId) {
-    const ready = projectHostSetups.find(
-      (setup) => setup.projectId === workspaceProjectId && setup.setupState === 'ready'
-    )
-    if (ready?.path) {
-      return ready.path
-    }
-  }
-  return fallbackCwd?.trim() ?? ''
-}
+export { resolveWorkspaceProjectCwd } from '../../../../shared/todo/workspace-project-cwd'
 
 type TodoWorkspaceProjectPickerProps = {
   value: string | null
