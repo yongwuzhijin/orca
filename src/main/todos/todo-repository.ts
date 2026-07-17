@@ -141,6 +141,17 @@ export class TodoRepository {
     return rows.map(rowToTodoItem)
   }
 
+  // Why: the orchestrator picks across all projects — status must be 'todo'
+  // (backlog is not ready) and eligible; the service applies the priority sort.
+  listAutoPilotCandidates(): TodoItem[] {
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM todo_items WHERE status = 'todo' AND auto_pilot_enabled = 1 ORDER BY order_key ASC`
+      )
+      .all() as TodoItemRow[]
+    return rows.map(rowToTodoItem)
+  }
+
   getItem(id: string): TodoItem | null {
     const row = this.db.prepare('SELECT * FROM todo_items WHERE id = ?').get(id) as
       | TodoItemRow
@@ -166,6 +177,8 @@ export class TodoRepository {
     const workspaceProjectId = input.workspaceProjectId ?? null
     const workspaceName = input.workspaceName?.trim() ? input.workspaceName.trim() : null
     const preferredAgent = input.preferredAgent ?? null
+    const autoPilotEnabled = input.autoPilotEnabled ?? false
+    const autoPilotMaxTurns = input.autoPilotMaxTurns ?? null
     const { startedAt, completedAt } = deriveTimestamps(status, null, null, timestamp)
 
     this.db.exec('BEGIN')
@@ -198,8 +211,8 @@ export class TodoRepository {
             id, identifier, project_id, title, description, status, priority,
             scheduled_date, estimate, labels, template_id, order_key,
             created_at, updated_at, started_at, completed_at, session_id,
-            workspace_project_id, workspace_name, preferred_agent
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            workspace_project_id, workspace_name, preferred_agent, auto_pilot_enabled, auto_pilot_max_turns
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           id,
@@ -222,7 +235,9 @@ export class TodoRepository {
           null,
           workspaceProjectId,
           workspaceName,
-          preferredAgent
+          preferredAgent,
+          autoPilotEnabled ? 1 : 0,
+          autoPilotMaxTurns
         )
 
       this.db.exec('COMMIT')
@@ -257,6 +272,10 @@ export class TodoRepository {
         : current.workspaceName
     const preferredAgent =
       patch.preferredAgent !== undefined ? patch.preferredAgent : current.preferredAgent
+    const autoPilotEnabled =
+      patch.autoPilotEnabled !== undefined ? patch.autoPilotEnabled : current.autoPilotEnabled
+    const autoPilotMaxTurns =
+      patch.autoPilotMaxTurns !== undefined ? patch.autoPilotMaxTurns : current.autoPilotMaxTurns
 
     // Only re-derive lifecycle stamps when the status actually changes; a plain
     // field edit must not disturb startedAt/completedAt.
@@ -271,6 +290,7 @@ export class TodoRepository {
           title = ?, description = ?, status = ?, priority = ?,
           scheduled_date = ?, estimate = ?, labels = ?, template_id = ?,
           workspace_project_id = ?, workspace_name = ?, preferred_agent = ?,
+          auto_pilot_enabled = ?, auto_pilot_max_turns = ?,
           updated_at = ?, started_at = ?, completed_at = ?
         WHERE id = ?`
       )
@@ -286,6 +306,8 @@ export class TodoRepository {
         workspaceProjectId,
         workspaceName,
         preferredAgent,
+        autoPilotEnabled ? 1 : 0,
+        autoPilotMaxTurns,
         timestamp,
         timestamps.startedAt,
         timestamps.completedAt,
