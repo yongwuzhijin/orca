@@ -236,4 +236,32 @@ describe('TodoOrchestratorService.tick', () => {
     await service.tick()
     expect(fn).toHaveBeenCalledTimes(1)
   })
+
+  it('frees the slot when updateStatus throws synchronously (no capacity leak)', async () => {
+    const { fn } = deferredDispatch()
+    const statuses = new Map<string, TodoStatus>()
+    // Simulate a row deleted mid-tick: the first status flip throws, later ones succeed.
+    let failFirst = true
+    const updateStatus = vi.fn((id: string, s: TodoStatus) => {
+      if (id === 'a' && failFirst) {
+        failFirst = false
+        throw new Error('row vanished')
+      }
+      statuses.set(id, s)
+    })
+    const items = [item({ id: 'a' })]
+    const service = new TodoOrchestratorService({
+      listCandidates: () => items.filter((c) => (statuses.get(c.id) ?? c.status) === 'todo'),
+      updateStatus,
+      resolveCwd: () => '/repo',
+      dispatch: fn,
+      getConfig: () => cfg({ maxConcurrent: 1 })
+    })
+    await service.tick() // throw before dispatch → slot must be released, no dispatch
+    expect(fn).not.toHaveBeenCalled()
+    // If the slot had leaked, this tick would see 0 free slots and skip. It dispatches,
+    // proving the reservation was freed.
+    await service.tick()
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
 })

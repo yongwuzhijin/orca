@@ -20,7 +20,6 @@ export type OrchestratorDeps = {
   resolveCwd: (item: TodoItem) => string | null
   dispatch: (input: OrchestratorDispatchInput) => Promise<{ sessionId: string }>
   getConfig: () => TodoOrchestratorConfig
-  now?: () => number
 }
 
 export class TodoOrchestratorService {
@@ -54,11 +53,6 @@ export class TodoOrchestratorService {
     this.timer = null
   }
 
-  /** Event-trigger: an eligibility flip or app signal should re-evaluate now. */
-  notifyEligible(): void {
-    void this.tick()
-  }
-
   async tick(): Promise<void> {
     if (this.evaluating) {
       return
@@ -83,7 +77,6 @@ export class TodoOrchestratorService {
           continue
         }
         this.liveSessions.add(candidate.id)
-        this.deps.updateStatus(candidate.id, 'in_progress')
         const engine: AcpEngine = candidate.preferredAgent ?? ACP_ENGINES[0]
         // Why: autoPilotRunner.run() resolves only at loop-end, so this promise's
         // lifetime == one AutoPilot run. Free the slot on either settle path and
@@ -94,15 +87,23 @@ export class TodoOrchestratorService {
           this.liveSessions.delete(candidate.id)
           void this.tick()
         }
-        void this.deps
-          .dispatch({
-            taskId: candidate.id,
-            engine,
-            prompt: buildBasePrompt(candidate),
-            cwd,
-            autoPilot: { maxTurns: candidate.autoPilotMaxTurns ?? cfg.defaultMaxTurns }
-          })
-          .then(release, release)
+        // Why: reserve the slot, flip status, and dispatch as one unit. A synchronous
+        // throw from updateStatus (e.g. the row was deleted mid-tick) must free the
+        // reservation, or the slot leaks permanently and maxConcurrent erodes to 0.
+        try {
+          this.deps.updateStatus(candidate.id, 'in_progress')
+          void this.deps
+            .dispatch({
+              taskId: candidate.id,
+              engine,
+              prompt: buildBasePrompt(candidate),
+              cwd,
+              autoPilot: { maxTurns: candidate.autoPilotMaxTurns ?? cfg.defaultMaxTurns }
+            })
+            .then(release, release)
+        } catch {
+          this.liveSessions.delete(candidate.id)
+        }
       }
     } finally {
       this.evaluating = false
