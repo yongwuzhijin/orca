@@ -13064,7 +13064,10 @@
             "maxTurns": "最大ターン数"
           },
           "TodoDetailView": {
-            "startTask": "タスクを開始"
+            "startTask": "タスクを開始",
+            "autoPilotEligible": "AutoPilot 対象",
+            "autoPilotMaxTurns": "最大ターン数",
+            "autoPilotMaxTurnsPlaceholder": "グローバル既定値"
           },
           "InProgressPanel": {
             "noSession": "No active session",
@@ -13172,6 +13175,14 @@
           "a2c6d9e0f7": "MR",
           "91b5c8d7e6": "GitLab"
         }
+      }
+    },
+    "settings": {
+      "todoOrchestrator": {
+        "enable": "自律タスクオーケストレーター",
+        "enableDescription": "AutoPilot 対象のタスクを自動的に取得し、空いているスロットに割り当てます。",
+        "maxConcurrent": "最大同時実行タスク数",
+        "maxConcurrentDescription": "オーケストレーターが同時に実行するタスク数の上限です。"
       }
     }
   },
