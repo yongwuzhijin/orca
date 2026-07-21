@@ -9,7 +9,8 @@ import type {
   LinearWorkspaceError,
   LinearWorkspaceSelection
 } from '../../shared/types'
-import { LinearClient } from '@linear/sdk'
+import type { LinearClient } from '@linear/sdk'
+import { loadLinearSdk } from './linear-sdk'
 import {
   LINEAR_ISSUE_API_PAGE_SIZE_MAX,
   clampLinearIssueListLimit
@@ -38,6 +39,7 @@ type LinearIssueNode = {
   id: string
   identifier: string
   title: string
+  branchName?: string | null
   description?: string | null
   url: string
   dueDate?: string | null
@@ -143,6 +145,7 @@ const LINEAR_ISSUE_NODE_FIELDS = `
   id
   identifier
   title
+  branchName
   description
   url
   dueDate
@@ -399,6 +402,7 @@ function mapRawIssueForWorkspace(
     id: issue.id,
     identifier: issue.identifier,
     title: issue.title,
+    branchName: issue.branchName ?? undefined,
     description: issue.description ?? undefined,
     url: issue.url,
     state: {
@@ -599,7 +603,9 @@ async function runLinearWrite<T>(
 ): Promise<T> {
   await acquire()
   try {
-    const client = signal ? new LinearClient({ apiKey: entry.apiKey, signal }) : entry.client
+    const client = signal
+      ? new (loadLinearSdk().LinearClient)({ apiKey: entry.apiKey, signal })
+      : entry.client
     return await write(client)
   } catch (error) {
     if (error instanceof LinearWriteFailure) {
