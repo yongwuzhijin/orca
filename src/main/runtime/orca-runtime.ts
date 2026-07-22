@@ -187,6 +187,12 @@ import type {
   LinearIssueRequest,
   LinearIssueTaskUpdateRequest,
   LinearIssueTaskUpdateResult,
+  LinearMcpIssueListRequest,
+  LinearMcpIssueListResult,
+  LinearIssueRelationWriteRequest,
+  LinearIssueRelationWriteResult,
+  LinearSaveIssueRequest,
+  LinearSaveIssueResult,
   LinearTeamLabelsResult,
   LinearTeamListResult,
   LinearTeamMembersResult,
@@ -359,6 +365,7 @@ import type {
   RuntimeMarkdownSaveTabResult,
   RuntimeMobileSessionCreateTerminalResult,
   RuntimeMobileSessionClientTab,
+  RuntimeMobileSessionTabCloseResult,
   RuntimeMobileSessionMarkdownTab,
   RuntimeMobileSessionTabMove,
   RuntimeMobileSessionTabMoveResult,
@@ -369,6 +376,7 @@ import type {
   RuntimeMobileSessionTabsRemovedResult,
   RuntimeMobileSessionTabsResult,
   RuntimeMobileSessionTabsSnapshot,
+  RuntimeSessionTabCloseReason,
   RuntimeBrowserDriverState,
   RuntimeTerminalDriverState,
   RuntimeSyncWindowGraph,
@@ -378,6 +386,8 @@ import type {
 } from '../../shared/runtime-types'
 import type { AutomationService } from '../automations/service'
 import { RuntimeBrowserCommands } from './orca-runtime-browser'
+import { RemoteRuntimeTerminalCreateIdempotency } from './remote-runtime-terminal-create-idempotency'
+import { deriveRemoteRuntimeTerminalCreateHandle } from './remote-runtime-terminal-create-identity'
 import { buildHeadlessTerminalSplitLayout } from './headless-terminal-split-layout'
 import { RECENT_PTY_OUTPUT_LIMIT, RecentPtyOutputBuffer } from './recent-pty-output-buffer'
 import {
@@ -574,6 +584,8 @@ import {
   linearMessage,
   sanitizeLinearErrorMessage
 } from '../linear/issue-context-errors'
+import { listMcpIssues } from '../linear/mcp-issue-list'
+import { writeIssueRelation } from '../linear/issue-relation-write'
 import {
   createProject as createLinearProject,
   getCustomView as getLinearCustomView,
@@ -1118,6 +1130,7 @@ type TerminalCreateOptions = {
   leafId?: string
   sessionId?: string
   persistHostSessionBinding?: boolean
+  preAllocatedHandle?: string
   // Why: the headless mobile-session create publishes its own authoritative
   // snapshot (with the correct target group) right after spawn. Skip the
   // intermediate pty-backed publish so the new tab doesn't briefly flash in
@@ -2297,6 +2310,7 @@ export class OrcaRuntimeService {
     string,
     Promise<RuntimeMobileSessionCreateTerminalResult>
   >()
+  private readonly terminalCreateIdempotency = new RemoteRuntimeTerminalCreateIdempotency()
   // Why: idempotency map for worktree.create — a create interrupted by a mobile
   // connection migration is retried with the same clientMutationId and returns
   // the in-flight (or just-finished) operation instead of a duplicate worktree.
@@ -2325,6 +2339,7 @@ export class OrcaRuntimeService {
     createMobileSessionTabsNotifyCoalescer((worktreeId) =>
       this.notifyMobileSessionTabsChangedNow(worktreeId)
     )
+  private pendingMobileSessionPtyInventoryRefresh: Promise<Set<string> | null> | null = null
   private leaves = new Map<string, RuntimeLeafRecord>()
   // Why: PTY output is a per-keystroke hot path. Looking up affected leaves by
   // ptyId keeps active TUI redraws independent of the total open terminal count.
@@ -4984,14 +4999,35 @@ export class OrcaRuntimeService {
 
   private async refreshMobileSessionPtyRecords(
     targetWorktreeId: string | null = null
-  ): Promise<void> {
+  ): Promise<Set<string> | null> {
+    if (targetWorktreeId !== FLOATING_TERMINAL_WORKTREE_ID) {
+      const pending = this.pendingMobileSessionPtyInventoryRefresh
+      if (pending) {
+        return pending
+      }
+      // Why: reconnect exit bursts share one authoritative daemon inventory
+      // instead of multiplying a full cross-generation list RPC per stale tab.
+      const refresh = this.performMobileSessionPtyRecordsRefresh(targetWorktreeId).finally(() => {
+        if (this.pendingMobileSessionPtyInventoryRefresh === refresh) {
+          this.pendingMobileSessionPtyInventoryRefresh = null
+        }
+      })
+      this.pendingMobileSessionPtyInventoryRefresh = refresh
+      return refresh
+    }
+    return await this.performMobileSessionPtyRecordsRefresh(targetWorktreeId)
+  }
+
+  private async performMobileSessionPtyRecordsRefresh(
+    targetWorktreeId: string | null
+  ): Promise<Set<string> | null> {
     if (!this.ptyController?.listProcesses && !this.ptyController?.hasPty) {
-      return
+      return null
     }
     // Why: floating PTY identity is explicit, so polling must not resolve every Git/SSH worktree.
     const isFloatingWorkspace = targetWorktreeId === FLOATING_TERMINAL_WORKTREE_ID
     const resolvedWorktrees = isFloatingWorkspace ? [] : await this.listResolvedWorktrees()
-    await this.refreshPtyWorktreeRecordsFromController(
+    return await this.refreshPtyWorktreeRecordsFromController(
       resolvedWorktrees,
       isFloatingWorkspace ? targetWorktreeId : null
     )
@@ -5309,13 +5345,68 @@ export class OrcaRuntimeService {
     })
   }
 
-  async closeMobileSessionTab(worktreeSelector: string, tabId: string): Promise<{ closed: true }> {
+  async refuseUnattributedMobileSessionTabClose(
+    worktreeSelector: string,
+    tabId: string
+  ): Promise<RuntimeMobileSessionTabCloseResult> {
+    const snapshot = await this.listMobileSessionTabs(worktreeSelector)
+    const tabExists = snapshot.tabs.some(
+      (candidate) =>
+        candidate.id === tabId ||
+        (candidate.type === 'terminal' && candidate.parentTabId === tabId) ||
+        (candidate.type === 'browser' && candidate.browserWorkspaceId === tabId)
+    )
+    if (!tabExists) {
+      throw new Error('tab_not_found')
+    }
+    // Why: a legacy client may already have hidden its mirror; a new snapshot
+    // restores it without granting an unattributed request destructive authority.
+    this.republishMobileSessionTabsSnapshot(snapshot.worktree)
+    return {
+      closed: true,
+      refused: true,
+      refusalReason: 'missing-intent',
+      snapshotRepublished: true
+    }
+  }
+
+  async closeMobileSessionTab(
+    worktreeSelector: string,
+    tabId: string,
+    options: {
+      reason?: RuntimeSessionTabCloseReason
+      expectedPublicationEpoch?: string
+      expectedTerminalHandle?: string
+    } = {}
+  ): Promise<RuntimeMobileSessionTabCloseResult> {
     const explicitWorktreeId = this.getValidatedExplicitWorktreeIdSelector(worktreeSelector)
     const worktreeId =
       explicitWorktreeId ?? (await this.resolveWorktreeSelector(worktreeSelector)).id
     this.hydrateHeadlessMobileSessionTabsFromWorkspaceSession(worktreeId)
-    await this.refreshMobileSessionPtyRecords()
+    const observedPtyIds = await this.refreshMobileSessionPtyRecords()
     const snapshot = this.mobileSessionTabsByWorktree.get(worktreeId)
+    if (options.reason !== undefined && options.reason !== 'user' && observedPtyIds === null) {
+      // Why: keep-on-unknown must also restore the mirror the caller already pruned.
+      this.republishMobileSessionTabsSnapshot(worktreeId)
+      return {
+        closed: true,
+        refused: true,
+        refusalReason: 'unknown-liveness',
+        ...(snapshot ? { snapshotRepublished: true as const } : {})
+      }
+    }
+    if (
+      options.expectedPublicationEpoch !== undefined &&
+      snapshot?.publicationEpoch !== options.expectedPublicationEpoch
+    ) {
+      this.republishMobileSessionTabsSnapshot(worktreeId)
+      return {
+        closed: true,
+        refused: true,
+        refusalReason: 'stale-publication',
+        ...(snapshot ? { snapshotRepublished: true as const } : {})
+      }
+    }
     const tab =
       snapshot?.tabs.find((candidate) => candidate.id === tabId) ??
       snapshot?.tabs.find(
@@ -5327,18 +5418,86 @@ export class OrcaRuntimeService {
     if (!tab) {
       throw new Error('tab_not_found')
     }
+    if (options.expectedTerminalHandle !== undefined) {
+      const terminalIncarnationMatches =
+        tab.type === 'terminal' &&
+        snapshot!.tabs.some(
+          (candidate) =>
+            candidate.type === 'terminal' &&
+            candidate.parentTabId === tab.parentTabId &&
+            this.getMobileSessionTerminalHandle(worktreeId, candidate) ===
+              options.expectedTerminalHandle
+        )
+      if (!terminalIncarnationMatches) {
+        this.republishMobileSessionTabsSnapshot(worktreeId)
+        return {
+          closed: true,
+          refused: true,
+          refusalReason: 'stale-terminal',
+          snapshotRepublished: true
+        }
+      }
+    }
     if (tab.type === 'terminal') {
       const parentLeafCount = snapshot!.tabs.filter(
         (candidate) => candidate.type === 'terminal' && candidate.parentTabId === tab.parentTabId
       ).length
       const closingWholeParent = tab.id !== tabId || parentLeafCount <= 1
+      // Why: a non-'user' reason is a client-lifecycle echo ("terminal gone"),
+      // not authorization to kill. Every destructive branch below can take the
+      // whole parent down, so any live PTY under the parent means the echo is a
+      // transport artifact: refuse the close and republish the snapshot so the
+      // echoing client re-syncs and re-attaches. A reasonless close keeps
+      // legacy behavior — old clients send user closes without the field.
+      if (options.reason !== undefined && options.reason !== 'user') {
+        const parentLeaves = snapshot!.tabs.filter(
+          (candidate): candidate is RuntimeMobileSessionTerminalTab =>
+            candidate.type === 'terminal' && candidate.parentTabId === tab.parentTabId
+        )
+        // Why: exited PTYs keep a disconnected record in ptysById for status
+        // reads (and a still-synced leaf retains its record), so record
+        // presence is not liveness — only `connected` counts, or a genuinely
+        // dead tab never retires and the echo loops forever.
+        const leafHasConnectedPty = (leaf: RuntimeMobileSessionTerminalTab): boolean =>
+          this.findPtyForMobileTerminalTab(worktreeId, leaf)?.connected === true
+        if (parentLeaves.some(leafHasConnectedPty)) {
+          // Why: when the echo addresses a dead leaf under a live sibling we
+          // still refuse (every reachable close path below destroys the whole
+          // parent, live sibling included) but skip the republish — re-adding
+          // the dead leaf on the echoing client would feed an endless
+          // refuse→republish→re-echo cycle.
+          const addressedDeadLeaf = tab.id === tabId && !leafHasConnectedPty(tab)
+          if (!addressedDeadLeaf) {
+            this.republishMobileSessionTabsSnapshot(worktreeId)
+          }
+          // Why: both markers are skew-safe; clients must restore a mirror only
+          // when the host actually republished it, not for a dead leaf.
+          return {
+            closed: true,
+            refused: true,
+            refusalReason: 'live-host-pty',
+            ...(!addressedDeadLeaf ? { snapshotRepublished: true as const } : {})
+          }
+        }
+        if (!closingWholeParent || this.tabs.has(tab.parentTabId)) {
+          // Why: only the renderer may retire its own tab or split leaf; a
+          // remote lifecycle echo must never cross that boundary into a kill.
+          return {
+            closed: true,
+            refused: true,
+            refusalReason: 'retirement-owner'
+          }
+        }
+      }
       // Why: a runtime-owned headless tab is absent from renderer state, so the
       // closeTerminalTab relay below would ack success without killing its PTY,
       // and syncMobileSessionTabs would republish the "closed" tab. Only bypass
       // the relay when no renderer owns the parent: an adopted tab needs the
       // renderer's live pin guard and durable close transaction.
       if (closingWholeParent && !this.tabs.has(tab.parentTabId)) {
-        this.closeHeadlessMobileTerminalTab(worktreeId, snapshot!, tab)
+        this.closeHeadlessMobileTerminalTab(worktreeId, snapshot!, tab, {
+          killPtys: options.reason === undefined || options.reason === 'user'
+        })
         this.notifyRendererOfHeadlessTerminalClose(tab.parentTabId)
         this.store?.flushOrThrow?.()
         return { closed: true }
@@ -5384,6 +5543,31 @@ export class OrcaRuntimeService {
       this.notifier?.closeSessionTab?.(tab.id, worktreeId)
     }
     return { closed: true }
+  }
+
+  // Why: a refused echoed close means the echoing client already pruned its
+  // local mirror. Bump the version and emit the unchanged snapshot so clients
+  // that dedupe by snapshotVersion re-add and re-attach the still-live tab.
+  private republishMobileSessionTabsSnapshot(worktreeId: string): void {
+    const snapshot = this.mobileSessionTabsByWorktree.get(worktreeId)
+    if (snapshot) {
+      this.mobileSessionTabsByWorktree.set(worktreeId, {
+        ...snapshot,
+        snapshotVersion: snapshot.snapshotVersion + 1
+      })
+    }
+    this.notifyMobileSessionTabsChanged(worktreeId)
+  }
+
+  private getMobileSessionTerminalHandle(
+    worktreeId: string,
+    tab: RuntimeMobileSessionTerminalTab
+  ): string | null {
+    const pty = this.findPtyForMobileTerminalTab(worktreeId, tab)
+    if (!pty) {
+      return null
+    }
+    return this.handleByPtyId.get(pty.ptyId) ?? this.findHandleForPtyRecord(pty.ptyId)
   }
 
   private notifyRendererOfHeadlessTerminalClose(parentTabId: string): void {
@@ -5489,7 +5673,8 @@ export class OrcaRuntimeService {
   private closeHeadlessMobileTerminalTab(
     worktreeId: string,
     snapshot: RuntimeMobileSessionTabsSnapshot,
-    tab: RuntimeMobileSessionTerminalTab
+    tab: RuntimeMobileSessionTerminalTab,
+    options: { killPtys?: boolean } = {}
   ): void {
     const closedParentTabId = tab.parentTabId
     const projectedPtyIds = this.removePersistedHeadlessTerminalTab(worktreeId, closedParentTabId)
@@ -5516,8 +5701,10 @@ export class OrcaRuntimeService {
         ptyIdsToKill.add(ptyId)
       }
     }
-    for (const ptyId of ptyIdsToKill) {
-      this.ptyController?.kill(ptyId)
+    if (options.killPtys !== false) {
+      for (const ptyId of ptyIdsToKill) {
+        this.ptyController?.kill(ptyId)
+      }
     }
     const nextTabs = snapshot.tabs.filter((candidate) => {
       if (candidate.type !== 'terminal' || candidate.parentTabId !== closedParentTabId) {
@@ -19599,7 +19786,8 @@ export class OrcaRuntimeService {
       const launchOpts = await this.resolveAgentTerminalCreateOptions(workspace, opts)
       const cwd =
         this.resolveWorkspaceTerminalStartupCwd(workspace, launchOpts.cwd) ?? workspace.path
-      const preAllocatedHandle = this.createPreAllocatedTerminalHandle()
+      const preAllocatedHandle =
+        launchOpts.preAllocatedHandle ?? this.createPreAllocatedTerminalHandle()
       // Why: mint tabId in main before spawn so paneKey is known at PTY env
       // build time. Hook-based agent status (Claude/Codex/Cursor/Gemini) keys
       // off `${tabId}:${leafId}` — without these vars set on the PTY, the
@@ -19870,6 +20058,100 @@ export class OrcaRuntimeService {
       worktreeId: worktreeId ?? '',
       title: reply.title,
       surface: 'visible'
+    }
+  }
+
+  async dedupeTerminalCreate(
+    clientIdentity: string,
+    worktreeSelector: string | undefined,
+    clientMutationId: string | undefined,
+    reconcileExisting: boolean,
+    run: (
+      canonicalWorktreeSelector: string | undefined,
+      preAllocatedHandle: string | undefined
+    ) => Promise<RuntimeTerminalCreate>
+  ): Promise<RuntimeTerminalCreate> {
+    if (!clientMutationId || !worktreeSelector) {
+      if (reconcileExisting) {
+        throw new Error('runtime_unavailable')
+      }
+      return await run(worktreeSelector, undefined)
+    }
+    const workspace = await this.resolveTerminalWorkspaceLaunchScope(worktreeSelector)
+    const canonicalWorktreeSelector = `id:${workspace.id}`
+    const preAllocatedHandle = deriveRemoteRuntimeTerminalCreateHandle(
+      clientIdentity,
+      workspace.id,
+      clientMutationId
+    )
+    return this.terminalCreateIdempotency.run(
+      clientIdentity,
+      workspace.id,
+      clientMutationId,
+      async () => {
+        if (reconcileExisting) {
+          const adopted = await this.reconcileRemoteTerminalCreate(workspace.id, preAllocatedHandle)
+          if (adopted) {
+            return adopted
+          }
+        }
+        return await run(canonicalWorktreeSelector, preAllocatedHandle)
+      }
+    )
+  }
+
+  private async reconcileRemoteTerminalCreate(
+    worktreeId: string,
+    terminalHandle: string
+  ): Promise<RuntimeTerminalCreate | null> {
+    if (!this.ptyController?.listProcesses) {
+      throw new Error('runtime_unavailable')
+    }
+    const listed = await withTimeoutResult(
+      this.ptyController.listProcesses(),
+      PTY_CONTROLLER_LIST_TIMEOUT_MS
+    )
+    if (!listed.ok) {
+      // Why: unknown inventory cannot prove the first create failed, so spawning could duplicate a live shell.
+      throw new Error('runtime_unavailable')
+    }
+    const matches = listed.value.filter((session) => session.terminalHandle === terminalHandle)
+    if (matches.length > 1) {
+      throw new Error('terminal_create_identity_conflict')
+    }
+    if (matches.length === 0) {
+      const sameWorktreeHasUnknownIdentity = listed.value.some(
+        (session) =>
+          (session.worktreeId ?? inferWorktreeIdFromPtyId(session.id)) === worktreeId &&
+          !session.terminalHandle
+      )
+      if (sameWorktreeHasUnknownIdentity) {
+        // Why: older retained providers may list the first shell without its handle; absence is not authoritative in that shape.
+        throw new Error('runtime_unavailable')
+      }
+      return null
+    }
+    const session = matches[0]
+    const authoritativeWorktreeId = session.worktreeId ?? inferWorktreeIdFromPtyId(session.id)
+    if (authoritativeWorktreeId !== worktreeId) {
+      // Why: a reused address or forged provider record must never adopt a PTY from another workspace.
+      throw new Error('terminal_create_identity_conflict')
+    }
+    this.adoptControllerTerminalHandle(session.id, terminalHandle)
+    const pty = this.recordPtyWorktree(session.id, worktreeId, {
+      connected: true,
+      title: session.title
+    })
+    const adoptedHandle = this.issuePtyHandle(pty)
+    if (adoptedHandle !== terminalHandle) {
+      throw new Error('terminal_create_identity_conflict')
+    }
+    return {
+      handle: adoptedHandle,
+      ptyId: session.id,
+      worktreeId,
+      title: session.title || null,
+      surface: 'background'
     }
   }
 
@@ -20816,13 +21098,15 @@ export class OrcaRuntimeService {
       if (!tabId) {
         throw new Error('terminal_tab_not_found')
       }
-      await this.closeMobileSessionTab(`id:${pty.pty.worktreeId}`, tabId)
+      // Why: a handle-addressed CLI/automation close is an explicit intent, so
+      // it must stay destructive under the non-user close adjudication gate.
+      await this.closeMobileSessionTab(`id:${pty.pty.worktreeId}`, tabId, { reason: 'user' })
       this.claudeAgentTeams.removeTeamForLeaderHandle(handle)
       return { handle, tabId, closeMode: 'tab', ptyKilled: false }
     }
     this.assertGraphReady()
     const { leaf } = this.getLiveLeafForHandle(handle)
-    await this.closeMobileSessionTab(`id:${leaf.worktreeId}`, leaf.tabId)
+    await this.closeMobileSessionTab(`id:${leaf.worktreeId}`, leaf.tabId, { reason: 'user' })
     this.claudeAgentTeams.removeTeamForLeaderHandle(handle)
     return { handle, tabId: leaf.tabId, closeMode: 'tab', ptyKilled: false }
   }
@@ -24922,6 +25206,14 @@ export class OrcaRuntimeService {
     }
   }
 
+  async linearMcpIssueList(params: LinearMcpIssueListRequest): Promise<LinearMcpIssueListResult> {
+    try {
+      return await listMcpIssues(params)
+    } catch (error) {
+      throw this.mapLinearReadFailure(error)
+    }
+  }
+
   async linearResolveCurrentIssue(
     context?: LinearCurrentIssueContextHints
   ): Promise<ReturnType<typeof getLinearCurrentIssueFromWorktree>> {
@@ -25126,6 +25418,133 @@ export class OrcaRuntimeService {
       state: { id: state.id, name: state.name, type: state.type },
       previousState,
       meta: { workspaceId: target.workspaceId, alreadyInState }
+    }
+  }
+
+  async linearIssueRelationWrite(
+    params: LinearIssueRelationWriteRequest
+  ): Promise<LinearIssueRelationWriteResult> {
+    const target = await this.resolveLinearAgentWriteTarget(params)
+    const related = await this.resolveLinearAgentWriteTarget({
+      input: params.relatedInput,
+      workspaceId: target.workspaceId,
+      context: params.context
+    })
+    if (target.issue.id === related.issue.id) {
+      throw linearError('linear_write_failed', 'An issue cannot be related to itself.')
+    }
+    try {
+      const result = await this.runLinearAgentWrite(
+        (signal) =>
+          writeIssueRelation({
+            issue: { ...this.linearWriteIssueRef(target.issue), title: target.issue.title },
+            relatedIssue: {
+              ...this.linearWriteIssueRef(related.issue),
+              title: related.issue.title
+            },
+            relationship: params.relationship,
+            operation: params.operation,
+            workspaceId: target.workspaceId,
+            signal
+          }),
+        (cause) =>
+          linearError(
+            'linear_write_unconfirmed',
+            'Linear may have applied the relation change, but Orca could not confirm it.',
+            {
+              nextSteps: [
+                `Run \`orca linear issue ${target.issue.identifier} --relations --workspace ${target.workspaceId} --json\` before retrying.`
+              ],
+              ...(cause ? { cause } : {})
+            }
+          )
+      )
+      await this.notifyLinearLinkedIssueUpdated(target.workspaceId, [
+        target.issue.identifier,
+        related.issue.identifier
+      ])
+      return result
+    } catch (error) {
+      throw this.mapLinearReadFailure(error)
+    }
+  }
+
+  async linearSaveIssue(params: LinearSaveIssueRequest): Promise<LinearSaveIssueResult> {
+    if ((params.description?.length ?? 0) > LINEAR_WRITE_BODY_CAP) {
+      throw linearError('linear_body_too_large', 'Linear issue body is too large.')
+    }
+    if (!params.input && !params.current) {
+      if (!params.title || !params.team) {
+        throw linearError(
+          'linear_write_failed',
+          'Creating with save-issue requires both team and title.'
+        )
+      }
+      const created = await this.linearIssueCreate({
+        title: params.title,
+        body: params.description,
+        teamInput: params.team,
+        state: params.state,
+        assignee: params.assignee ?? undefined,
+        priority: params.priority,
+        estimate: params.estimate ?? undefined,
+        dueDate: params.dueDate ?? undefined,
+        labels: params.labels,
+        projectInput: params.project ?? undefined,
+        parentInput: params.parentId ?? undefined,
+        workspaceId: params.workspaceId,
+        writeId: params.writeId,
+        context: params.context
+      })
+      return { ...created, meta: { ...created.meta, created: true } }
+    }
+    if (params.team !== undefined) {
+      throw linearError('linear_write_failed', 'Team can only be set when creating an issue.')
+    }
+    const target = await this.resolveLinearAgentWriteTarget(params)
+    const current = await this.readLinearAgentIssueWriteRecord(target.issue.id, target.workspaceId)
+    const fields = await this.buildLinearSaveUpdate(params, current, target.workspaceId)
+    if (Object.keys(fields).length === 0) {
+      throw linearError('linear_write_failed', 'No issue fields were provided to save.')
+    }
+    const alreadySet = this.linearSavedIssueMatchesIntent(current, fields)
+    const updated = alreadySet
+      ? current
+      : await this.runLinearAgentWrite(
+          async (signal) => {
+            const saved = await updateLinearIssueForAgent(
+              target.issue.id,
+              fields,
+              target.workspaceId,
+              { signal }
+            )
+            if (!this.linearSavedIssueMatchesIntent(saved, fields)) {
+              throw new LinearWriteFailure(
+                'unconfirmed',
+                'Linear issue save could not be confirmed.'
+              )
+            }
+            return saved
+          },
+          (cause) =>
+            linearError(
+              'linear_write_unconfirmed',
+              'Linear may have applied the issue save, but Orca could not confirm it.',
+              {
+                nextSteps: [
+                  `Run \`orca linear issue ${target.issue.identifier} --workspace ${target.workspaceId} --json\` before retrying.`
+                ],
+                ...(cause ? { cause } : {})
+              }
+            )
+        )
+    await this.notifyLinearLinkedIssueUpdated(target.workspaceId, target.issue.identifier)
+    return {
+      issue: updated,
+      meta: {
+        workspaceId: target.workspaceId,
+        created: false
+      }
     }
   }
 
@@ -25451,7 +25870,13 @@ export class OrcaRuntimeService {
         input: params.input,
         current: params.current,
         workspaceId: params.workspaceId,
-        include: { comments: false, children: false, attachments: false, relations: false },
+        include: {
+          comments: false,
+          children: false,
+          attachments: false,
+          relations: false,
+          activity: false
+        },
         depth: 0,
         context: params.context
       },
@@ -25476,13 +25901,12 @@ export class OrcaRuntimeService {
     states: Awaited<ReturnType<typeof getLinearTeamStatesOrThrow>>
   ): Awaited<ReturnType<typeof getLinearTeamStatesOrThrow>>[number] | null {
     const normalized = input.toLocaleLowerCase()
-    return (
-      states.find(
-        (state) =>
-          state.id.toLocaleLowerCase() === normalized ||
-          state.name.toLocaleLowerCase() === normalized
-      ) ?? null
+    const exact = states.find(
+      (state) =>
+        state.id.toLocaleLowerCase() === normalized || state.name.toLocaleLowerCase() === normalized
     )
+    // Why: Linear MCP accepts lifecycle types; keep explicit IDs/names authoritative when they collide.
+    return exact ?? states.find((state) => state.type.toLocaleLowerCase() === normalized) ?? null
   }
 
   private async getLinearTeamLabelsForWrite(
@@ -25573,6 +25997,153 @@ export class OrcaRuntimeService {
     return null
   }
 
+  private async buildLinearSaveUpdate(
+    params: LinearSaveIssueRequest,
+    current: NonNullable<Awaited<ReturnType<typeof getLinearIssueByUuidForAgent>>>,
+    workspaceId: string
+  ): Promise<LinearIssueUpdate> {
+    const fields: LinearIssueUpdate = {}
+    if (params.title !== undefined) {
+      fields.title = params.title
+    }
+    if (params.description !== undefined) {
+      fields.description = params.description
+    }
+    if (params.priority !== undefined) {
+      fields.priority = params.priority
+    }
+    if (params.estimate !== undefined) {
+      fields.estimate = params.estimate
+    }
+    if (params.dueDate !== undefined) {
+      fields.dueDate = params.dueDate
+    }
+    if (params.state !== undefined) {
+      const states = await this.getLinearTeamStatesForWrite(current.team.id, workspaceId)
+      const state = this.resolveLinearAgentState(params.state, states)
+      if (!state) {
+        throw linearError(
+          'linear_invalid_state',
+          `No workflow state exactly matched "${params.state}".`
+        )
+      }
+      fields.stateId = state.id
+    }
+    if (params.assignee !== undefined) {
+      fields.assigneeId =
+        params.assignee === null
+          ? null
+          : await this.resolveLinearAssignee(params.assignee, current.team.id, workspaceId)
+    }
+    if (params.labels !== undefined) {
+      if (params.labels.length === 0) {
+        fields.labelIds = []
+      } else {
+        const labels = await this.resolveLinearLabelsForIssue(current, params.labels, workspaceId)
+        fields.labelIds = labels.map((label) => label.id)
+      }
+    }
+    if (params.project !== undefined) {
+      fields.projectId =
+        params.project === null
+          ? null
+          : (
+              await this.resolveLinearCreateProject(params.project, {
+                id: current.team.id,
+                workspaceId
+              })
+            ).id
+    }
+    if (params.parentId !== undefined) {
+      fields.parentId =
+        params.parentId === null
+          ? null
+          : (
+              await this.resolveLinearAgentWriteTarget({
+                input: params.parentId,
+                workspaceId,
+                context: params.context
+              })
+            ).issue.id
+      if (fields.parentId === current.id) {
+        throw linearError('linear_invalid_parent', 'An issue cannot be its own parent.')
+      }
+    }
+    return fields
+  }
+
+  private async resolveLinearAssignee(
+    input: string,
+    teamId: string,
+    workspaceId: string
+  ): Promise<string> {
+    if (input.toLocaleLowerCase() === 'me') {
+      return (await this.getLinearViewerForWrite(workspaceId)).id
+    }
+    // Why: caller-supplied IDs were accepted directly before save-issue; avoid a paginated member scan on that existing fast path.
+    if (isLinearUuid(input)) {
+      return input
+    }
+    let members: Awaited<ReturnType<typeof getLinearTeamMembersOrThrow>>
+    try {
+      members = await getLinearTeamMembersOrThrow(teamId, workspaceId)
+    } catch (error) {
+      throw this.mapLinearReadFailure(error)
+    }
+    const normalized = input.toLocaleLowerCase()
+    const matches = members.filter(
+      (member) =>
+        member.id.toLocaleLowerCase() === normalized ||
+        member.displayName.toLocaleLowerCase() === normalized ||
+        member.name?.toLocaleLowerCase() === normalized ||
+        member.email?.toLocaleLowerCase() === normalized
+    )
+    if (matches.length === 1) {
+      return matches[0].id
+    }
+    throw linearError(
+      'linear_invalid_assignee',
+      matches.length === 0
+        ? `No team member exactly matched "${input}".`
+        : `Multiple team members exactly matched "${input}".`
+    )
+  }
+
+  private linearSavedIssueMatchesIntent(
+    issue: NonNullable<Awaited<ReturnType<typeof getLinearIssueByUuidForAgent>>>,
+    fields: LinearIssueUpdate
+  ): boolean {
+    if (fields.title !== undefined && issue.title !== fields.title) {
+      return false
+    }
+    if (fields.description !== undefined && (issue.description ?? '') !== fields.description) {
+      return false
+    }
+    if (fields.parentId !== undefined && (issue.parent?.id ?? null) !== fields.parentId) {
+      return false
+    }
+    if (fields.stateId !== undefined && issue.state?.id !== fields.stateId) {
+      return false
+    }
+    if (fields.assigneeId !== undefined && (issue.assignee?.id ?? null) !== fields.assigneeId) {
+      return false
+    }
+    if (fields.priority !== undefined && issue.priority !== fields.priority) {
+      return false
+    }
+    if (fields.estimate !== undefined && (issue.estimate ?? null) !== fields.estimate) {
+      return false
+    }
+    if (fields.dueDate !== undefined && (issue.dueDate ?? null) !== fields.dueDate) {
+      return false
+    }
+    if (fields.projectId !== undefined && (issue.project?.id ?? null) !== fields.projectId) {
+      return false
+    }
+    const issueLabelIds = issue.labelIds ?? issue.labels?.map((label) => label.id) ?? []
+    return fields.labelIds === undefined || sameStringSet(issueLabelIds, fields.labelIds)
+  }
+
   private async resolveLinearCreateFields(
     params: {
       state?: string
@@ -25599,10 +26170,11 @@ export class OrcaRuntimeService {
       fields.stateId = state.id
     }
     if (params.assignee) {
-      fields.assigneeId =
-        params.assignee.toLocaleLowerCase() === 'me'
-          ? (await this.getLinearViewerForWrite(team.workspaceId)).id
-          : params.assignee
+      fields.assigneeId = await this.resolveLinearAssignee(
+        params.assignee,
+        team.id,
+        team.workspaceId
+      )
     }
     if (params.priority !== undefined) {
       fields.priority = params.priority
@@ -25645,6 +26217,13 @@ export class OrcaRuntimeService {
     if (idMatch) {
       await this.assertLinearProjectIncludesTeam(idMatch, team.id, team.workspaceId, trimmed)
       return idMatch
+    }
+    const slugMatch = searchCandidates.find(
+      (project) => project.slugId?.toLowerCase() === normalized
+    )
+    if (slugMatch) {
+      await this.assertLinearProjectIncludesTeam(slugMatch, team.id, team.workspaceId, trimmed)
+      return slugMatch
     }
     const nameMatches = await this.readLinearProjectsByExactNameForCreate(trimmed, team.workspaceId)
     const compatibleNameMatches = await this.filterLinearProjectsForTeam(
@@ -26563,11 +27142,17 @@ export class OrcaRuntimeService {
 
   private async notifyLinearLinkedIssueUpdated(
     workspaceId: string,
-    identifier: string
+    identifier: string | readonly string[]
   ): Promise<void> {
-    const normalized = identifier.toLocaleUpperCase()
+    const identifiers = typeof identifier === 'string' ? [identifier] : identifier
+    const normalized = new Map(
+      identifiers.map((value) => [value.toLocaleUpperCase(), value] as const)
+    )
     for (const worktree of await this.listResolvedWorktrees()) {
-      if ((worktree.linkedLinearIssue ?? '').toLocaleUpperCase() !== normalized) {
+      const linkedIdentifier = normalized.get(
+        (worktree.linkedLinearIssue ?? '').toLocaleUpperCase()
+      )
+      if (!linkedIdentifier) {
         continue
       }
       const linkedWorkspaceId = worktree.linkedLinearIssueWorkspaceId ?? workspaceId
@@ -26577,7 +27162,7 @@ export class OrcaRuntimeService {
       this.emitClientEvent({
         type: 'linearLinkedIssueUpdated',
         worktreeId: worktree.id,
-        identifier,
+        identifier: linkedIdentifier,
         workspaceId
       })
     }
