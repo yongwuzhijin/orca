@@ -2750,7 +2750,8 @@
             "sessionQueued": "セッションをキューに追加しました",
             "openSupportedWorkspace": "セッションを再開する前にワークスペースを開いてください。",
             "localSessionSshWorkspaceUnsupported": "このセッションの履歴はこのマシンに保存されているため、SSH ワークスペースでは再開できません。代わりにローカルワークスペースにドロップしてください。",
-            "sessionHostMismatchUnsupported": "このセッションは別のホストに属しています。同じホスト上のワークスペースにドロップしてください。"
+            "sessionHostMismatchUnsupported": "このセッションは別のホストに属しています。同じホスト上のワークスペースにドロップしてください。",
+            "resumePrepareFailed": "このセッションの再開準備ができませんでした。"
           },
           "TabGroupDropOverlay": {
             "paneColumnLabel": "新しい分割"
@@ -10392,7 +10393,8 @@
             "worktreeUnavailable": "ワークツリーは利用できなくなりました。",
             "openSupportedWorkspace": "Open a workspace before resuming a session.",
             "localSessionSshWorkspaceUnsupported": "このセッションの履歴はこのマシンに保存されているため、SSH ワークスペースでは再開できません。代わりにローカルワークスペースを開いてください。",
-            "sessionHostMismatchUnsupported": "このセッションは別のホストに属しています。再開するには同じホスト上のワークスペースを開いてください。"
+            "sessionHostMismatchUnsupported": "このセッションは別のホストに属しています。再開するには同じホスト上のワークスペースを開いてください。",
+            "resumePrepareFailed": "このセッションの再開準備ができませんでした。"
           },
           "AiVaultPanelControls": {
             "scanningSessions": "Scanning sessions",

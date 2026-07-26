@@ -2750,7 +2750,8 @@
             "sessionQueued": "Sesión en cola",
             "openSupportedWorkspace": "Abre un espacio de trabajo antes de reanudar una sesión.",
             "localSessionSshWorkspaceUnsupported": "El historial de esta sesión solo existe en este equipo. Para reanudarla, arrástrala a un workspace local. Los workspaces SSH no tienen acceso a ese historial.",
-            "sessionHostMismatchUnsupported": "Esta sesión pertenece a un host diferente. Suéltala en un espacio de trabajo del mismo host."
+            "sessionHostMismatchUnsupported": "Esta sesión pertenece a un host diferente. Suéltala en un espacio de trabajo del mismo host.",
+            "resumePrepareFailed": "No se pudo preparar esta sesión para reanudarla."
           },
           "TabGroupDropOverlay": {
             "paneColumnLabel": "Nueva división"
@@ -10392,7 +10393,8 @@
             "worktreeUnavailable": "El worktree ya no está disponible.",
             "openSupportedWorkspace": "Abre un workspace antes de reanudar una sesión.",
             "localSessionSshWorkspaceUnsupported": "El historial de esta sesión solo existe en este equipo. Para reanudarla, abre un workspace local. Los workspaces SSH no tienen acceso a ese historial.",
-            "sessionHostMismatchUnsupported": "Esta sesión pertenece a un host diferente. Abre un espacio de trabajo en el mismo host para reanudarla."
+            "sessionHostMismatchUnsupported": "Esta sesión pertenece a un host diferente. Abre un espacio de trabajo en el mismo host para reanudarla.",
+            "resumePrepareFailed": "No se pudo preparar esta sesión para reanudarla."
           },
           "AiVaultPanelControls": {
             "scanningSessions": "Buscando sesiones",

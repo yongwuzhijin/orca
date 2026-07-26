@@ -2750,7 +2750,8 @@
             "sessionQueued": "会话已排队",
             "openSupportedWorkspace": "在恢复会话之前，请先打开一个工作区。",
             "localSessionSshWorkspaceUnsupported": "此会话的历史记录存储在本机上，因此无法在 SSH 工作区中恢复。请改为将其拖放到本地工作区。",
-            "sessionHostMismatchUnsupported": "此会话属于其他主机。请将其拖放到同一主机上的工作区。"
+            "sessionHostMismatchUnsupported": "此会话属于其他主机。请将其拖放到同一主机上的工作区。",
+            "resumePrepareFailed": "无法为该会话准备恢复。"
           },
           "TabGroupDropOverlay": {
             "paneColumnLabel": "新建拆分"
@@ -10392,7 +10393,8 @@
             "worktreeUnavailable": "工作树不再可用。",
             "openSupportedWorkspace": "在恢复会话之前，请先打开一个工作区。",
             "localSessionSshWorkspaceUnsupported": "此会话的历史记录存储在本机上，因此无法在 SSH 工作区中恢复。请改为打开一个本地工作区。",
-            "sessionHostMismatchUnsupported": "此会话属于其他主机。请打开同一主机上的工作区以恢复它。"
+            "sessionHostMismatchUnsupported": "此会话属于其他主机。请打开同一主机上的工作区以恢复它。",
+            "resumePrepareFailed": "无法为该会话准备恢复。"
           },
           "AiVaultPanelControls": {
             "scanningSessions": "正在扫描会话",
