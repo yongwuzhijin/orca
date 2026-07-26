@@ -753,7 +753,9 @@
         "devSearchKeywordNotification": "notification",
         "projectHostsSummary": "{{value0}} hosts",
         "linearTitle": "Linear",
-        "linearDescription": "Give agents the skill to read and update your linked Linear tickets."
+        "linearDescription": "Give agents the skill to read and update your linked Linear tickets.",
+        "browserQuickLinks": "Browser Quick Links",
+        "browserQuickLinksDescription": "Global browser shortcuts shown in the Bookmarks sidebar, organized into folders."
       },
       "useAppMenuPaste": {
         "pasteTooLarge": "Paste is too large."
@@ -6587,7 +6589,9 @@
           "dev": "Dev Tools",
           "devDescription": "Dev-only tools for exercising UI states.",
           "linearTitle": "Linear",
-          "linearDescription": "Give agents the skill to read and update your linked Linear tickets."
+          "linearDescription": "Give agents the skill to read and update your linked Linear tickets.",
+          "browserQuickLinksTitle": "Browser Quick Links",
+          "browserQuickLinksDescription": "Global browser shortcuts shown in the Bookmarks sidebar, organized into folders."
         },
         "SettingsFormControls": {
           "42a4d15a30": "No matching fonts.",
@@ -7554,6 +7558,23 @@
               "85fab5e12c": "cli",
               "890ddf943d": "Register the Orca CLI so agents can drive the browser.",
               "50f0860e18": "Enable Orca CLI"
+            }
+          },
+          "quick": {
+            "links": {
+              "search": {
+                "title": "Browser Quick Links",
+                "description": "Global browser shortcuts shown in the Bookmarks sidebar, organized into folders.",
+                "kwBookmark": "bookmark",
+                "kwBookmarks": "bookmarks",
+                "kwQuick": "quick",
+                "kwLink": "link",
+                "kwLinks": "links",
+                "kwShortcut": "shortcut",
+                "kwBrowser": "browser",
+                "kwFolder": "folder",
+                "kwFavorites": "favorites"
+              }
             }
           }
         },
@@ -9293,6 +9314,37 @@
           "title": "Editor Font Family",
           "description": "Font used by file editors and diff views. Leave empty to follow the terminal font.",
           "placeholder": "Same as terminal font"
+        },
+        "BrowserQuickLinksPane": {
+          "deleteLinkTitle": "Delete \"{{value0}}\"?",
+          "deleteLinkDescription": "This quick link will be removed everywhere.",
+          "deleteConfirm": "Delete",
+          "deleteFolderTitle": "Delete folder \"{{value0}}\"?",
+          "deleteFolderDescription": "Links inside this folder move to the root level.",
+          "heading": "Browser Quick Links",
+          "headingDescription": "Global shortcuts shown in the Bookmarks sidebar. Organize them into folders or keep them at the root level.",
+          "newFolder": "New Folder",
+          "addLink": "Add Quick Link",
+          "empty": "No quick links yet. Add shortcuts to the sites you open all the time.",
+          "renameFolder": "Rename folder",
+          "deleteFolder": "Delete folder",
+          "emptyFolder": "Empty folder.",
+          "editLink": "Edit link",
+          "deleteLink": "Delete link",
+          "editLinkTitle": "Edit Quick Link",
+          "addLinkTitle": "Add Quick Link",
+          "nameLabel": "Name",
+          "namePlaceholder": "Optional — defaults to the site host",
+          "urlLabel": "URL",
+          "invalidUrl": "Enter a valid URL.",
+          "folderLabel": "Folder",
+          "rootFolder": "Root (no folder)",
+          "cancel": "Cancel",
+          "save": "Save",
+          "renameFolderTitle": "Rename Folder",
+          "newFolderTitle": "New Folder",
+          "folderNameLabel": "Name",
+          "urlPlaceholder": "https://example.com"
         }
       },
       "right": {
@@ -10140,7 +10192,8 @@
             "fc3095d2ed": "explorer",
             "aiVaultSessionHistory": "Agents",
             "folderWorkspaces": "Attached worktrees",
-            "parentPrChecks": "PR Checks"
+            "parentPrChecks": "PR Checks",
+            "bookmarksTab": "Bookmarks"
           },
           "right": {
             "panel": {
@@ -10563,6 +10616,32 @@
                 }
               }
             }
+          },
+          "BookmarkLinkDialog": {
+            "nameLabel": "Name",
+            "namePlaceholder": "Optional — defaults to the site host",
+            "urlLabel": "URL",
+            "invalidUrl": "Enter a valid URL.",
+            "cancel": "Cancel",
+            "save": "Save",
+            "urlPlaceholder": "https://example.com/docs"
+          },
+          "BookmarksPanel": {
+            "branchDocs": "Branch Docs",
+            "addDoc": "Add doc link",
+            "noWorkspace": "Open a git workspace to attach branch doc links.",
+            "emptyDocs": "No doc links for this branch yet. Add project docs, specs, or PRDs related to this work.",
+            "projectLinks": "Project Links",
+            "addProjectLink": "Add project link",
+            "emptyProjectLinks": "Project-wide links stay available across branches and workspaces.",
+            "quickLinks": "Quick Links",
+            "manageQuickLinks": "Manage quick links in Settings",
+            "emptyQuickLinks": "Global shortcuts managed from Settings → Browser Quick Links.",
+            "editLink": "Edit Link",
+            "addProjectLinkTitle": "Add Project Link",
+            "addDocTitle": "Add Branch Doc Link",
+            "editAction": "Edit",
+            "deleteAction": "Delete"
           }
         }
       },

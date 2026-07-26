@@ -730,7 +730,9 @@
         "devSearchKeywordNotification": "notification",
         "projectHostsSummary": "호스트 {{value0}}개",
         "linearTitle": "Linear",
-        "linearDescription": "Give agents the skill to read and update your linked Linear tickets."
+        "linearDescription": "에이전트가 연결된 Linear 티켓을 읽고 업데이트할 수 있는 기능을 제공합니다.",
+        "browserQuickLinks": "브라우저 바로가기 링크",
+        "browserQuickLinksDescription": "북마크 사이드바에 표시되는 전역 브라우저 바로가기이며 폴더로 정리할 수 있습니다."
       },
       "useAppMenuPaste": {
         "pasteTooLarge": "붙여넣기 내용이 너무 큽니다."
@@ -6512,7 +6514,9 @@
           "dev": "Dev Tools",
           "devDescription": "UI 상태를 시험해 보기 위한 개발 전용 도구입니다.",
           "linearTitle": "Linear",
-          "linearDescription": "Give agents the skill to read and update your linked Linear tickets."
+          "linearDescription": "에이전트가 연결된 Linear 티켓을 읽고 업데이트할 수 있는 기능을 제공합니다.",
+          "browserQuickLinksTitle": "브라우저 바로가기 링크",
+          "browserQuickLinksDescription": "북마크 사이드바에 표시되는 전역 브라우저 바로가기이며 폴더로 정리할 수 있습니다."
         },
         "SettingsFormControls": {
           "42a4d15a30": "일치하는 글꼴이 없습니다.",
@@ -7479,6 +7483,23 @@
               "85fab5e12c": "CLI",
               "890ddf943d": "agents가 브라우저를 구동할 수 있도록 Orca CLI를 등록하세요.",
               "50f0860e18": "Orca CLI 활성화"
+            }
+          },
+          "quick": {
+            "links": {
+              "search": {
+                "title": "브라우저 바로가기 링크",
+                "description": "북마크 사이드바에 표시되는 전역 브라우저 바로가기이며 폴더로 정리할 수 있습니다.",
+                "kwBookmark": "북마크",
+                "kwBookmarks": "북마크",
+                "kwQuick": "빠른",
+                "kwLink": "링크",
+                "kwLinks": "링크",
+                "kwShortcut": "바로가기",
+                "kwBrowser": "브라우저",
+                "kwFolder": "폴더",
+                "kwFavorites": "즐겨찾기"
+              }
             }
           }
         },
@@ -9270,6 +9291,37 @@
           "title": "Editor Font Family",
           "description": "Font used by file editors and diff views. Leave empty to follow the terminal font.",
           "placeholder": "Same as terminal font"
+        },
+        "BrowserQuickLinksPane": {
+          "deleteLinkTitle": "\"{{value0}}\"을(를) 삭제할까요?",
+          "deleteLinkDescription": "이 바로가기 링크가 모든 위치에서 제거됩니다.",
+          "deleteConfirm": "삭제",
+          "deleteFolderTitle": "폴더 \"{{value0}}\"을(를) 삭제할까요?",
+          "deleteFolderDescription": "폴더 안의 링크는 루트로 이동합니다.",
+          "heading": "브라우저 바로가기 링크",
+          "headingDescription": "북마크 사이드바에 표시되는 전역 바로가기입니다. 폴더로 정리하거나 루트에 둘 수 있습니다.",
+          "newFolder": "새 폴더",
+          "addLink": "바로가기 링크 추가",
+          "empty": "아직 바로가기 링크가 없습니다. 자주 여는 사이트의 바로가기를 추가해 보세요.",
+          "renameFolder": "폴더 이름 바꾸기",
+          "deleteFolder": "폴더 삭제",
+          "emptyFolder": "빈 폴더입니다.",
+          "editLink": "링크 편집",
+          "deleteLink": "링크 삭제",
+          "editLinkTitle": "바로가기 링크 편집",
+          "addLinkTitle": "바로가기 링크 추가",
+          "nameLabel": "이름",
+          "namePlaceholder": "선택 사항 — 기본값은 사이트 호스트",
+          "urlLabel": "URL",
+          "invalidUrl": "올바른 URL을 입력하세요.",
+          "folderLabel": "폴더",
+          "rootFolder": "루트(폴더 없음)",
+          "cancel": "취소",
+          "save": "저장",
+          "renameFolderTitle": "폴더 이름 바꾸기",
+          "newFolderTitle": "새 폴더",
+          "folderNameLabel": "이름",
+          "urlPlaceholder": "https://example.com"
         }
       },
       "right": {
@@ -10117,7 +10169,8 @@
             "fc3095d2ed": "탐색기",
             "aiVaultSessionHistory": "에이전트",
             "folderWorkspaces": "연결된 워크트리",
-            "parentPrChecks": "PR 검사"
+            "parentPrChecks": "PR 검사",
+            "bookmarksTab": "북마크"
           },
           "right": {
             "panel": {
@@ -10540,6 +10593,32 @@
                 }
               }
             }
+          },
+          "BookmarkLinkDialog": {
+            "nameLabel": "이름",
+            "namePlaceholder": "선택 사항 — 기본값은 사이트 호스트",
+            "urlLabel": "URL",
+            "invalidUrl": "올바른 URL을 입력하세요.",
+            "cancel": "취소",
+            "save": "저장",
+            "urlPlaceholder": "https://example.com/docs"
+          },
+          "BookmarksPanel": {
+            "branchDocs": "브랜치 문서",
+            "addDoc": "문서 링크 추가",
+            "noWorkspace": "Git 워크스페이스를 열면 브랜치에 문서 링크를 연결할 수 있습니다.",
+            "emptyDocs": "이 브랜치에는 아직 문서 링크가 없습니다. 이 작업과 관련된 문서, 스펙, PRD를 추가하세요.",
+            "projectLinks": "프로젝트 링크",
+            "addProjectLink": "프로젝트 링크 추가",
+            "emptyProjectLinks": "프로젝트 범위 링크는 브랜치나 워크스페이스를 전환해도 유지됩니다.",
+            "quickLinks": "바로가기 링크",
+            "manageQuickLinks": "설정에서 바로가기 링크 관리",
+            "emptyQuickLinks": "전역 바로가기는 설정 → 브라우저 바로가기 링크에서 관리합니다.",
+            "editLink": "링크 편집",
+            "addProjectLinkTitle": "프로젝트 링크 추가",
+            "addDocTitle": "브랜치 문서 링크 추가",
+            "editAction": "편집",
+            "deleteAction": "삭제"
           }
         }
       },

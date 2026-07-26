@@ -529,6 +529,8 @@ export type Worktree = {
   priorWorktreeIds?: string[]
   workspaceStatus?: WorkspaceStatus
   diffComments?: DiffComment[]
+  /** Branch-scoped doc links shown in the right-sidebar Bookmarks tab. */
+  browserDocLinks?: BrowserBookmarkLink[]
   mobileDiffReview?: MobileDiffReviewState
   automationProvenance?: AutomationWorkspaceProvenance
 } & GitWorktreeInfo
@@ -634,6 +636,8 @@ export type WorktreeMeta = {
   /** User-assigned workspace board status for manual sidebar organization. */
   workspaceStatus?: WorkspaceStatus
   diffComments?: DiffComment[]
+  /** Branch-scoped doc links shown in the right-sidebar Bookmarks tab. */
+  browserDocLinks?: BrowserBookmarkLink[]
   /** Path-derived worktree ids this worktree had before its folder was renamed
    *  on disk (the id embeds the path). Lets the daemon's session GC and registry
    *  hydration recognize sessions minted under an old id instead of reaping
@@ -890,6 +894,24 @@ export type BrowserLoadError = {
   code: number
   description: string
   validatedUrl: string
+}
+
+// ─── Browser bookmark links (right-sidebar Bookmarks tab) ────────────
+export type BrowserBookmarkLink = {
+  id: string
+  title: string
+  url: string
+  createdAt: number
+}
+
+export type BrowserQuickLinkFolder = {
+  id: string
+  name: string
+}
+
+export type BrowserQuickLink = BrowserBookmarkLink & {
+  /** null/undefined = link lives at the root level, outside any folder. */
+  folderId?: string | null
 }
 
 export type BrowserCertificateFailure = {
@@ -2713,6 +2735,12 @@ export type GlobalSettings = {
   electronHttp1CompatibilityMode?: boolean
   /** Opt-in in-app browsing (isolated guest surface); default keeps links opening in the system browser. */
   openLinksInApp: boolean
+  /** Project-scoped bookmark links keyed by repoId (right-sidebar Bookmarks tab, survives branch/workspace switches). */
+  browserProjectLinks?: Record<string, BrowserBookmarkLink[]>
+  /** Global browser quick-link folders managed from Settings. */
+  browserQuickLinkFolders?: BrowserQuickLinkFolder[]
+  /** Global browser quick links managed from Settings; folderId null/undefined = root. */
+  browserQuickLinks?: BrowserQuickLink[]
   /** Worktree-scoped localhost hostnames to distinguish tabs; opt-in since a non-localhost host can break apps binding cookies/sessions to localhost. */
   localhostWorktreeLabelsEnabled?: boolean
   /** Tracks the one-time first-use prompt for terminal link routing (avoid silently changing where links open). */
@@ -3155,6 +3183,7 @@ export type RightSidebarTab =
   | 'source-control'
   | 'checks'
   | 'ports'
+  | 'bookmarks'
 export type ActiveRightSidebarTab = Exclude<RightSidebarTab, 'search'>
 export type RightSidebarExplorerView = 'files' | 'search'
 

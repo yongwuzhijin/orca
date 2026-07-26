@@ -730,7 +730,9 @@
         "devSearchKeywordNotification": "notification",
         "projectHostsSummary": "{{value0}} 台のホスト",
         "linearTitle": "Linear",
-        "linearDescription": "Give agents the skill to read and update your linked Linear tickets."
+        "linearDescription": "エージェントにリンク済みの Linear チケットを読み取り・更新するスキルを与えます。",
+        "browserQuickLinks": "ブラウザクイックリンク",
+        "browserQuickLinksDescription": "ブックマークサイドバーに表示されるグローバルなブラウザショートカット。フォルダで整理できます。"
       },
       "useAppMenuPaste": {
         "pasteTooLarge": "貼り付け内容が大きすぎます。"
@@ -6549,7 +6551,9 @@
           "dev": "Dev Tools",
           "devDescription": "Dev-only tools for exercising UI states.",
           "linearTitle": "Linear",
-          "linearDescription": "Give agents the skill to read and update your linked Linear tickets."
+          "linearDescription": "エージェントにリンク済みの Linear チケットを読み取り・更新するスキルを与えます。",
+          "browserQuickLinksTitle": "ブラウザクイックリンク",
+          "browserQuickLinksDescription": "ブックマークサイドバーに表示されるグローバルなブラウザショートカット。フォルダで整理できます。"
         },
         "SettingsFormControls": {
           "42a4d15a30": "一致するフォントがありません。",
@@ -7516,6 +7520,23 @@
               "85fab5e12c": "CLI",
               "890ddf943d": "agents がブラウザを操作できるように Orca CLI を登録します。",
               "50f0860e18": "Orca CLI を有効にする"
+            }
+          },
+          "quick": {
+            "links": {
+              "search": {
+                "title": "ブラウザクイックリンク",
+                "description": "ブックマークサイドバーに表示されるグローバルなブラウザショートカット。フォルダで整理できます。",
+                "kwBookmark": "ブックマーク",
+                "kwBookmarks": "ブックマーク",
+                "kwQuick": "クイック",
+                "kwLink": "リンク",
+                "kwLinks": "リンク",
+                "kwShortcut": "ショートカット",
+                "kwBrowser": "ブラウザ",
+                "kwFolder": "フォルダ",
+                "kwFavorites": "お気に入り"
+              }
             }
           }
         },
@@ -9270,6 +9291,37 @@
           "title": "Editor Font Family",
           "description": "Font used by file editors and diff views. Leave empty to follow the terminal font.",
           "placeholder": "Same as terminal font"
+        },
+        "BrowserQuickLinksPane": {
+          "deleteLinkTitle": "「{{value0}}」を削除しますか？",
+          "deleteLinkDescription": "このクイックリンクはすべての場所から削除されます。",
+          "deleteConfirm": "削除",
+          "deleteFolderTitle": "フォルダ「{{value0}}」を削除しますか？",
+          "deleteFolderDescription": "フォルダ内のリンクはルート直下に移動します。",
+          "heading": "ブラウザクイックリンク",
+          "headingDescription": "ブックマークサイドバーに表示されるグローバルショートカット。フォルダに整理するか、ルート直下に置けます。",
+          "newFolder": "新規フォルダ",
+          "addLink": "クイックリンクを追加",
+          "empty": "クイックリンクはまだありません。よく開くサイトのショートカットを追加しましょう。",
+          "renameFolder": "フォルダ名を変更",
+          "deleteFolder": "フォルダを削除",
+          "emptyFolder": "空のフォルダです。",
+          "editLink": "リンクを編集",
+          "deleteLink": "リンクを削除",
+          "editLinkTitle": "クイックリンクを編集",
+          "addLinkTitle": "クイックリンクを追加",
+          "nameLabel": "名前",
+          "namePlaceholder": "省略可 — 既定はサイトのホスト名",
+          "urlLabel": "URL",
+          "invalidUrl": "有効な URL を入力してください。",
+          "folderLabel": "フォルダ",
+          "rootFolder": "ルート（フォルダなし）",
+          "cancel": "キャンセル",
+          "save": "保存",
+          "renameFolderTitle": "フォルダ名を変更",
+          "newFolderTitle": "新規フォルダ",
+          "folderNameLabel": "名前",
+          "urlPlaceholder": "https://example.com"
         }
       },
       "right": {
@@ -10117,7 +10169,8 @@
             "fc3095d2ed": "エクスプローラ",
             "aiVaultSessionHistory": "エージェント",
             "folderWorkspaces": "添付ワークツリー",
-            "parentPrChecks": "PR チェック"
+            "parentPrChecks": "PR チェック",
+            "bookmarksTab": "ブックマーク"
           },
           "right": {
             "panel": {
@@ -10540,6 +10593,32 @@
                 }
               }
             }
+          },
+          "BookmarkLinkDialog": {
+            "nameLabel": "名前",
+            "namePlaceholder": "省略可 — 既定はサイトのホスト名",
+            "urlLabel": "URL",
+            "invalidUrl": "有効な URL を入力してください。",
+            "cancel": "キャンセル",
+            "save": "保存",
+            "urlPlaceholder": "https://example.com/docs"
+          },
+          "BookmarksPanel": {
+            "branchDocs": "ブランチドキュメント",
+            "addDoc": "ドキュメントリンクを追加",
+            "noWorkspace": "Git ワークスペースを開くとブランチにドキュメントリンクを関連付けられます。",
+            "emptyDocs": "このブランチにはまだドキュメントリンクがありません。この作業に関連するドキュメント・仕様書・PRD を追加しましょう。",
+            "projectLinks": "プロジェクトリンク",
+            "addProjectLink": "プロジェクトリンクを追加",
+            "emptyProjectLinks": "プロジェクト単位のリンクはブランチやワークスペースを切り替えても利用できます。",
+            "quickLinks": "クイックリンク",
+            "manageQuickLinks": "設定でクイックリンクを管理",
+            "emptyQuickLinks": "グローバルショートカットは「設定 → ブラウザクイックリンク」で管理します。",
+            "editLink": "リンクを編集",
+            "addProjectLinkTitle": "プロジェクトリンクを追加",
+            "addDocTitle": "ブランチドキュメントリンクを追加",
+            "editAction": "編集",
+            "deleteAction": "削除"
           }
         }
       },

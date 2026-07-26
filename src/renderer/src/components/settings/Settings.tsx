@@ -59,6 +59,7 @@ import { StatsPane } from '../stats/StatsPane'
 import { IntegrationsPane } from './IntegrationsPane'
 import { TasksPane } from './TasksPane'
 import { QuickCommandsPane } from './QuickCommandsPane'
+import { BrowserQuickLinksPane } from './BrowserQuickLinksPane'
 import { DeveloperPermissionsPane } from './DeveloperPermissionsPane'
 import { ComputerUsePane } from './ComputerUsePane'
 import { MobileSettingsPane } from './MobileSettingsPane'
@@ -1572,6 +1573,23 @@ function Settings(): React.JSX.Element {
                   searchEntries={getSectionSearchEntries('stats')}
                 >
                   {isSectionMounted('stats') ? <StatsPane /> : null}
+                </SettingsSection>
+
+                <SettingsSection
+                  id="quick-links"
+                  title={translate(
+                    'auto.components.settings.Settings.browserQuickLinksTitle',
+                    'Browser Quick Links'
+                  )}
+                  description={translate(
+                    'auto.components.settings.Settings.browserQuickLinksDescription',
+                    'Global browser shortcuts shown in the Bookmarks sidebar, organized into folders.'
+                  )}
+                  searchEntries={getSectionSearchEntries('quick-links')}
+                >
+                  {isSectionMounted('quick-links') ? (
+                    <BrowserQuickLinksPane settings={settings} updateSettings={updateSettings} />
+                  ) : null}
                 </SettingsSection>
 
                 <SettingsSection

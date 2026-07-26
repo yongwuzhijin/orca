@@ -730,7 +730,9 @@
         "devSearchKeywordNotification": "notification",
         "projectHostsSummary": "{{value0}} 个主机",
         "linearTitle": "Linear",
-        "linearDescription": "Give agents the skill to read and update your linked Linear tickets."
+        "linearDescription": "让智能体具备读取和更新已关联 Linear 工单的能力。",
+        "browserQuickLinks": "浏览器快捷方式",
+        "browserQuickLinksDescription": "显示在书签侧边栏中的全局浏览器快捷方式，可按文件夹整理。"
       },
       "useAppMenuPaste": {
         "pasteTooLarge": "粘贴内容过大。"
@@ -6512,7 +6514,9 @@
           "dev": "开发工具",
           "devDescription": "仅用于调试 UI 状态的开发工具。",
           "linearTitle": "Linear",
-          "linearDescription": "Give agents the skill to read and update your linked Linear tickets."
+          "linearDescription": "让智能体具备读取和更新已关联 Linear 工单的能力。",
+          "browserQuickLinksTitle": "浏览器快捷方式",
+          "browserQuickLinksDescription": "显示在书签侧边栏中的全局浏览器快捷方式，可按文件夹整理。"
         },
         "SettingsFormControls": {
           "42a4d15a30": "没有匹配的字体。",
@@ -7479,6 +7483,23 @@
               "85fab5e12c": "CLI",
               "890ddf943d": "注册 Orca CLI，以便智能体可以驱动浏览器。",
               "50f0860e18": "启用 Orca CLI"
+            }
+          },
+          "quick": {
+            "links": {
+              "search": {
+                "title": "浏览器快捷方式",
+                "description": "显示在书签侧边栏中的全局浏览器快捷方式，可按文件夹整理。",
+                "kwBookmark": "书签",
+                "kwBookmarks": "书签",
+                "kwQuick": "快捷",
+                "kwLink": "链接",
+                "kwLinks": "链接",
+                "kwShortcut": "快捷方式",
+                "kwBrowser": "浏览器",
+                "kwFolder": "文件夹",
+                "kwFavorites": "收藏夹"
+              }
             }
           }
         },
@@ -9270,6 +9291,37 @@
           "title": "Editor Font Family",
           "description": "Font used by file editors and diff views. Leave empty to follow the terminal font.",
           "placeholder": "Same as terminal font"
+        },
+        "BrowserQuickLinksPane": {
+          "deleteLinkTitle": "删除“{{value0}}”？",
+          "deleteLinkDescription": "该快捷链接将被彻底移除。",
+          "deleteConfirm": "删除",
+          "deleteFolderTitle": "删除文件夹“{{value0}}”？",
+          "deleteFolderDescription": "文件夹内的链接将移动到根目录。",
+          "heading": "浏览器快捷方式",
+          "headingDescription": "显示在书签侧边栏中的全局快捷方式，可放入文件夹或直接放在根目录。",
+          "newFolder": "新建文件夹",
+          "addLink": "添加快捷链接",
+          "empty": "还没有快捷链接。把常用网站添加为快捷方式吧。",
+          "renameFolder": "重命名文件夹",
+          "deleteFolder": "删除文件夹",
+          "emptyFolder": "空文件夹。",
+          "editLink": "编辑链接",
+          "deleteLink": "删除链接",
+          "editLinkTitle": "编辑快捷链接",
+          "addLinkTitle": "添加快捷链接",
+          "nameLabel": "名称",
+          "namePlaceholder": "可选——默认使用网站域名",
+          "urlLabel": "URL",
+          "invalidUrl": "请输入有效的 URL。",
+          "folderLabel": "文件夹",
+          "rootFolder": "根目录（无文件夹）",
+          "cancel": "取消",
+          "save": "保存",
+          "renameFolderTitle": "重命名文件夹",
+          "newFolderTitle": "新建文件夹",
+          "folderNameLabel": "名称",
+          "urlPlaceholder": "https://example.com"
         }
       },
       "right": {
@@ -10117,7 +10169,8 @@
             "fc3095d2ed": "资源管理器",
             "aiVaultSessionHistory": "智能体",
             "folderWorkspaces": "已附加的工作树",
-            "parentPrChecks": "PR 检查"
+            "parentPrChecks": "PR 检查",
+            "bookmarksTab": "书签"
           },
           "right": {
             "panel": {
@@ -10540,6 +10593,32 @@
                 }
               }
             }
+          },
+          "BookmarkLinkDialog": {
+            "nameLabel": "名称",
+            "namePlaceholder": "可选——默认使用网站域名",
+            "urlLabel": "URL",
+            "invalidUrl": "请输入有效的 URL。",
+            "cancel": "取消",
+            "save": "保存",
+            "urlPlaceholder": "https://example.com/docs"
+          },
+          "BookmarksPanel": {
+            "branchDocs": "分支文档",
+            "addDoc": "添加文档链接",
+            "noWorkspace": "打开一个 Git 工作区后即可关联分支文档链接。",
+            "emptyDocs": "当前分支还没有文档链接。添加与这项工作相关的项目文档、规格或 PRD。",
+            "projectLinks": "项目链接",
+            "addProjectLink": "添加项目链接",
+            "emptyProjectLinks": "项目级链接在切换分支或工作区后依然可用。",
+            "quickLinks": "快捷链接",
+            "manageQuickLinks": "在设置中管理快捷链接",
+            "emptyQuickLinks": "全局快捷方式在「设置 → 浏览器快捷方式」中管理。",
+            "editLink": "编辑链接",
+            "addProjectLinkTitle": "添加项目链接",
+            "addDocTitle": "添加分支文档链接",
+            "editAction": "编辑",
+            "deleteAction": "删除"
           }
         }
       },

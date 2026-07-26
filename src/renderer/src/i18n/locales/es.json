@@ -730,7 +730,9 @@
         "devSearchKeywordNotification": "notification",
         "projectHostsSummary": "{{value0}} hosts",
         "linearTitle": "Linear",
-        "linearDescription": "Give agents the skill to read and update your linked Linear tickets."
+        "linearDescription": "Da a los agentes la capacidad de leer y actualizar tus tickets de Linear vinculados.",
+        "browserQuickLinks": "Enlaces rápidos del navegador",
+        "browserQuickLinksDescription": "Accesos directos globales del navegador que se muestran en la barra lateral de marcadores, organizados en carpetas."
       },
       "useAppMenuPaste": {
         "pasteTooLarge": "El contenido pegado es demasiado grande."
@@ -6527,7 +6529,9 @@
           "dev": "Herramientas de desarrollo",
           "devDescription": "Herramientas solo de desarrollo para probar estados de la UI.",
           "linearTitle": "Linear",
-          "linearDescription": "Give agents the skill to read and update your linked Linear tickets."
+          "linearDescription": "Da a los agentes la capacidad de leer y actualizar tus tickets de Linear vinculados.",
+          "browserQuickLinksTitle": "Enlaces rápidos del navegador",
+          "browserQuickLinksDescription": "Accesos directos globales del navegador que se muestran en la barra lateral de marcadores, organizados en carpetas."
         },
         "SettingsFormControls": {
           "42a4d15a30": "No hay fuentes coincidentes.",
@@ -7494,6 +7498,23 @@
               "85fab5e12c": "CLI",
               "890ddf943d": "Registra la CLI de Orca para que los agentes puedan controlar el navegador.",
               "50f0860e18": "Habilitar CLI de Orca"
+            }
+          },
+          "quick": {
+            "links": {
+              "search": {
+                "title": "Enlaces rápidos del navegador",
+                "description": "Accesos directos globales del navegador que se muestran en la barra lateral de marcadores, organizados en carpetas.",
+                "kwBookmark": "marcador",
+                "kwBookmarks": "marcadores",
+                "kwQuick": "rápido",
+                "kwLink": "enlace",
+                "kwLinks": "enlaces",
+                "kwShortcut": "acceso directo",
+                "kwBrowser": "navegador",
+                "kwFolder": "carpeta",
+                "kwFavorites": "favoritos"
+              }
             }
           }
         },
@@ -9270,6 +9291,37 @@
           "title": "Editor Font Family",
           "description": "Font used by file editors and diff views. Leave empty to follow the terminal font.",
           "placeholder": "Same as terminal font"
+        },
+        "BrowserQuickLinksPane": {
+          "deleteLinkTitle": "¿Eliminar \"{{value0}}\"?",
+          "deleteLinkDescription": "Este enlace rápido se eliminará de todas partes.",
+          "deleteConfirm": "Eliminar",
+          "deleteFolderTitle": "¿Eliminar la carpeta \"{{value0}}\"?",
+          "deleteFolderDescription": "Los enlaces de esta carpeta se moverán al nivel raíz.",
+          "heading": "Enlaces rápidos del navegador",
+          "headingDescription": "Accesos directos globales que se muestran en la barra lateral de marcadores. Organízalos en carpetas o déjalos en el nivel raíz.",
+          "newFolder": "Nueva carpeta",
+          "addLink": "Añadir enlace rápido",
+          "empty": "Aún no hay enlaces rápidos. Añade accesos directos a los sitios que abres con frecuencia.",
+          "renameFolder": "Renombrar carpeta",
+          "deleteFolder": "Eliminar carpeta",
+          "emptyFolder": "Carpeta vacía.",
+          "editLink": "Editar enlace",
+          "deleteLink": "Eliminar enlace",
+          "editLinkTitle": "Editar enlace rápido",
+          "addLinkTitle": "Añadir enlace rápido",
+          "nameLabel": "Nombre",
+          "namePlaceholder": "Opcional: por defecto, el host del sitio",
+          "urlLabel": "URL",
+          "invalidUrl": "Introduce una URL válida.",
+          "folderLabel": "Carpeta",
+          "rootFolder": "Raíz (sin carpeta)",
+          "cancel": "Cancelar",
+          "save": "Guardar",
+          "renameFolderTitle": "Renombrar carpeta",
+          "newFolderTitle": "Nueva carpeta",
+          "folderNameLabel": "Nombre",
+          "urlPlaceholder": "https://example.com"
         }
       },
       "right": {
@@ -10117,7 +10169,8 @@
             "fc3095d2ed": "explorador",
             "aiVaultSessionHistory": "Agentes",
             "folderWorkspaces": "Worktrees adjuntos",
-            "parentPrChecks": "Checks de PR"
+            "parentPrChecks": "Checks de PR",
+            "bookmarksTab": "Marcadores"
           },
           "right": {
             "panel": {
@@ -10540,6 +10593,32 @@
                 }
               }
             }
+          },
+          "BookmarkLinkDialog": {
+            "nameLabel": "Nombre",
+            "namePlaceholder": "Opcional: por defecto, el host del sitio",
+            "urlLabel": "URL",
+            "invalidUrl": "Introduce una URL válida.",
+            "cancel": "Cancelar",
+            "save": "Guardar",
+            "urlPlaceholder": "https://example.com/docs"
+          },
+          "BookmarksPanel": {
+            "branchDocs": "Documentos de la rama",
+            "addDoc": "Añadir enlace de documento",
+            "noWorkspace": "Abre un espacio de trabajo git para asociar enlaces de documentos a la rama.",
+            "emptyDocs": "Esta rama aún no tiene enlaces de documentos. Añade documentos del proyecto, especificaciones o PRD relacionados con este trabajo.",
+            "projectLinks": "Enlaces del proyecto",
+            "addProjectLink": "Añadir enlace del proyecto",
+            "emptyProjectLinks": "Los enlaces a nivel de proyecto siguen disponibles al cambiar de rama o espacio de trabajo.",
+            "quickLinks": "Enlaces rápidos",
+            "manageQuickLinks": "Gestionar enlaces rápidos en Ajustes",
+            "emptyQuickLinks": "Los accesos directos globales se gestionan en Ajustes → Enlaces rápidos del navegador.",
+            "editLink": "Editar enlace",
+            "addProjectLinkTitle": "Añadir enlace del proyecto",
+            "addDocTitle": "Añadir enlace de documento de rama",
+            "editAction": "Editar",
+            "deleteAction": "Eliminar"
           }
         }
       },

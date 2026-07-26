@@ -30,6 +30,7 @@ export type SettingsNavTarget =
   | 'voice'
   | 'shortcuts'
   | 'stats'
+  | 'quick-links'
   | 'ssh'
   | 'experimental'
   | 'agents'
