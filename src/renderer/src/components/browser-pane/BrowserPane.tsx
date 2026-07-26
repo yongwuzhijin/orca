@@ -5069,6 +5069,9 @@ function BrowserPagePane({
             viewportPresetId={browserTab.viewportPresetId ?? null}
             onDestroyWebview={() => destroyPersistentWebview(browserTab.id)}
             isActive={isActive}
+            worktreeId={browserTab.worktreeId}
+            pageUrl={browserTab.url}
+            pageTitle={browserTab.title}
           />
         </div>
         {visibleDownloads.length > 0 ? (

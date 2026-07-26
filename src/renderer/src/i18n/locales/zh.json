@@ -12726,7 +12726,12 @@
             "bf648471c5": "创建中…",
             "53bbe3dab4": "已从文件导入 {{value0}} 个 Cookie。",
             "c5f0e4d3b2a1": "已从 {{value1}} ({{value2}}) 导入 {{value0}} 个 Cookie。",
-            "d6a1f5e4c3b2": "已从 {{value1}} 导入 {{value0}} 个 Cookie。"
+            "d6a1f5e4c3b2": "已从 {{value1}} 导入 {{value0}} 个 Cookie。",
+            "addToBookmarks": "添加到书签",
+            "bookmarkBranchDocs": "分支文档",
+            "bookmarkProjectLinks": "项目链接",
+            "bookmarkQuickLinks": "快捷链接",
+            "bookmarkQuickLinksRoot": "根目录（无文件夹）"
           },
           "GrabConfirmationSheet": {
             "314a0aaa5b": "附加到 AI",
@@ -12750,6 +12755,14 @@
                 "suggestions": {
                   "87fcdd0da9": "{{value0}} 搜索"
                 }
+              }
+            },
+            "bookmark": {
+              "add": {
+                "duplicate": "该页面已在此书签列表中。",
+                "addedToBranchDocs": "已添加到分支文档",
+                "addedToProjectLinks": "已添加到项目链接",
+                "addedToQuickLinks": "已添加到快捷链接"
               }
             }
           }

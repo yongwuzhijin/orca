@@ -12749,7 +12749,12 @@
             "bf648471c5": "Creating…",
             "53bbe3dab4": "Imported {{value0}} cookies from file.",
             "c5f0e4d3b2a1": "Imported {{value0}} cookies from {{value1}} ({{value2}}).",
-            "d6a1f5e4c3b2": "Imported {{value0}} cookies from {{value1}}."
+            "d6a1f5e4c3b2": "Imported {{value0}} cookies from {{value1}}.",
+            "addToBookmarks": "Add to Bookmarks",
+            "bookmarkBranchDocs": "Branch Docs",
+            "bookmarkProjectLinks": "Project Links",
+            "bookmarkQuickLinks": "Quick Links",
+            "bookmarkQuickLinksRoot": "Root (no folder)"
           },
           "GrabConfirmationSheet": {
             "314a0aaa5b": "Attach to AI",
@@ -12773,6 +12778,14 @@
                 "suggestions": {
                   "87fcdd0da9": "{{value0}} Search"
                 }
+              }
+            },
+            "bookmark": {
+              "add": {
+                "duplicate": "This page is already in that bookmark list.",
+                "addedToBranchDocs": "Added to Branch Docs",
+                "addedToProjectLinks": "Added to Project Links",
+                "addedToQuickLinks": "Added to Quick Links"
               }
             }
           }

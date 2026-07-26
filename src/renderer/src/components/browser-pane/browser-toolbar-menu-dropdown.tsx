@@ -1,4 +1,4 @@
-import { Check, Ellipsis, Import, Monitor, Plus, Settings } from 'lucide-react'
+import { Bookmark, Check, Ellipsis, Folder, Import, Monitor, Plus, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -14,8 +14,14 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { useAppStore } from '@/store'
-import { BROWSER_FAMILY_LABELS } from '../../../../shared/constants'
+import { BROWSER_FAMILY_LABELS, ORCA_BROWSER_BLANK_URL } from '../../../../shared/constants'
+import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
 import type { BrowserSessionProfile, BrowserViewportPresetId } from '../../../../shared/types'
+import {
+  addBookmarkToBranchDocs,
+  addBookmarkToProjectLinks,
+  addBookmarkToQuickLinks
+} from './browser-bookmark-add'
 
 type DetectedBrowserEntry = {
   family: string
@@ -40,6 +46,9 @@ type BrowserToolbarMenuDropdownProps = {
   onImportFromFile: () => void
   viewportPresetId: BrowserViewportPresetId | null
   onApplyViewportPreset: (nextId: BrowserViewportPresetId | null) => void
+  worktreeId: string
+  pageUrl: string
+  pageTitle: string
 }
 
 export function BrowserToolbarMenuDropdown({
@@ -55,8 +64,18 @@ export function BrowserToolbarMenuDropdown({
   onImportFromBrowser,
   onImportFromFile,
   viewportPresetId,
-  onApplyViewportPreset
+  onApplyViewportPreset,
+  worktreeId,
+  pageUrl,
+  pageTitle
 }: BrowserToolbarMenuDropdownProps): React.JSX.Element {
+  const quickLinkFolders = useAppStore((s) => s.settings?.browserQuickLinkFolders) ?? []
+  const repoId = useAppStore((s) => s.getKnownWorktreeById(worktreeId)?.repoId ?? null)
+  // Why: folder workspaces have no branch, and their meta channel drops unknown fields.
+  const canAddToBranchDocs = parseWorkspaceKey(worktreeId)?.type !== 'folder'
+  const canBookmarkPage = Boolean(
+    pageUrl && pageUrl !== 'about:blank' && pageUrl !== ORCA_BROWSER_BLANK_URL
+  )
   return (
     <DropdownMenu modal={false} open={menuOpen} onOpenChange={onMenuOpenChange}>
       <DropdownMenuTrigger asChild>
@@ -210,6 +229,70 @@ export function BrowserToolbarMenuDropdown({
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger disabled={!canBookmarkPage}>
+            <Bookmark className="mr-2 size-3.5" />
+            {translate(
+              'auto.components.browser.pane.BrowserToolbarMenu.addToBookmarks',
+              'Add to Bookmarks'
+            )}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem
+                disabled={!canAddToBranchDocs}
+                onSelect={() => addBookmarkToBranchDocs(worktreeId, pageTitle, pageUrl)}
+              >
+                {translate(
+                  'auto.components.browser.pane.BrowserToolbarMenu.bookmarkBranchDocs',
+                  'Branch Docs'
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={!repoId}
+                onSelect={() => repoId && addBookmarkToProjectLinks(repoId, pageTitle, pageUrl)}
+              >
+                {translate(
+                  'auto.components.browser.pane.BrowserToolbarMenu.bookmarkProjectLinks',
+                  'Project Links'
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  {translate(
+                    'auto.components.browser.pane.BrowserToolbarMenu.bookmarkQuickLinks',
+                    'Quick Links'
+                  )}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem
+                      onSelect={() => addBookmarkToQuickLinks(pageTitle, pageUrl, null)}
+                    >
+                      {translate(
+                        'auto.components.browser.pane.BrowserToolbarMenu.bookmarkQuickLinksRoot',
+                        'Root (no folder)'
+                      )}
+                    </DropdownMenuItem>
+                    {quickLinkFolders.length > 0 ? <DropdownMenuSeparator /> : null}
+                    {quickLinkFolders.map((folder) => (
+                      <DropdownMenuItem
+                        key={folder.id}
+                        onSelect={() => addBookmarkToQuickLinks(pageTitle, pageUrl, folder.id)}
+                      >
+                        <Folder className="mr-2 size-3.5 text-muted-foreground" />
+                        <span className="truncate">{folder.name}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
         </DropdownMenuSub>

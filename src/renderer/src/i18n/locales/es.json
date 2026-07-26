@@ -12726,7 +12726,12 @@
             "bf648471c5": "Creando…",
             "53bbe3dab4": "Se importaron {{value0}} cookies del archivo.",
             "c5f0e4d3b2a1": "Se importaron {{value0}} cookies de {{value1}} ({{value2}}).",
-            "d6a1f5e4c3b2": "Se importaron {{value0}} cookies de {{value1}}."
+            "d6a1f5e4c3b2": "Se importaron {{value0}} cookies de {{value1}}.",
+            "addToBookmarks": "Añadir a marcadores",
+            "bookmarkBranchDocs": "Documentos de la rama",
+            "bookmarkProjectLinks": "Enlaces del proyecto",
+            "bookmarkQuickLinks": "Enlaces rápidos",
+            "bookmarkQuickLinksRoot": "Raíz (sin carpeta)"
           },
           "GrabConfirmationSheet": {
             "314a0aaa5b": "Adjuntar a IA",
@@ -12750,6 +12755,14 @@
                 "suggestions": {
                   "87fcdd0da9": "{{value0}} Buscar"
                 }
+              }
+            },
+            "bookmark": {
+              "add": {
+                "duplicate": "Esta página ya está en esa lista de marcadores.",
+                "addedToBranchDocs": "Añadido a Documentos de la rama",
+                "addedToProjectLinks": "Añadido a Enlaces del proyecto",
+                "addedToQuickLinks": "Añadido a Enlaces rápidos"
               }
             }
           }

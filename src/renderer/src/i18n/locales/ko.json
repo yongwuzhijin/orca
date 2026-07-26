@@ -12726,7 +12726,12 @@
             "bf648471c5": "만드는 중…",
             "53bbe3dab4": "파일에서 {{value0}}개의 쿠키를 가져왔습니다.",
             "c5f0e4d3b2a1": "{{value1}} ({{value2}})에서 {{value0}}개의 쿠키를 가져왔습니다.",
-            "d6a1f5e4c3b2": "{{value1}}에서 {{value0}}개의 쿠키를 가져왔습니다."
+            "d6a1f5e4c3b2": "{{value1}}에서 {{value0}}개의 쿠키를 가져왔습니다.",
+            "addToBookmarks": "북마크에 추가",
+            "bookmarkBranchDocs": "브랜치 문서",
+            "bookmarkProjectLinks": "프로젝트 링크",
+            "bookmarkQuickLinks": "바로가기 링크",
+            "bookmarkQuickLinksRoot": "루트(폴더 없음)"
           },
           "GrabConfirmationSheet": {
             "314a0aaa5b": "AI에 연결",
@@ -12750,6 +12755,14 @@
                 "suggestions": {
                   "87fcdd0da9": "{{value0}} 검색"
                 }
+              }
+            },
+            "bookmark": {
+              "add": {
+                "duplicate": "이 페이지는 이미 해당 북마크 목록에 있습니다.",
+                "addedToBranchDocs": "브랜치 문서에 추가했습니다",
+                "addedToProjectLinks": "프로젝트 링크에 추가했습니다",
+                "addedToQuickLinks": "바로가기 링크에 추가했습니다"
               }
             }
           }

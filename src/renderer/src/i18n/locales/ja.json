@@ -12726,7 +12726,12 @@
             "bf648471c5": "作成…",
             "53bbe3dab4": "ファイルから {{value0}} 個の Cookie をインポートしました。",
             "c5f0e4d3b2a1": "{{value1}} ({{value2}}) から {{value0}} 件の Cookie をインポートしました。",
-            "d6a1f5e4c3b2": "{{value1}} から {{value0}} 件の Cookie をインポートしました。"
+            "d6a1f5e4c3b2": "{{value1}} から {{value0}} 件の Cookie をインポートしました。",
+            "addToBookmarks": "ブックマークに追加",
+            "bookmarkBranchDocs": "ブランチドキュメント",
+            "bookmarkProjectLinks": "プロジェクトリンク",
+            "bookmarkQuickLinks": "クイックリンク",
+            "bookmarkQuickLinksRoot": "ルート（フォルダなし）"
           },
           "GrabConfirmationSheet": {
             "314a0aaa5b": "AIにアタッチする",
@@ -12750,6 +12755,14 @@
                 "suggestions": {
                   "87fcdd0da9": "{{value0}} 検索"
                 }
+              }
+            },
+            "bookmark": {
+              "add": {
+                "duplicate": "このページはすでにそのブックマークリストにあります。",
+                "addedToBranchDocs": "ブランチドキュメントに追加しました",
+                "addedToProjectLinks": "プロジェクトリンクに追加しました",
+                "addedToQuickLinks": "クイックリンクに追加しました"
               }
             }
           }

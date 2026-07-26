@@ -19,6 +19,9 @@ type BrowserToolbarMenuProps = {
   viewportPresetId: BrowserViewportPresetId | null
   onDestroyWebview: () => void
   isActive: boolean
+  worktreeId: string
+  pageUrl: string
+  pageTitle: string
 }
 
 export function BrowserToolbarMenu({
@@ -27,7 +30,10 @@ export function BrowserToolbarMenu({
   browserPageId,
   viewportPresetId,
   onDestroyWebview,
-  isActive
+  isActive,
+  worktreeId,
+  pageUrl,
+  pageTitle
 }: BrowserToolbarMenuProps): React.JSX.Element {
   const browserSessionProfiles = useAppStore((s) => s.browserSessionProfiles)
   const detectedBrowsers = useAppStore((s) => s.detectedBrowsers)
@@ -229,6 +235,9 @@ export function BrowserToolbarMenu({
         onImportFromFile={() => void handleImportFromFile()}
         viewportPresetId={viewportPresetId}
         onApplyViewportPreset={applyViewportPreset}
+        worktreeId={worktreeId}
+        pageUrl={pageUrl}
+        pageTitle={pageTitle}
       />
 
       <BrowserToolbarProfileDialogs
