@@ -1,5 +1,6 @@
 import { useLayoutEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { emitBrowserCookieImportToast } from '@/lib/browser-cookie-import-toast'
 import { useAppStore } from '@/store'
 import { useMountedRef } from '@/hooks/useMountedRef'
 import { shouldShowBrowserImportHint } from './browser-import-hint-visibility'
@@ -66,6 +67,7 @@ export function BrowserToolbarMenu({
 
   const [newProfileDialogOpen, setNewProfileDialogOpen] = useState(false)
   const [newProfileName, setNewProfileName] = useState('')
+  const [useNativeUserAgent, setUseNativeUserAgent] = useState(false)
   const [isCreatingProfile, setIsCreatingProfile] = useState(false)
   const [pendingSwitchProfileId, setPendingSwitchProfileId] = useState<string | null | undefined>(
     undefined
@@ -84,6 +86,14 @@ export function BrowserToolbarMenu({
       return
     }
     setMenuOpen(open)
+  }
+
+  const handleNewProfileDialogOpenChange = (open: boolean): void => {
+    setNewProfileDialogOpen(open)
+    if (!open) {
+      setNewProfileName('')
+      setUseNativeUserAgent(false)
+    }
   }
 
   const effectiveProfileId = currentProfileId ?? 'default'
@@ -134,7 +144,11 @@ export function BrowserToolbarMenu({
 
     setIsCreatingProfile(true)
     try {
-      const profile = await createBrowserSessionProfile('isolated', trimmed)
+      const profile = await createBrowserSessionProfile(
+        'isolated',
+        trimmed,
+        useNativeUserAgent ? { userAgentMode: 'native' } : undefined
+      )
       if (!profile) {
         if (mountedRef.current) {
           toast.error(
@@ -153,6 +167,7 @@ export function BrowserToolbarMenu({
 
       setNewProfileDialogOpen(false)
       setNewProfileName('')
+      setUseNativeUserAgent(false)
 
       onDestroyWebview()
       switchBrowserTabProfile(workspaceId, profile.id, profile.partition)
@@ -177,7 +192,8 @@ export function BrowserToolbarMenu({
     const result = await importCookiesFromBrowser(effectiveProfileId, browserFamily, browserProfile)
     if (result.ok) {
       const browser = detectedBrowsers.find((b) => b.family === browserFamily)
-      toast.success(
+      emitBrowserCookieImportToast(
+        result.summary,
         browserProfile
           ? translate(
               'auto.components.browser.pane.BrowserToolbarMenu.c5f0e4d3b2a1',
@@ -205,7 +221,8 @@ export function BrowserToolbarMenu({
   const handleImportFromFile = async (): Promise<void> => {
     const result = await importCookiesToProfile(effectiveProfileId)
     if (result.ok) {
-      toast.success(
+      emitBrowserCookieImportToast(
+        result.summary,
         translate(
           'auto.components.browser.pane.BrowserToolbarMenu.53bbe3dab4',
           'Imported {{value0}} cookies from file.',
@@ -245,14 +262,17 @@ export function BrowserToolbarMenu({
         onPendingSwitchChange={() => setPendingSwitchProfileId(undefined)}
         onConfirmSwitch={confirmSwitchProfile}
         newProfileDialogOpen={newProfileDialogOpen}
-        onNewProfileDialogOpenChange={setNewProfileDialogOpen}
+        onNewProfileDialogOpenChange={handleNewProfileDialogOpenChange}
         newProfileName={newProfileName}
         onNewProfileNameChange={setNewProfileName}
+        useNativeUserAgent={useNativeUserAgent}
+        onUseNativeUserAgentChange={setUseNativeUserAgent}
         isCreatingProfile={isCreatingProfile}
         onCreateProfile={() => void handleCreateProfile()}
         onCancelNewProfile={() => {
           setNewProfileDialogOpen(false)
           setNewProfileName('')
+          setUseNativeUserAgent(false)
         }}
       />
     </>

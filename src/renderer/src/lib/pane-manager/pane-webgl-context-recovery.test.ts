@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { setTerminalWebglDiagnosticRecorder } from '../../../../shared/terminal-webgl-diagnostics'
 import type { ManagedPaneInternal } from './pane-manager-types'
 import { resumePaneRendering } from './pane-rendering-control'
 import { attachWebgl, resetTerminalWebglSuggestion } from './pane-webgl-renderer'
@@ -36,7 +37,6 @@ function createPane(options: { loadAddon?: () => void } = {}): ManagedPaneIntern
     serializeAddon: {} as never,
     unicode11Addon: {} as never,
     webLinksAddon: {} as never,
-    compositionHandler: null,
     pendingSplitScrollState: null,
     debugLabel: null
   }
@@ -122,5 +122,28 @@ describe('terminal WebGL context recovery', () => {
     fireContextLoss(pane)
     expect(pane.webglDisabledAfterContextLoss).toBe(true)
     expect(pane.webglAddon).toBeNull()
+  })
+
+  // Why exact keys: a GPU death loses every pane's context at once and the
+  // crash ring coalesces the repeats, so the population has to survive on the
+  // payload. It must use the same names the fit-retry crumb uses, or one ring
+  // ends up describing one measurement two ways.
+  it('carries the pane census under the same field names the fit-retry crumb uses', () => {
+    const recorded: { kind: string; detail?: Record<string, unknown> }[] = []
+    setTerminalWebglDiagnosticRecorder((kind, detail) => recorded.push({ kind, detail }))
+    try {
+      const pane = createPane()
+      attachWebgl(pane)
+      fireContextLoss(pane)
+    } finally {
+      setTerminalWebglDiagnosticRecorder(null)
+    }
+
+    expect(recorded).toEqual([
+      {
+        kind: 'webgl-context-loss',
+        detail: { paneId: 1, livePanes: expect.any(Number), livePaneManagers: expect.any(Number) }
+      }
+    ])
   })
 })

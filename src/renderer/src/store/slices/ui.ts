@@ -36,6 +36,8 @@ import {
   normalizeManualRepoOrder
 } from '../../../../shared/manual-repo-order'
 import { isTopLevelView } from '../../../../shared/top-level-view'
+import { normalizeLinearIssueViewResumeState } from '../../../../shared/linear-issue-view-resume-state'
+import { isReleaseChannel, type ReleaseChannel } from '../../../../shared/release-channel'
 import type { UsagePercentageDisplay } from '../../../../shared/usage-percentage-display'
 import {
   DEFAULT_USAGE_PERCENTAGE_DISPLAY,
@@ -101,9 +103,13 @@ import {
   normalizeWorkspaceStatuses
 } from '../../../../shared/workspace-statuses'
 import { clampMarkdownTocPanelWidth } from '../../../../shared/markdown-toc-panel-width'
+import { clampCombinedDiffFileTreeWidth } from '../../../../shared/combined-diff-file-tree-width'
 import { normalizeKagiSessionLink } from '../../../../shared/browser-url'
 import type { OrcaHookScriptKind } from '../../lib/orca-hook-trust'
-import type { SettingsNavTarget } from '@/lib/settings-navigation-types'
+import {
+  isSettingsNavigationTarget,
+  type SettingsNavigationTarget
+} from '@/lib/settings-navigation-types'
 import {
   filterSetupScriptPromptDismissalsToValidRepos,
   getSetupScriptPromptDismissalKey,
@@ -127,6 +133,7 @@ import {
 import { buildAgentNotificationId } from '../../../../shared/agent-notification-id'
 import { parsePaneKey } from '../../../../shared/stable-pane-id'
 import { translate } from '@/i18n/i18n'
+import { getRepoHostIdentity } from './repo-host-identity'
 
 export type PendingSidebarWorktreeReveal = {
   worktreeId: string
@@ -313,7 +320,8 @@ const VALID_LINEAR_PRESETS = new Set<NonNullable<TaskResumeState['linearPreset']
 const VALID_LINEAR_MODES = new Set<NonNullable<TaskResumeState['linearMode']>>([
   'issues',
   'projects',
-  'views'
+  'views',
+  'in-orca'
 ])
 const VALID_JIRA_PRESETS = new Set<NonNullable<TaskResumeState['jiraPreset']>>([
   'assigned',
@@ -552,6 +560,12 @@ function sanitizeTaskResumeState(value: unknown): TaskResumeState | undefined {
   if (typeof input.linearQuery === 'string') {
     next.linearQuery = input.linearQuery
   }
+  // Why: normalization drops a malformed preference or filter entry on its own,
+  // so corrupt Linear view state can't take the rest of the resume state down.
+  const linearIssueView = normalizeLinearIssueViewResumeState(input.linearIssueView)
+  if (linearIssueView) {
+    next.linearIssueView = linearIssueView
+  }
   if (input.linearContext && typeof input.linearContext === 'object') {
     const context = input.linearContext as Record<string, unknown>
     if (
@@ -611,6 +625,7 @@ export type UISlice = {
     | 'todos'
     | 'space'
     | 'skills'
+    | 'artifacts'
     | 'mobile'
   previousViewBeforeSettings:
     | 'terminal'
@@ -620,6 +635,7 @@ export type UISlice = {
     | 'todos'
     | 'space'
     | 'skills'
+    | 'artifacts'
     | 'mobile'
   previousViewBeforeActivity:
     | 'terminal'
@@ -629,6 +645,7 @@ export type UISlice = {
     | 'todos'
     | 'space'
     | 'skills'
+    | 'artifacts'
     | 'mobile'
   previousViewBeforeAutomations:
     | 'terminal'
@@ -638,6 +655,7 @@ export type UISlice = {
     | 'todos'
     | 'space'
     | 'skills'
+    | 'artifacts'
     | 'mobile'
   previousViewBeforeTodos:
     | 'terminal'
@@ -647,6 +665,7 @@ export type UISlice = {
     | 'automations'
     | 'space'
     | 'skills'
+    | 'artifacts'
     | 'mobile'
   previousViewBeforeSpace:
     | 'terminal'
@@ -656,6 +675,7 @@ export type UISlice = {
     | 'automations'
     | 'todos'
     | 'skills'
+    | 'artifacts'
     | 'mobile'
   previousViewBeforeSkills:
     | 'terminal'
@@ -665,6 +685,7 @@ export type UISlice = {
     | 'automations'
     | 'todos'
     | 'space'
+    | 'artifacts'
     | 'mobile'
   previousViewBeforeMobile:
     | 'terminal'
@@ -675,6 +696,17 @@ export type UISlice = {
     | 'todos'
     | 'space'
     | 'skills'
+    | 'artifacts'
+  previousViewBeforeArtifacts:
+    | 'terminal'
+    | 'settings'
+    | 'tasks'
+    | 'activity'
+    | 'automations'
+    | 'todos'
+    | 'space'
+    | 'skills'
+    | 'mobile'
   setActiveView: (view: UISlice['activeView']) => void
   taskPageData: {
     preselectedRepoId?: string
@@ -706,15 +738,19 @@ export type UISlice = {
     note: string
     attachments: string[]
     linkedWorkItem: {
+      provider?: 'github' | 'gitlab' | 'linear' | 'jira'
       type: 'issue' | 'pr' | 'mr'
       number: number
       title: string
       url: string
       linearIdentifier?: string
       linearBranchName?: string
+      jiraIdentifier?: string
+      repoId?: string
     } | null
     /** Preserve where provider data came from, separately from the host chosen to run the workspace. */
     taskSourceContext?: TaskSourceContext | null
+    linkedTaskSourceContext?: TaskSourceContext | null
     agent: TuiAgent
     linkedIssue: string
     linkedPR: number | null
@@ -751,18 +787,15 @@ export type UISlice = {
   closeSpacePage: () => void
   openSkillsPage: () => void
   closeSkillsPage: () => void
+  openArtifactsPage: () => void
+  closeArtifactsPage: () => void
   openMobilePage: () => void
   closeMobilePage: () => void
   setNewWorkspaceDraft: (draft: NonNullable<UISlice['newWorkspaceDraft']>) => void
   clearNewWorkspaceDraft: () => void
   openSettingsPage: () => void
   closeSettingsPage: () => void
-  settingsNavigationTarget: {
-    pane: SettingsNavTarget
-    repoId: string | null
-    sectionId?: string
-    intent?: 'add-quick-command' | 'add-remote-orca-server' | 'add-ssh-host'
-  } | null
+  settingsNavigationTarget: SettingsNavigationTarget | null
   openSettingsTarget: (target: NonNullable<UISlice['settingsNavigationTarget']>) => void
   clearSettingsTarget: () => void
   /** Which host the Projects Settings pane shows per project (keyed by projectId). Ephemeral on purpose — never persisted, so reload reopens on the effective host. */
@@ -845,7 +878,7 @@ export type UISlice = {
   markOrcaHookRepoAlwaysTrusted: (repoId: string) => void
   clearOrcaHookTrustForRepo: (repoId: string) => void
   setupScriptPromptDismissedRepoIds: string[]
-  dismissSetupScriptPrompt: (repoId: string) => void
+  dismissSetupScriptPrompt: (repoHostIdentity: string) => void
   setupGuideSidebarDismissed: boolean
   setSetupGuideSidebarDismissed: (dismissed: boolean) => void
   setupGuideBrowserMilestoneMigrated: boolean
@@ -884,6 +917,12 @@ export type UISlice = {
   setHideDefaultBranchWorkspace: (v: boolean) => void
   hideAutomationGeneratedWorkspaces: boolean
   setHideAutomationGeneratedWorkspaces: (v: boolean) => void
+  hideCliCreatedWorkspaces: boolean
+  setHideCliCreatedWorkspaces: (v: boolean) => void
+  hideDetachedHeadWorkspaces: boolean
+  setHideDetachedHeadWorkspaces: (v: boolean) => void
+  alwaysShowDefaultBranchWorkspace: boolean
+  setAlwaysShowDefaultBranchWorkspace: (v: boolean) => void
   showDotfilesByWorktree: Record<string, boolean>
   setShowDotfilesForWorktree: (worktreeId: string, showDotfiles: boolean) => void
   toggleShowDotfilesForWorktree: (worktreeId: string) => void
@@ -979,6 +1018,9 @@ export type UISlice = {
   dismissedUpdateVersion: string | null
   dismissUpdate: (versionOverride?: string) => void
   clearDismissedUpdateVersion: () => void
+  /** Dev-only channel override; null follows the running build's own channel. */
+  releaseChannelOverride: ReleaseChannel | null
+  setReleaseChannelOverride: (channel: ReleaseChannel | null) => void
   // Why: ephemeral, renderer-only — never persisted; resets each session and on every phase transition (see setUpdateStatus).
   updateCardCollapsed: boolean
   setUpdateCardCollapsed: (collapsed: boolean) => void
@@ -1240,6 +1282,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   previousViewBeforeSpace: 'terminal',
   previousViewBeforeSkills: 'terminal',
   previousViewBeforeMobile: 'terminal',
+  previousViewBeforeArtifacts: 'terminal',
   setActiveView: (view) => set({ activeView: view }),
   taskPageData: {},
   taskResumeState: undefined,
@@ -1508,6 +1551,16 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
     set((state) => ({
       activeView: state.previousViewBeforeSkills
     })),
+  openArtifactsPage: () =>
+    set((state) => ({
+      activeView: 'artifacts',
+      previousViewBeforeArtifacts:
+        state.activeView === 'artifacts' ? state.previousViewBeforeArtifacts : state.activeView
+    })),
+  closeArtifactsPage: () =>
+    set((state) => ({
+      activeView: state.previousViewBeforeArtifacts
+    })),
   openMobilePage: () =>
     set((state) => ({
       activeView: 'mobile',
@@ -1540,7 +1593,15 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
       return { activeView: previousView }
     }),
   settingsNavigationTarget: null,
-  openSettingsTarget: (target) => set({ settingsNavigationTarget: target }),
+  openSettingsTarget: (target) => {
+    if (!isSettingsNavigationTarget(target)) {
+      if (import.meta.env.DEV) {
+        throw new TypeError('openSettingsTarget received an invalid navigation target')
+      }
+      return
+    }
+    set({ settingsNavigationTarget: target })
+  },
   clearSettingsTarget: () => set({ settingsNavigationTarget: null }),
   settingsProjectHostSelection: {},
   settingsProjectSetupSelection: {},
@@ -1922,10 +1983,10 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
       return { trustedOrcaHooks: next }
     }),
   setupScriptPromptDismissedRepoIds: [],
-  dismissSetupScriptPrompt: (repoId) =>
+  dismissSetupScriptPrompt: (repoHostIdentity) =>
     set((s) => {
-      const dismissalKey = getSetupScriptPromptDismissalKey(repoId)
-      if (!repoId || s.setupScriptPromptDismissedRepoIds.includes(dismissalKey)) {
+      const dismissalKey = getSetupScriptPromptDismissalKey(repoHostIdentity)
+      if (!repoHostIdentity || s.setupScriptPromptDismissedRepoIds.includes(dismissalKey)) {
         return s
       }
       const next = [...s.setupScriptPromptDismissedRepoIds, dismissalKey]
@@ -2071,6 +2132,12 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   setHideDefaultBranchWorkspace: (v) => set({ hideDefaultBranchWorkspace: v }),
   hideAutomationGeneratedWorkspaces: false,
   setHideAutomationGeneratedWorkspaces: (v) => set({ hideAutomationGeneratedWorkspaces: v }),
+  hideCliCreatedWorkspaces: false,
+  setHideCliCreatedWorkspaces: (v) => set({ hideCliCreatedWorkspaces: v }),
+  hideDetachedHeadWorkspaces: false,
+  setHideDetachedHeadWorkspaces: (v) => set({ hideDetachedHeadWorkspaces: v }),
+  alwaysShowDefaultBranchWorkspace: true,
+  setAlwaysShowDefaultBranchWorkspace: (v) => set({ alwaysShowDefaultBranchWorkspace: v }),
 
   showDotfilesByWorktree: {},
   setShowDotfilesForWorktree: (worktreeId, showDotfiles) =>
@@ -2379,6 +2446,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
       const manualRepoOrder = normalizeManualRepoOrder(ui.manualRepoOrder)
       const orderedRepos = applyManualRepoOrder(s.repos, manualRepoOrder)
       const validRepoIds = new Set(s.repos.map((repo) => repo.id))
+      const validRepoHostIdentities = new Set(s.repos.map(getRepoHostIdentity))
       const persistedFilterRepoIds = sanitizePersistedRepoIds(ui.filterRepoIds)
       // Why: pre-rename builds used sidekick* keys; read as fallback only so new pet* writes win after upgrade.
       const customPets = Array.isArray(ui.customPets)
@@ -2450,6 +2518,11 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
           undefined,
           s.markdownTocPanelWidth
         ),
+        combinedDiffFileTreeWidth: clampCombinedDiffFileTreeWidth(
+          ui.combinedDiffFileTreeWidth,
+          undefined,
+          s.combinedDiffFileTreeWidth
+        ),
         rightSidebarOpen: typeof ui.rightSidebarOpen === 'boolean' ? ui.rightSidebarOpen : true,
         rightSidebarTab: rightSidebarRoute.rightSidebarTab,
         rightSidebarExplorerView: rightSidebarRoute.rightSidebarExplorerView,
@@ -2469,6 +2542,11 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
         repos: orderedRepos,
         hideDefaultBranchWorkspace: ui.hideDefaultBranchWorkspace ?? false,
         hideAutomationGeneratedWorkspaces: ui.hideAutomationGeneratedWorkspaces === true,
+        hideCliCreatedWorkspaces: ui.hideCliCreatedWorkspaces === true,
+        hideDetachedHeadWorkspaces: ui.hideDetachedHeadWorkspaces === true,
+        // Why !== false: profiles written before #8873 have no key, and they are
+        // precisely the ones showing the bug, so absence must mean "exempt".
+        alwaysShowDefaultBranchWorkspace: ui.alwaysShowDefaultBranchWorkspace !== false,
         showDotfilesByWorktree: sanitizeShowDotfilesByWorktree(ui.showDotfilesByWorktree),
         // Why: startup hydrates UI before repo catalogs, so defer repo-filter validation to the all-host refresh.
         filterRepoIds:
@@ -2508,6 +2586,12 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
           return DEFAULT_PET_ID
         })(),
         dismissedUpdateVersion: ui.dismissedUpdateVersion ?? null,
+        // Why: a persisted value from a build that knew a different channel set
+        // would otherwise survive as-is; activeChannel only falls back on null,
+        // so an unknown string reaches listBuilds and the segmented control.
+        releaseChannelOverride: isReleaseChannel(ui.releaseChannelOverride)
+          ? ui.releaseChannelOverride
+          : null,
         updateReassuranceSeen: ui.updateReassuranceSeen ?? false,
         osc52ClipboardDefaultOnNoticePending: ui.osc52ClipboardDefaultOnNoticePending === true,
         browserDefaultUrl: ui.browserDefaultUrl ?? null,
@@ -2524,11 +2608,11 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
             : null,
         trustedOrcaHooks: hydrateTrustedOrcaHooks(ui.trustedOrcaHooks, validRepoIds),
         setupScriptPromptDismissedRepoIds:
-          validRepoIds.size === 0
+          validRepoHostIdentities.size === 0
             ? sanitizeSetupScriptPromptDismissals(ui.setupScriptPromptDismissedRepoIds)
             : filterSetupScriptPromptDismissalsToValidRepos(
                 ui.setupScriptPromptDismissedRepoIds,
-                validRepoIds
+                validRepoHostIdentities
               ),
         setupGuideSidebarDismissed: ui.setupGuideSidebarDismissed === true,
         setupGuideBrowserMilestoneMigrated: ui.setupGuideBrowserMilestoneMigrated === true,
@@ -2602,6 +2686,11 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   clearDismissedUpdateVersion: () => {
     set({ dismissedUpdateVersion: null })
   },
+  releaseChannelOverride: null,
+  setReleaseChannelOverride: (channel) => {
+    void window.api.ui.set({ releaseChannelOverride: channel }).catch(console.error)
+    set({ releaseChannelOverride: channel })
+  },
   dismissUpdate: (versionOverride?: string) =>
     set((s) => {
       // Why: the 'error' variant has no version field, so the card passes it via versionOverride.
@@ -2611,6 +2700,8 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
         'activeNudgeId' in s.updateStatus ? (s.updateStatus.activeNudgeId ?? null) : null
       // Why: persist dismissal so relaunch doesn't immediately re-show the same card until a newer release.
       void window.api.ui.set({ dismissedUpdateVersion }).catch(console.error)
+      // Why: main can't otherwise tell an offered update was abandoned, which keeps a local-build session pinned and stalls background checks.
+      void window.api.updater.dismissAvailableUpdate().catch(console.error)
       // Why: only consume the nudge campaign for cards from a nudge cycle, not ordinary dismissals.
       if (activeNudgeId) {
         void window.api.updater.dismissNudge().catch(console.error)

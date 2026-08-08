@@ -8,7 +8,7 @@ import type {
 import { useAppStore } from '../../store'
 import { Button } from '../ui/button'
 import { Label } from '../ui/label'
-import { useConfirmationDialog } from '@/components/confirmation-dialog'
+import { useConfirmationDialog } from '@/components/confirmation-dialog-context'
 import { buildBrowserBookmarkLink, createBrowserBookmarkLinkId } from '@/lib/browser-bookmark-links'
 import { translate } from '@/i18n/i18n'
 import { BrowserQuickLinkDialog, BrowserQuickLinkFolderDialog } from './BrowserQuickLinkDialogs'

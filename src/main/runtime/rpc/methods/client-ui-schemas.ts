@@ -10,10 +10,17 @@ import {
 } from '../../../../shared/tui-agent-launch-defaults'
 import { isTuiAgent } from '../../../../shared/tui-agent-config'
 import { isTaskProvider } from '../../../../shared/task-providers'
+import { isReleaseChannel, type ReleaseChannel } from '../../../../shared/release-channel'
 import { normalizeDisabledTuiAgents } from '../../../../shared/tui-agent-selection'
 import { normalizePRBotAuthorOverrides } from '../../../../shared/pr-bot-author-overrides'
-import { normalizeWorktreeCardProperties } from '../../../../shared/worktree-card-properties'
+import {
+  normalizeWorktreeCardProperties,
+  WORKTREE_CARD_PROPERTIES
+} from '../../../../shared/worktree-card-properties'
 import type { TaskProvider } from '../../../../shared/types'
+import { RightSidebarTabParam } from './right-sidebar-tab-schema'
+import { TaskResumeState } from './task-resume-state-schema'
+import { omitUndefinedValues, tolerateUnknownValues } from './ui-update-value-tolerance'
 
 const NullableString = z.string().nullable()
 const StringArray = z.array(z.string())
@@ -23,21 +30,11 @@ const TaskProviderParam = z.custom<TaskProvider>(isTaskProvider, {
 const FeatureTipIds = z.array(z.custom(isFeatureTipId, { message: 'Unknown feature tip id' }))
 const UnknownRecord = z.record(z.string(), z.unknown())
 const UnknownRecordArray = z.array(UnknownRecord)
-const LegacyWorktreeCardProperty = z.enum([
-  'status',
-  'unread',
-  'ci',
-  'branch',
-  'issue',
-  'linear-issue',
-  'pr',
-  'automation',
-  'comment',
-  'ports',
-  'inline-agents'
-])
+// Derived from the shared union so a new card property cannot drift out of the
+// client schema — it previously omitted 'cli' and rejected the whole payload.
+const WorktreeCardPropertyParam = z.enum(WORKTREE_CARD_PROPERTIES)
 const WorktreeCardProperties = z
-  .array(LegacyWorktreeCardProperty)
+  .array(WorktreeCardPropertyParam)
   .transform((value) => normalizeWorktreeCardProperties(value))
 const AgentActivityDisplayMode = z.enum(['compact', 'full'])
 const StatusBarItem = z.enum([
@@ -59,16 +56,6 @@ const WorkspaceStatusDefinition = z.object({
   color: z.string().optional(),
   icon: z.string().optional()
 })
-const TaskResumeState = z
-  .object({
-    githubMode: z.enum(['items', 'project']).optional(),
-    githubItemsPreset: z.string().nullable().optional(),
-    githubItemsQuery: z.string().optional(),
-    githubProjectHiddenFieldIdsByView: z.record(z.string(), z.array(z.string())).optional(),
-    linearPreset: z.enum(['assigned', 'created', 'all', 'completed']).optional(),
-    linearQuery: z.string().optional()
-  })
-  .strict()
 const WorkspaceCleanupDismissal = z
   .object({
     worktreeId: z.string(),
@@ -169,18 +156,31 @@ export const SettingsUpdate = z
   .strict()
   .default({})
 
-export const UiUpdate = z
+const TopLevelViewSchema = z.enum([
+  'terminal',
+  'settings',
+  'tasks',
+  'activity',
+  'automations',
+  'todos',
+  'space',
+  'skills',
+  'artifacts',
+  'mobile'
+])
+const UiUpdateFields = z
   .object({
     lastActiveRepoId: NullableString.optional(),
     lastActiveWorktreeId: NullableString.optional(),
+    // Why: sync hydration ignores this persisted startup view, so paired windows stay put.
+    activeView: TopLevelViewSchema.optional(),
     sidebarWidth: z.number().finite().optional(),
     rightSidebarOpen: z.boolean().optional(),
-    rightSidebarTab: z
-      .enum(['explorer', 'search', 'vault', 'source-control', 'checks', 'ports'])
-      .optional(),
+    rightSidebarTab: RightSidebarTabParam.optional(),
     rightSidebarExplorerView: z.enum(['files', 'search']).optional(),
     rightSidebarWidth: z.number().finite().optional(),
     markdownTocPanelWidth: z.number().finite().optional(),
+    combinedDiffFileTreeWidth: z.number().finite().optional(),
     groupBy: z.enum(['none', 'workspace-status', 'repo', 'pr-status']).optional(),
     showWorkspaceLineage: z.boolean().optional(),
     sortBy: z.enum(['name', 'smart', 'recent', 'repo', 'manual']).optional(),
@@ -197,6 +197,12 @@ export const UiUpdate = z
       .optional(),
     hideDefaultBranchWorkspace: z.boolean().optional(),
     hideAutomationGeneratedWorkspaces: z.boolean().optional(),
+    // Why: rides App.tsx's debounced writer, so omitting it rejected that entire
+    // payload (sidebar widths, filters, agent acks) for every paired client.
+    showDotfilesByWorktree: z.record(z.string(), z.boolean()).optional(),
+    hideCliCreatedWorkspaces: z.boolean().optional(),
+    hideDetachedHeadWorkspaces: z.boolean().optional(),
+    alwaysShowDefaultBranchWorkspace: z.boolean().optional(),
     filterRepoIds: StringArray.optional(),
     collapsedGroups: StringArray.optional(),
     uiZoomLevel: z.number().finite().optional(),
@@ -225,6 +231,10 @@ export const UiUpdate = z
     lastUpdateCheckAt: z.number().finite().nullable().optional(),
     pendingUpdateNudgeId: NullableString.optional(),
     dismissedUpdateNudgeId: NullableString.optional(),
+    // Why the predicate rather than an inline z.enum: an enum here is a copy of
+    // RELEASE_CHANNELS, and a copy that drifts silently rejects the new
+    // channel's override on its way here — the picker moves, nothing installs.
+    releaseChannelOverride: z.custom<ReleaseChannel>(isReleaseChannel).nullable().optional(),
     notificationPermissionRequested: z.boolean().optional(),
     updateReassuranceSeen: z.boolean().optional(),
     osc52ClipboardDefaultOnNoticePending: z.boolean().optional(),
@@ -251,6 +261,14 @@ export const UiUpdate = z
     _inlineAgentsDefaultedForAllUsers: z.boolean().optional(),
     trustedOrcaHooks: z.record(z.string(), z.unknown()).optional(),
     setupScriptPromptDismissedRepoIds: StringArray.optional(),
+    // Why: one-shot dismissals the renderer writes through ui.set; each was a
+    // whole-payload rejection for paired clients while unlisted.
+    setupGuideSidebarDismissed: z.boolean().optional(),
+    setupGuideBrowserMilestoneMigrated: z.boolean().optional(),
+    setupGuideBrowserMilestoneLegacyComplete: z.boolean().optional(),
+    browserImportHintHidden: z.boolean().optional(),
+    mobileEmulatorTabIntroDismissed: z.boolean().optional(),
+    mobileEmulatorAgentSetupDismissed: z.boolean().optional(),
     projectOrderManualDefaultNoticeDismissed: z.boolean().optional(),
     usagePercentageDisplayChangeNoticeDismissed: z.boolean().optional(),
     usageEmptyStateDismissed: z.boolean().optional(),
@@ -270,4 +288,12 @@ export const UiUpdate = z
     contextualToursAutoEligible: z.boolean().optional()
   })
   .strict()
+
+export const UiUpdate = z
+  .object(tolerateUnknownValues(UiUpdateFields.shape))
+  .strict()
   .default({})
+  .transform(omitUndefinedValues)
+
+// The key/value parity assertions over this live in ui-state-schema-parity-checks.ts.
+export type UiUpdateFieldsSchema = typeof UiUpdateFields

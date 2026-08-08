@@ -43,18 +43,27 @@ describe('useMobileNativeChatDrafts', () => {
   function Harness({
     tabId,
     sessionId = `session-${tabId}`,
-    messages = []
+    messages = [],
+    launchDraft = null,
+    chatActive = true,
+    transcriptLoading = false
   }: {
     tabId: string
     sessionId?: string | null
     messages?: NativeChatMessage[]
+    launchDraft?: string | null
+    chatActive?: boolean
+    transcriptLoading?: boolean
   }): null {
     state = useMobileNativeChatDrafts({
       hostId: 'host',
       worktreeId: 'worktree',
       tabId,
       sessionId,
-      messages
+      messages,
+      launchDraft,
+      chatActive,
+      transcriptLoading
     })
     return null
   }
@@ -85,6 +94,11 @@ describe('useMobileNativeChatDrafts', () => {
     act(() => state?.setComposerText('from a'))
     const originA = state?.captureSendOrigin('from a')
     expect(originA).not.toBeNull()
+    act(() => {
+      if (originA) {
+        state?.clearDraftForSend(originA, 'from a')
+      }
+    })
 
     await switchTo('b')
     act(() => state?.setComposerText('from b'))
@@ -99,6 +113,99 @@ describe('useMobileNativeChatDrafts', () => {
     await switchTo('a')
     expect(state?.composerText).toBe('')
     expect(state?.pending.map((pending) => pending.text)).toEqual(['from a'])
+  })
+
+  it('clears the composer at send time, before the RPC settles', async () => {
+    await mount('a')
+    act(() => state?.setComposerText('ping'))
+    const origin = state?.captureSendOrigin('ping')
+    act(() => {
+      if (origin) {
+        state?.clearDraftForSend(origin, 'ping')
+      }
+    })
+    expect(state?.composerText).toBe('')
+  })
+
+  it('restores the text on a definite rejection', async () => {
+    await mount('a')
+    act(() => state?.setComposerText('ping'))
+    const origin = state?.captureSendOrigin('ping')
+    act(() => {
+      if (origin) {
+        state?.clearDraftForSend(origin, 'ping')
+        state?.restoreRejectedDraft(origin, 'ping')
+      }
+    })
+    expect(state?.composerText).toBe('ping')
+  })
+
+  it('does not clobber newer edits when restoring a rejected send', async () => {
+    await mount('a')
+    act(() => state?.setComposerText('ping'))
+    const origin = state?.captureSendOrigin('ping')
+    act(() => {
+      if (origin) {
+        state?.clearDraftForSend(origin, 'ping')
+      }
+    })
+    act(() => state?.setComposerText('newer edit'))
+    act(() => {
+      if (origin) {
+        state?.restoreRejectedDraft(origin, 'ping')
+      }
+    })
+    expect(state?.composerText).toBe('newer edit')
+  })
+
+  it('restores a rejected send onto its originating tab only', async () => {
+    await mount('a')
+    act(() => state?.setComposerText('from a'))
+    const originA = state?.captureSendOrigin('from a')
+    act(() => {
+      if (originA) {
+        state?.clearDraftForSend(originA, 'from a')
+      }
+    })
+
+    await switchTo('b')
+    act(() => {
+      if (originA) {
+        state?.restoreRejectedDraft(originA, 'from a')
+      }
+    })
+    expect(state?.composerText).toBe('')
+
+    await switchTo('a')
+    expect(state?.composerText).toBe('from a')
+  })
+
+  it('keeps the composer clear when the echo lands after the unconfirmed deadline', async () => {
+    vi.useFakeTimers()
+    try {
+      await mount('a')
+      act(() => state?.setComposerText('ping'))
+      const origin = state?.captureSendOrigin('ping')
+      act(() => {
+        if (origin) {
+          state?.clearDraftForSend(origin, 'ping')
+          state?.holdUnconfirmedSend(origin, 'ping', vi.fn())
+        }
+      })
+      expect(state?.composerText).toBe('')
+
+      // A relay drop can stall the transcript stream past the deadline; the
+      // delivered prompt must not reappear in the composer when it recovers.
+      act(() => vi.advanceTimersByTime(25_000))
+      await act(async () =>
+        renderer?.update(
+          createElement(Harness, { tabId: 'a', messages: [userTextMessage('m1', 'ping')] })
+        )
+      )
+      expect(state?.composerText).toBe('')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('clears one pending per landed message so duplicate sends are not all dropped', async () => {
@@ -162,6 +269,7 @@ describe('useMobileNativeChatDrafts', () => {
       )
     )
     expect(state?.pending).toEqual([])
+    expect(state?.imagePreviewsByMessageId).toEqual({ u1: ['file:///a.jpg'] })
   })
 
   it("keeps an image-only echo when an unrelated text send's echo lands", async () => {
@@ -238,6 +346,29 @@ describe('useMobileNativeChatDrafts', () => {
       )
     )
     expect(state?.pending).toEqual([])
+    expect(state?.imagePreviewsByMessageId).toEqual({ u2: ['file:///a.jpg'] })
+  })
+
+  it('hands a marker-only image preview to the authoritative user bubble', async () => {
+    await mount('a')
+    const origin = state?.captureSendOrigin('')
+    act(() => {
+      if (origin) {
+        state?.acceptSend(origin, '', ['file:///a.jpg'])
+      }
+    })
+
+    await act(async () =>
+      renderer?.update(
+        createElement(Harness, {
+          tabId: 'a',
+          messages: [userTextMessage('u1', '[Image #1]')]
+        })
+      )
+    )
+
+    expect(state?.pending).toEqual([])
+    expect(state?.imagePreviewsByMessageId).toEqual({ u1: ['file:///a.jpg'] })
   })
 
   it('does not reconcile a repeated send against an older identical turn', async () => {
@@ -279,25 +410,24 @@ describe('useMobileNativeChatDrafts', () => {
     expect(state?.pending).toEqual([])
   })
 
-  it('does not erase newer edits when an older send settles', async () => {
+  it('does not erase newer edits when an older send clears', async () => {
     await mount('a')
     act(() => state?.setComposerText('submitted'))
     const origin = state?.captureSendOrigin('submitted')
     act(() => state?.setComposerText('new edit'))
     act(() => {
       if (origin) {
-        state?.acceptSend(origin, 'submitted')
+        state?.clearDraftForSend(origin, 'submitted')
       }
     })
 
     expect(state?.composerText).toBe('new edit')
   })
 
-  it('clears the draft when an unconfirmed send lands in the transcript', async () => {
+  it('stays quiet when an unconfirmed send lands in the transcript', async () => {
     vi.useFakeTimers()
     try {
       await mount('a')
-      act(() => state?.setComposerText('ping'))
       const origin = state?.captureSendOrigin('ping')
       const onUnconfirmed = vi.fn()
       act(() => {
@@ -305,14 +435,12 @@ describe('useMobileNativeChatDrafts', () => {
           state?.holdUnconfirmedSend(origin, 'ping', onUnconfirmed)
         }
       })
-      expect(state?.composerText).toBe('ping')
 
       await act(async () =>
         renderer?.update(
           createElement(Harness, { tabId: 'a', messages: [userTextMessage('m1', 'ping')] })
         )
       )
-      expect(state?.composerText).toBe('')
 
       act(() => vi.advanceTimersByTime(30_000))
       expect(onUnconfirmed).not.toHaveBeenCalled()
@@ -399,11 +527,10 @@ describe('useMobileNativeChatDrafts', () => {
     expect(state?.pending.map((pending) => pending.images)).toEqual([['file:///b.jpg']])
   })
 
-  it('clears immediately when the transcript echo beat the ambiguous RPC rejection', async () => {
+  it('registers no deadline when the transcript echo beat the ambiguous RPC rejection', async () => {
     vi.useFakeTimers()
     try {
       await mount('a')
-      act(() => state?.setComposerText('ping'))
       const origin = state?.captureSendOrigin('ping')
       const onUnconfirmed = vi.fn()
 
@@ -418,7 +545,6 @@ describe('useMobileNativeChatDrafts', () => {
         }
       })
 
-      expect(state?.composerText).toBe('')
       expect(vi.getTimerCount()).toBe(0)
       act(() => vi.advanceTimersByTime(30_000))
       expect(onUnconfirmed).not.toHaveBeenCalled()
@@ -427,11 +553,10 @@ describe('useMobileNativeChatDrafts', () => {
     }
   })
 
-  it('surfaces uncertainty and keeps the draft when no echo lands before the deadline', async () => {
+  it('surfaces uncertainty when no echo lands before the deadline', async () => {
     vi.useFakeTimers()
     try {
       await mount('a')
-      act(() => state?.setComposerText('ping'))
       const origin = state?.captureSendOrigin('ping')
       const onUnconfirmed = vi.fn()
       act(() => {
@@ -444,7 +569,6 @@ describe('useMobileNativeChatDrafts', () => {
       expect(onUnconfirmed).not.toHaveBeenCalled()
       act(() => vi.advanceTimersByTime(1))
       expect(onUnconfirmed).toHaveBeenCalledTimes(1)
-      expect(state?.composerText).toBe('ping')
     } finally {
       vi.useRealTimers()
     }
@@ -622,20 +746,59 @@ describe('useMobileNativeChatDrafts', () => {
     }
   })
 
-  it('accepts and clears the first send before a provider session id exists', async () => {
+  it('preserves first-send images through session assignment and transcript replacement', async () => {
     await mount('a')
     await act(async () => renderer?.update(createElement(Harness, { tabId: 'a', sessionId: null })))
-    act(() => state?.setComposerText('start the session'))
+    const images = ['file:///a.jpg', 'file:///b.jpg', 'file:///c.jpg']
+    act(() => state?.setComposerText('look'))
 
-    const origin = state?.captureSendOrigin('start the session')
+    const origin = state?.captureSendOrigin('look')
     expect(origin).toMatchObject({ pendingKey: null })
     act(() => {
       if (origin) {
-        state?.acceptSend(origin, 'start the session')
+        state?.clearDraftForSend(origin, 'look')
+        state?.acceptSend(origin, 'look', images)
       }
     })
 
     expect(state?.composerText).toBe('')
+    expect(state?.pending.map((pending) => pending.images)).toEqual([images])
+
+    await act(async () =>
+      renderer?.update(createElement(Harness, { tabId: 'a', sessionId: 'assigned' }))
+    )
+    expect(state?.pending.map((pending) => pending.images)).toEqual([images])
+
+    await act(async () =>
+      renderer?.update(
+        createElement(Harness, {
+          tabId: 'a',
+          sessionId: 'assigned',
+          messages: [
+            userTextMessage('source-1', '[Image: source: /tmp/a.png]'),
+            userTextMessage('source-2', '[Image: source: /tmp/b.png]'),
+            userTextMessage('source-3', '[Image: source: /tmp/c.png]')
+          ]
+        })
+      )
+    )
+    expect(state?.pending.map((pending) => pending.images)).toEqual([images])
+
+    await act(async () =>
+      renderer?.update(
+        createElement(Harness, {
+          tabId: 'a',
+          sessionId: 'assigned',
+          messages: [
+            userTextMessage('source-1', '[Image: source: /tmp/a.png]'),
+            userTextMessage('source-2', '[Image: source: /tmp/b.png]'),
+            userTextMessage('source-3', '[Image: source: /tmp/c.png]'),
+            userTextMessage('prompt', '[Image #1] [Image #2] [Image #3] look')
+          ]
+        })
+      )
+    )
     expect(state?.pending).toEqual([])
+    expect(state?.imagePreviewsByMessageId).toEqual({ prompt: images })
   })
 })

@@ -30,6 +30,18 @@ describe('mapRuntimeError', () => {
     })
   })
 
+  it.each(['remote_runtime_unavailable', 'runtime_timeout', 'invalid_runtime_response'])(
+    'preserves structured remote transport failure %s',
+    (code) => {
+      const error = Object.assign(new Error(`Remote transport failed: ${code}`), { code })
+
+      expect(mapRuntimeError('req_1', { runtimeId: 'runtime-1' }, error)).toMatchObject({
+        ok: false,
+        error: { code, message: `Remote transport failed: ${code}` }
+      })
+    }
+  )
+
   it.each([
     ['window_not_focused', 'keyboard input requires focus', 'restore-window'],
     ['permission_denied', 'missing DBUS_SESSION_BUS_ADDRESS', 'permissions'],
@@ -122,6 +134,25 @@ describe('mapRuntimeError', () => {
         }
       },
       _meta: { runtimeId: 'runtime-1' }
+    })
+  })
+
+  it('does not recommend a blind retry after a coordinate press may have landed', () => {
+    const message =
+      'coordinate click aborted because the recipient changed; 1 press(es) may already have been delivered'
+    const error = Object.assign(new Error(message), { code: 'window_not_focused' })
+
+    const response = mapRuntimeError('req_1', { runtimeId: 'runtime-1' }, error)
+
+    expect(response.error).toMatchObject({
+      code: 'window_not_focused',
+      message,
+      data: {
+        nextSteps: [
+          expect.stringContaining('verify whether the intended action already occurred'),
+          expect.stringContaining('Do not retry the click if it already took effect')
+        ]
+      }
     })
   })
 

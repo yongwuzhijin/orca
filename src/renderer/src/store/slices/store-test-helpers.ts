@@ -49,6 +49,7 @@ import { createOrcaProfilesSlice } from './orca-profiles'
 import { createNewIssueDraftSlice } from './new-issue-draft'
 import { createTodosSlice } from './todos'
 import { createAcpSlice } from './acp'
+import { createTaskCreationDraftsSlice } from './task-creation-drafts'
 import { createRemoteServerUpdatesSlice } from './remote-server-updates'
 import { translate } from '@/i18n/i18n'
 
@@ -103,6 +104,7 @@ export function createTestStore() {
     ...createNewIssueDraftSlice(...a),
     ...createTodosSlice(...a),
     ...createAcpSlice(...a),
+    ...createTaskCreationDraftsSlice(...a),
     ...createRemoteServerUpdatesSlice(...a)
   }))
 }

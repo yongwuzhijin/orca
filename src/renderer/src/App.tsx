@@ -26,6 +26,11 @@ import { syncZoomCSSVar } from '@/lib/ui-zoom'
 import { resolveLeftSidebarStyleVariables } from '@/lib/left-sidebar-appearance'
 import { canShowRightSidebarForView } from '@/lib/right-sidebar-visibility'
 import {
+  isImeOwnedKeyboardEvent,
+  markImeOwnedShortcutEvent,
+  resolveImeModifierGesture
+} from '@/lib/ime-composition-keyboard-event'
+import {
   isPairedWebClientWindow,
   shouldRenderDesktopWindowChrome
 } from '@/lib/desktop-window-chrome'
@@ -48,6 +53,7 @@ import { isRemoteWorkspaceSnapshotApplyInProgress, useIpcEvents } from './hooks/
 import { useAutomationDispatchEvents } from './hooks/useAutomationDispatchEvents'
 import RetainedAgentsSyncGate from './components/dashboard/RetainedAgentsSyncGate'
 import { AgentHibernationGate } from './components/AgentHibernationGate'
+import { AiVaultTabTitleSyncGate } from './components/AiVaultTabTitleSyncGate'
 import { ActivityTitlebarControls } from './components/activity/ActivityTitlebarControls'
 import Sidebar from './components/Sidebar'
 import { shutdownBufferCaptures } from './components/terminal-pane/shutdown-buffer-captures'
@@ -68,15 +74,14 @@ import { onOnboardingReopened } from './components/onboarding/show-onboarding-ev
 import { shouldShowOnboarding } from './components/onboarding/should-show-onboarding'
 import { MarkdownTemplatePicker } from './components/editor/MarkdownTemplatePicker'
 import { FloatingTerminalToggleButton } from './components/floating-terminal/FloatingTerminalToggleButton'
-import { OrcaProfileSwitcher } from './components/orca-profiles/OrcaProfileSwitcher'
 import {
   TOGGLE_FLOATING_TERMINAL_EVENT,
   requestFloatingTerminalOpenMaximized
 } from '@/lib/floating-terminal'
 import {
   isFloatingWorkspacePanelFocused,
-  isFloatingWorkspacePanelShortcut,
   isFloatingWorkspaceTerminalInputTarget,
+  matchFloatingWorkspacePanelChord,
   shouldMinimizeFloatingWorkspacePanelOnCloseShortcut
 } from '@/lib/floating-workspace-terminal-actions'
 import { createFloatingWorkspaceTourInteractionSnapshot } from '@/lib/floating-workspace-tour-interaction-snapshot'
@@ -92,7 +97,6 @@ import RecentTabSwitcher from './components/tab-bar/RecentTabSwitcher'
 import { useGitStatusPolling } from './components/right-sidebar/useGitStatusPolling'
 import { useEditorExternalWatch } from './hooks/useEditorExternalWatch'
 import { useAutoAckViewedAgent } from './hooks/useAutoAckViewedAgent'
-import { useDashboardPopoutBridge } from './components/dashboard/useDashboardPopoutBridge'
 import { useUnreadDockBadge } from './hooks/useUnreadDockBadge'
 import {
   resolvePrimarySelectionMiddleClickPaste,
@@ -110,6 +114,7 @@ import {
 } from './runtime/sync-runtime-graph'
 import { useWebSessionTabsSync } from './runtime/web-session-tabs-sync'
 import { useGlobalFileDrop } from './hooks/useGlobalFileDrop'
+import { MacosTccPromptNoticeHost } from './hooks/MacosTccPromptNoticeHost'
 import { useRadixBodyPointerEventsRecovery } from './hooks/useRadixBodyPointerEventsRecovery'
 import { registerUpdaterBeforeUnloadBypass } from './lib/updater-beforeunload'
 import {
@@ -122,6 +127,8 @@ import {
   shouldPersistWorkspaceSession
 } from './lib/workspace-session'
 import { createSessionWriteSubscriber } from './lib/session-write-subscriber'
+import { sweepRestoredCodexPanesForStaleAccounts } from './lib/codex-stale-pane-sweep'
+import { installCodexDetachedPaneRestartExecutor } from '@/components/terminal-pane/codex-detached-pane-restart-scheduler'
 import { buildActiveViewUnloadPatch } from './lib/active-view-persist'
 import {
   buildWorkspaceSessionHostSnapshots,
@@ -179,8 +186,14 @@ import {
   keybindingMatchesAction,
   type KeybindingActionId,
   type KeybindingContext,
+  type KeybindingMatchOptions,
   type PhysicalModifierToken
 } from '../../shared/keybindings'
+import { PLUGIN_COMMAND_ALIAS_ACTION_IDS } from '../../shared/plugins/plugin-command-actions'
+import { registerAppCommandDispatcher } from '@/lib/app-command-dispatch'
+import { executePluginCommand } from '@/lib/plugin-command-execution'
+import { findPluginCommandForKeybinding } from '@/lib/plugin-command-keybindings'
+import { usePluginCommands } from '@/store/plugin-panels'
 import {
   getRepoExecutionHostId,
   isRuntimeOwnedSshTargetId,
@@ -198,11 +211,18 @@ import { showTerminalShortcutCaptureNotification } from '@/lib/terminal-shortcut
 import { resolveMountedLazyModalIds, type LazyModalId } from './lazy-modal-mount-state'
 import { translate } from '@/i18n/i18n'
 import PinnedTabCloseDialog from './components/terminal-pane/PinnedTabCloseDialog'
+import RunningTerminalCloseDialog from './components/terminal-pane/RunningTerminalCloseDialog'
+import WorktreeBaseFallbackDialog from './components/WorktreeBaseFallbackDialog'
 import { useOsc52ClipboardDefaultOnNotice } from './components/terminal-pane/osc52-clipboard-default-on-notice'
 import {
   hasRequestedBackgroundTerminalWorktreeMount,
   subscribeBackgroundTerminalWorktreeMountRequests
 } from './components/terminal/background-terminal-worktree-mount'
+import {
+  collectTerminalProviderSnapshotPtyIds,
+  refreshTerminalProviderSnapshotCapabilities
+} from './components/terminal/terminal-provider-snapshot-capability'
+import { useRemoteRuntimeRecoveryTriggers } from './runtime/use-remote-runtime-recovery-triggers'
 
 // Why: bound the resume-record loss window on a hard kill to ~1 min; capture skips unchanged records so per-tick cost is negligible.
 const SLEEPING_AGENT_RESUME_CAPTURE_INTERVAL_MS = 60_000
@@ -320,6 +340,7 @@ const TodoPage = lazy(() => import('./components/todo/TodoPage'))
 const ActivityPrototypePage = lazy(() => import('./components/activity/ActivityPrototypePage'))
 const Settings = lazy(() => import('./components/settings/Settings'))
 const SkillsPage = lazy(() => import('./components/skills/SkillsPage'))
+const ArtifactsPage = lazy(() => import('./components/artifacts/ArtifactsPage'))
 const WorkspaceSpacePage = lazy(() => import('./components/workspace-space/WorkspaceSpacePage'))
 const MobilePage = lazy(() => import('./components/mobile/MobilePage'))
 const QuickOpen = lazy(() => import('./components/QuickOpen'))
@@ -374,6 +395,7 @@ const FloatingTerminalPanel = lazy(() =>
 )
 // Why: lazy so the WebP asset + overlay module aren't fetched unless the experimental flag is on.
 const PetOverlay = lazy(() => import('./components/pet/PetOverlay'))
+const DashboardPopoutBridge = lazy(() => import('./components/dashboard/DashboardPopoutBridge'))
 // Why: lazy so onboarding's step modules + assets aren't fetched for users past first-launch.
 const OnboardingFlow = lazy(() => import('./components/onboarding/OnboardingFlow'))
 
@@ -402,8 +424,11 @@ function applyRemoteWorkspacePatchStatus(
     message:
       result.message ??
       (result.reason === 'stale-revision'
-        ? 'Workspace changed on another device'
-        : 'Remote workspace sync unavailable')
+        ? translate(
+            'auto.hooks.useIpcEvents.workspaceChangedOnAnotherDevice',
+            'Workspace changed on another device'
+          )
+        : translate('auto.hooks.useIpcEvents.2fe88c2e06', 'Remote workspace sync unavailable'))
   })
 }
 
@@ -434,6 +459,7 @@ function App(): React.JSX.Element {
       toggleSidebar: s.toggleSidebar,
       fetchRepos: s.fetchRepos,
       fetchReposForAllHosts: s.fetchReposForAllHosts,
+      awaitLocalRepoCatalogSettlement: s.awaitLocalRepoCatalogSettlement,
       fetchProjectGroups: s.fetchProjectGroups,
       fetchProjectGroupsForAllHosts: s.fetchProjectGroupsForAllHosts,
       fetchFolderWorkspaces: s.fetchFolderWorkspaces,
@@ -507,6 +533,7 @@ function App(): React.JSX.Element {
     hasRequestedBackgroundTerminalWorktreeMount
   )
   const keybindings = useAppStore((s) => s.keybindings)
+  const pluginCommands = usePluginCommands()
   const updateStatus = useAppStore((s) => s.updateStatus)
   const activeContextualTourId = useAppStore((s) => s.activeContextualTourId)
   const leftSidebarShortcutLabel = useShortcutLabel('sidebar.left.toggle')
@@ -639,6 +666,9 @@ function App(): React.JSX.Element {
   const showSleepingWorkspaces = useAppStore((s) => s.showSleepingWorkspaces)
   const hideDefaultBranchWorkspace = useAppStore((s) => s.hideDefaultBranchWorkspace)
   const hideAutomationGeneratedWorkspaces = useAppStore((s) => s.hideAutomationGeneratedWorkspaces)
+  const hideCliCreatedWorkspaces = useAppStore((s) => s.hideCliCreatedWorkspaces)
+  const hideDetachedHeadWorkspaces = useAppStore((s) => s.hideDetachedHeadWorkspaces)
+  const alwaysShowDefaultBranchWorkspace = useAppStore((s) => s.alwaysShowDefaultBranchWorkspace)
   const showDotfilesByWorktree = useAppStore((s) => s.showDotfilesByWorktree)
   const filterRepoIds = useAppStore((s) => s.filterRepoIds)
   const acknowledgedAgentsByPaneKey = useAppStore((s) => s.acknowledgedAgentsByPaneKey)
@@ -649,6 +679,7 @@ function App(): React.JSX.Element {
   const shouldMountUpdateCard = shouldMountUpdateCardForStatus(updateStatus)
   const rightSidebarWidth = useAppStore((s) => s.rightSidebarWidth)
   const markdownTocPanelWidth = useAppStore((s) => s.markdownTocPanelWidth)
+  const combinedDiffFileTreeWidth = useAppStore((s) => s.combinedDiffFileTreeWidth)
   const rightSidebarOpen = useAppStore((s) => s.rightSidebarOpen)
   const rightSidebarTab = useAppStore((s) => s.rightSidebarTab)
   const rightSidebarExplorerView = useAppStore((s) => s.rightSidebarExplorerView)
@@ -667,6 +698,7 @@ function App(): React.JSX.Element {
     settings?.primarySelectionMiddleClickPaste
   )
   usePrimarySelectionPaste(primarySelectionMiddleClickPaste)
+
   useAppMenuPaste()
   useLargeTextControlPaste()
   const petEnabled = useAppStore((s) => s.settings?.experimentalPet === true)
@@ -723,6 +755,7 @@ function App(): React.JSX.Element {
 
   // Subscribe to IPC push events
   useIpcEvents()
+  useRemoteRuntimeRecoveryTriggers()
   useAutomationDispatchEvents()
   // Why: retention runs at App level (in <RetainedAgentsSyncGate />, a null leaf) so "done" agents survive card collapse and its high-churn subscriptions don't re-render App.
   // Why: git polling lives at App level (RightSidebar unmounts when closed, stranding stale Rebasing/Merging badges); gate on workspaceSessionReady so it doesn't compete with first paint.
@@ -731,8 +764,6 @@ function App(): React.JSX.Element {
   useEditorExternalWatch()
   useGlobalFileDrop()
   useAutoAckViewedAgent()
-  useDashboardPopoutBridge(settings?.experimentalAgentDashboardPopout === true)
-
   useEffect(() => {
     return onOnboardingReopened(setOnboarding)
   }, [])
@@ -882,6 +913,9 @@ function App(): React.JSX.Element {
         await timeRendererStartupStep('fetch-repos-local', () =>
           actions.fetchReposForAllHosts({ remoteHosts: 'skip' })
         )
+        await timeRendererStartupStep('repo-catalog-settlement', () =>
+          actions.awaitLocalRepoCatalogSettlement()
+        )
         // Why: folder workspaces merge against projectGroups (repos.ts fetchFolderWorkspacesForAllHosts),
         // so keep this chain ordered while overlapping it with session-scoped hydration.
         const localCatalogChain = (async () => {
@@ -934,6 +968,9 @@ function App(): React.JSX.Element {
         }
         const sessionRead = sessionOutcome.value
         await keybindingsPromise
+        await timeRendererStartupStep('repo-catalog-final-settlement', () =>
+          actions.awaitLocalRepoCatalogSettlement()
+        )
         if (!cancelled) {
           const sessionHydrationOptions = {
             additionalValidWorkspaceKeys: collectFolderWorkspaceKeysFromSession(sessionRead.session)
@@ -1047,10 +1084,24 @@ function App(): React.JSX.Element {
           await timeRendererStartupStep('first-window-services-await', () =>
             window.api.app.awaitFirstWindowStartupServices()
           )
+          await timeRendererStartupStep('recover-legacy-worker-terminals-pre-reconnect', () =>
+            window.api.app.recoverLegacyWorkerTerminalsForRendererStartup()
+          )
+          await timeRendererStartupStep('terminal-provider-snapshot-capabilities', () => {
+            return refreshTerminalProviderSnapshotCapabilities(
+              collectTerminalProviderSnapshotPtyIds(useAppStore.getState())
+            )
+          })
           reconnectStarted = true
           await timeRendererStartupStep('reconnect-terminals', () =>
             actions.reconnectPersistedTerminals(abortController.signal)
           )
+          await timeRendererStartupStep('recover-legacy-worker-terminals-post-reconnect', () =>
+            window.api.app.recoverLegacyWorkerTerminalsForRendererStartup()
+          )
+          // Why here: reconnect just published restored PTY ids; sweeping them now
+          // re-offers stale Codex panes whose tabs never mount this session.
+          sweepRestoredCodexPanesForStaleAccounts(useAppStore.getState())
           syncZoomCSSVar()
           // Why (issue #1158): unlock the session writer only after hydration and all dependent steps succeeded, so a mid-startup throw can't serialize partially-mutated state to disk.
           actions.setHydrationSucceeded(true)
@@ -1125,7 +1176,12 @@ function App(): React.JSX.Element {
           if (!reconnectStarted) {
             try {
               await window.api.app.awaitFirstWindowStartupServices()
+              await window.api.app.recoverLegacyWorkerTerminalsForRendererStartup()
+              await refreshTerminalProviderSnapshotCapabilities(
+                collectTerminalProviderSnapshotPtyIds(useAppStore.getState())
+              )
               await actions.reconnectPersistedTerminals(abortController.signal)
+              await window.api.app.recoverLegacyWorkerTerminalsForRendererStartup()
             } catch (reconnectErr) {
               console.error(
                 '[startup] reconnectPersistedTerminals failed in error path:',
@@ -1168,6 +1224,8 @@ function App(): React.JSX.Element {
       setRuntimeGraphStoreStateGetter(null)
     }
   }, [])
+
+  useEffect(() => installCodexDetachedPaneRestartExecutor(), [])
 
   useEffect(() => {
     let previousKey = getRuntimeMobileSessionSyncKey(useAppStore.getState())
@@ -1276,9 +1334,7 @@ function App(): React.JSX.Element {
       const sessionSnapshots = shouldCaptureSession
         ? buildWorkspaceSessionHostSnapshots(buildWorkspaceSessionPayload(freshState), freshState)
         : []
-      // Why: one blocking checkpoint closes the immediate-quit race for both
-      // the narrow view preference and the larger session recovery snapshots.
-      window.api.app.persistBeforeUnloadSync({
+      window.api.app.stageBeforeUnloadSync({
         sessions: sessionSnapshots,
         ui: buildActiveViewUnloadPatch(freshState)
       })
@@ -1330,6 +1386,7 @@ function App(): React.JSX.Element {
         rightSidebarExplorerView,
         rightSidebarWidth,
         markdownTocPanelWidth,
+        combinedDiffFileTreeWidth,
         groupBy,
         sortBy,
         projectOrderBy,
@@ -1338,6 +1395,9 @@ function App(): React.JSX.Element {
         showSleepingWorkspaces,
         hideDefaultBranchWorkspace,
         hideAutomationGeneratedWorkspaces,
+        hideCliCreatedWorkspaces,
+        hideDetachedHeadWorkspaces,
+        alwaysShowDefaultBranchWorkspace,
         showDotfilesByWorktree,
         filterRepoIds,
         // Why (#9002): activeView is deliberately NOT included here. It used to
@@ -1362,12 +1422,16 @@ function App(): React.JSX.Element {
     rightSidebarExplorerView,
     rightSidebarWidth,
     markdownTocPanelWidth,
+    combinedDiffFileTreeWidth,
     groupBy,
     sortBy,
     projectOrderBy,
     showSleepingWorkspaces,
     hideDefaultBranchWorkspace,
     hideAutomationGeneratedWorkspaces,
+    hideCliCreatedWorkspaces,
+    hideDetachedHeadWorkspaces,
+    alwaysShowDefaultBranchWorkspace,
     showDotfilesByWorktree,
     filterRepoIds,
     acknowledgedAgentsByPaneKey
@@ -1467,9 +1531,6 @@ function App(): React.JSX.Element {
   })
   // Full-page navigation surfaces own the whole content area, so suppress right-sidebar controls.
   const showRightSidebarControls = !creationLayoutActive && canShowRightSidebarForView(activeView)
-  const showProfileSwitcherInSidebarFooter = showSidebar && sidebarOpen
-  const showProfileSwitcherInTopRight = !showProfileSwitcherInSidebarFooter
-
   const handleToggleExpand = (): void => {
     if (!effectiveActiveTabId) {
       return
@@ -1489,6 +1550,7 @@ function App(): React.JSX.Element {
     floatingTerminalOpen,
     floatingVisibleTabCount,
     keybindings,
+    pluginCommands,
     terminalShortcutPolicy: settings?.terminalShortcutPolicy,
     setFloatingTerminalOpenWithFocus,
     workspaceChromeActive,
@@ -1503,6 +1565,7 @@ function App(): React.JSX.Element {
     floatingTerminalOpen,
     floatingVisibleTabCount,
     keybindings,
+    pluginCommands,
     terminalShortcutPolicy: settings?.terminalShortcutPolicy,
     setFloatingTerminalOpenWithFocus,
     workspaceChromeActive,
@@ -1511,6 +1574,197 @@ function App(): React.JSX.Element {
 
   useEffect(() => {
     const doubleTapDetector = new ModifierDoubleTapDetector()
+    let imeOwnedModifierGesture = false
+
+    const createRegisteredCommandHandlers = (
+      input?: ShortcutDispatchInput,
+      keybindingContext: KeybindingContext = 'app'
+    ): Map<KeybindingActionId, () => boolean> => {
+      const {
+        activeView,
+        activeWorktreeId,
+        actions,
+        floatingTerminalEnabled,
+        floatingTerminalOpen,
+        terminalShortcutPolicy,
+        keybindings,
+        setFloatingTerminalOpenWithFocus,
+        workspaceChromeActive,
+        creationLayoutActive
+      } = globalShortcutStateRef.current
+      const floatingWorkspaceFocused = isFloatingWorkspacePanelFocused()
+      const canRevealRightSidebar = !creationLayoutActive && canShowRightSidebarForView(activeView)
+      const claim = (actionId: KeybindingActionId, run: () => void): boolean => {
+        input?.preventDefault()
+        if (
+          input &&
+          keybindingContext === 'terminal' &&
+          (terminalShortcutPolicy ?? 'orca-first') === 'orca-first'
+        ) {
+          showTerminalShortcutCaptureNotification({
+            actionId,
+            platform: shortcutPlatform,
+            keybindings
+          })
+        }
+        run()
+        return true
+      }
+
+      return new Map<KeybindingActionId, () => boolean>([
+        [
+          'worktree.history.back',
+          () => {
+            if (creationLayoutActive || !shouldShowWorktreeHistoryControls(activeView)) {
+              return false
+            }
+            return claim('worktree.history.back', () => useAppStore.getState().goBackWorktree())
+          }
+        ],
+        [
+          'worktree.history.forward',
+          () => {
+            if (creationLayoutActive || !shouldShowWorktreeHistoryControls(activeView)) {
+              return false
+            }
+            return claim('worktree.history.forward', () =>
+              useAppStore.getState().goForwardWorktree()
+            )
+          }
+        ],
+        ['sidebar.left.toggle', () => claim('sidebar.left.toggle', () => actions.toggleSidebar())],
+        [
+          'sidebar.sleepingWorkspaces.toggle',
+          () =>
+            claim('sidebar.sleepingWorkspaces.toggle', () => {
+              const store = useAppStore.getState()
+              const nextShowSleeping = !store.showSleepingWorkspaces
+              store.setShowSleepingWorkspaces(nextShowSleeping)
+              if (nextShowSleeping) {
+                store.setSidebarOpen(true)
+              }
+            })
+        ],
+        [
+          'floatingWorkspace.maximize',
+          () => {
+            if (floatingTerminalOpen || !floatingTerminalEnabled) {
+              return false
+            }
+            return claim('floatingWorkspace.maximize', () => {
+              requestFloatingTerminalOpenMaximized()
+              setFloatingTerminalOpenWithFocus(true)
+            })
+          }
+        ],
+        [
+          'tab.rename',
+          () => {
+            const store = useAppStore.getState()
+            if (
+              !workspaceChromeActive ||
+              floatingWorkspaceFocused ||
+              store.activeTabType !== 'terminal' ||
+              !store.activeTabId
+            ) {
+              return false
+            }
+            return claim('tab.rename', () => store.setRenamingTabId(store.activeTabId!))
+          }
+        ],
+        [
+          'workspace.rename',
+          () => {
+            if (!workspaceChromeActive || floatingWorkspaceFocused || !activeWorktreeId) {
+              return false
+            }
+            return claim('workspace.rename', () => {
+              useAppStore.getState().setSidebarOpen(true)
+              requestScrollToCurrentWorkspaceRevealAndRename()
+            })
+          }
+        ],
+        [
+          'workspace.openBoard',
+          () => {
+            if (activeView === 'settings') {
+              return false
+            }
+            return claim('workspace.openBoard', () => {
+              useAppStore.getState().setSidebarOpen(true)
+              window.dispatchEvent(new CustomEvent(OPEN_WORKSPACE_BOARD_EVENT))
+            })
+          }
+        ],
+        [
+          'view.tasks',
+          () => {
+            const store = useAppStore.getState()
+            if (activeView === 'settings' || !store.repos.some((repo) => isGitRepoKind(repo))) {
+              return false
+            }
+            return claim('view.tasks', () => store.openTaskPage())
+          }
+        ],
+        [
+          'sidebar.right.toggle',
+          () =>
+            canRevealRightSidebar
+              ? claim('sidebar.right.toggle', () => actions.toggleRightSidebar())
+              : false
+        ],
+        [
+          'sidebar.explorer.toggle',
+          () =>
+            canRevealRightSidebar
+              ? claim('sidebar.explorer.toggle', () => actions.showRightSidebarFiles())
+              : false
+        ],
+        [
+          'sidebar.search.toggle',
+          () =>
+            canRevealRightSidebar
+              ? claim('sidebar.search.toggle', () => actions.showRightSidebarSearch())
+              : false
+        ],
+        [
+          'sidebar.sourceControl.toggle',
+          () => {
+            if (!canRevealRightSidebar || document.querySelector('[data-terminal-search-root]')) {
+              return false
+            }
+            return claim('sidebar.sourceControl.toggle', () => {
+              actions.setRightSidebarTab('source-control')
+              actions.setRightSidebarOpen(true)
+            })
+          }
+        ],
+        [
+          'sidebar.checks.toggle',
+          () =>
+            canRevealRightSidebar
+              ? claim('sidebar.checks.toggle', () => {
+                  actions.setRightSidebarTab('checks')
+                  actions.setRightSidebarOpen(true)
+                })
+              : false
+        ],
+        [
+          'sidebar.ports.toggle',
+          () =>
+            canRevealRightSidebar
+              ? claim('sidebar.ports.toggle', () => {
+                  actions.setRightSidebarTab('ports')
+                  actions.setRightSidebarOpen(true)
+                })
+              : false
+        ]
+      ])
+    }
+
+    const unregisterAppCommandDispatcher = registerAppCommandDispatcher((actionId) =>
+      (createRegisteredCommandHandlers().get(actionId) ?? (() => false))()
+    )
 
     const dispatchShortcutInput = (input: ShortcutDispatchInput): void => {
       const {
@@ -1521,9 +1775,9 @@ function App(): React.JSX.Element {
         floatingTerminalOpen,
         floatingVisibleTabCount,
         keybindings,
+        pluginCommands,
         terminalShortcutPolicy,
         setFloatingTerminalOpenWithFocus,
-        workspaceChromeActive,
         creationLayoutActive
       } = globalShortcutStateRef.current
 
@@ -1615,6 +1869,18 @@ function App(): React.JSX.Element {
         return
       }
 
+      if (matchShortcut('worktree.palette')) {
+        input.preventDefault()
+        notifyTerminalCapture('worktree.palette')
+        const store = useAppStore.getState()
+        if (store.activeModal === 'worktree-palette') {
+          store.closeModal()
+        } else {
+          store.openModal('worktree-palette')
+        }
+        return
+      }
+
       // Skip editable surfaces so TipTap's Cmd+B bold works; this renderer-side fallback covers the blur→press IPC race (docs/markdown-cmd-b-bold-design.md).
       if (isEditableTarget(input.target)) {
         return
@@ -1625,171 +1891,71 @@ function App(): React.JSX.Element {
         return
       }
 
-      // Cmd/Ctrl+Alt+Arrow worktree history — kept before right-sidebar shortcuts because it's navigation, not sidebar reveal.
-      if (matchShortcut('worktree.history.back') || matchShortcut('worktree.history.forward')) {
-        // Back/Forward is live wherever the titlebar cluster shows (worktree + page visits), but suppressed in Settings.
-        if (creationLayoutActive || !shouldShowWorktreeHistoryControls(activeView)) {
-          return
-        }
-        input.preventDefault()
-        const store = useAppStore.getState()
-        if (matchShortcut('worktree.history.back')) {
-          store.goBackWorktree()
-        } else {
-          store.goForwardWorktree()
-        }
-        return
-      }
-
       // Only short-circuit chords the floating panel itself claims; suppressing others here would silently no-op them when focus is in the panel.
       const floatingWorkspaceFocused = isFloatingWorkspacePanelFocused()
       if (floatingWorkspaceFocused) {
+        const floatingMatchOptions: KeybindingMatchOptions = { context, terminalShortcutPolicy }
         if (
-          isFloatingWorkspacePanelShortcut(input, shortcutPlatform, null, keybindings, {
-            context,
-            terminalShortcutPolicy
-          })
+          matchFloatingWorkspacePanelChord(
+            input,
+            shortcutPlatform,
+            null,
+            keybindings,
+            floatingMatchOptions
+          ) !== null
         ) {
           return
         }
       }
 
-      // Cmd/Ctrl+B — toggle left sidebar
-      if (matchShortcut('sidebar.left.toggle')) {
-        input.preventDefault()
-        notifyTerminalCapture('sidebar.left.toggle')
-        actions.toggleSidebar()
-        return
-      }
-
-      // Toggle the sleeping-workspaces filter without the filters menu (issue #5209); open the sidebar when revealing so they're reachable.
-      if (matchShortcut('sidebar.sleepingWorkspaces.toggle')) {
-        input.preventDefault()
-        notifyTerminalCapture('sidebar.sleepingWorkspaces.toggle')
-        const store = useAppStore.getState()
-        const nextShowSleeping = !store.showSleepingWorkspaces
-        store.setShowSleepingWorkspaces(nextShowSleeping)
-        if (nextShowSleeping) {
-          store.setSidebarOpen(true)
-        }
-        return
-      }
-
-      // Cmd+R renames the active terminal tab — free here because the browser pane owns its own reload; non-terminal tabs fall through (no inline title editor).
-      if (workspaceChromeActive && !floatingWorkspaceFocused && matchShortcut('tab.rename')) {
-        const store = useAppStore.getState()
-        if (store.activeTabType === 'terminal' && store.activeTabId) {
+      // Plugin chords are user-reviewed instructional content. They win over
+      // built-in defaults only in app focus; terminal/editor/browser handlers
+      // retain their own shortcut authority.
+      if (context === 'app') {
+        const pluginCommand = findPluginCommandForKeybinding(
+          pluginCommands,
+          input,
+          shortcutPlatform,
+          keybindings,
+          Boolean(activeWorktreeId)
+        )
+        if (pluginCommand) {
           input.preventDefault()
-          notifyTerminalCapture('tab.rename')
-          store.setRenamingTabId(store.activeTabId)
+          void executePluginCommand(pluginCommand, 'plugin-keybinding').catch(() => {
+            toast.error(
+              translate('auto.App.pluginCommandFailed', 'Could not run the plugin command.')
+            )
+          })
           return
         }
       }
 
-      // Open/reveal the worktree card first so its inline title editor is mounted even when filters or collapse state would hide it.
-      if (
-        workspaceChromeActive &&
-        !floatingWorkspaceFocused &&
-        matchShortcut('workspace.rename') &&
-        activeWorktreeId
-      ) {
-        input.preventDefault()
-        notifyTerminalCapture('workspace.rename')
-        const store = useAppStore.getState()
-        store.setSidebarOpen(true)
-        requestScrollToCurrentWorkspaceRevealAndRename()
-        return
-      }
-
-      if (matchShortcut('workspace.openBoard') && activeView !== 'settings') {
-        input.preventDefault()
-        notifyTerminalCapture('workspace.openBoard')
-        const store = useAppStore.getState()
-        store.setSidebarOpen(true)
-        window.dispatchEvent(new CustomEvent(OPEN_WORKSPACE_BOARD_EVENT))
-        return
-      }
-
-      // Cmd/Ctrl+N is handled in the main-process before-input-event allowlist (window-shortcut-policy.ts), not here, so it fires even inside editors/browser guests.
-
-      // Full-page navigation surfaces own the whole content area, so don't reveal the right sidebar.
-      if (matchShortcut('view.tasks') && activeView !== 'settings') {
-        const store = useAppStore.getState()
-        if (store.repos.some((repo) => isGitRepoKind(repo))) {
-          input.preventDefault()
-          notifyTerminalCapture('view.tasks')
-          store.openTaskPage()
-        }
-        return
-      }
-
-      if (!canRevealRightSidebar) {
-        return
-      }
-
-      // Cmd/Ctrl+L — toggle right sidebar
-      if (matchShortcut('sidebar.right.toggle')) {
-        input.preventDefault()
-        notifyTerminalCapture('sidebar.right.toggle')
-        actions.toggleRightSidebar()
-        return
-      }
-
-      // Cmd/Ctrl+Shift+E — toggle right sidebar / explorer tab
-      if (matchShortcut('sidebar.explorer.toggle')) {
-        input.preventDefault()
-        notifyTerminalCapture('sidebar.explorer.toggle')
-        actions.showRightSidebarFiles()
-        return
-      }
-
-      // Cmd/Ctrl+Shift+F — toggle right sidebar / search tab
-      if (matchShortcut('sidebar.search.toggle')) {
-        input.preventDefault()
-        notifyTerminalCapture('sidebar.search.toggle')
-        openSearchSidebar(null)
-        return
-      }
-
-      // Cmd/Ctrl+Shift+G — source control tab; skip when terminal search is open (there it means "find previous"). DOM check because capture-phase order varies.
-      if (matchShortcut('sidebar.sourceControl.toggle')) {
-        if (document.querySelector('[data-terminal-search-root]')) {
+      const handlers = createRegisteredCommandHandlers(input, context)
+      for (const actionId of PLUGIN_COMMAND_ALIAS_ACTION_IDS) {
+        if (matchShortcut(actionId) && handlers.get(actionId)?.()) {
           return
         }
-        input.preventDefault()
-        notifyTerminalCapture('sidebar.sourceControl.toggle')
-        actions.setRightSidebarTab('source-control')
-        actions.setRightSidebarOpen(true)
-        return
       }
 
-      // Unbound by default; opens the active worktree's Source Control notes send picker. Only consumes the chord when there are unsent notes.
-      if (matchShortcut('sourceControl.sendReviewNotes')) {
+      // Unbound by default, so it runs after the built-in alias handlers above; only consumes the chord when the active worktree has unsent notes.
+      if (canRevealRightSidebar && matchShortcut('sourceControl.sendReviewNotes')) {
         if (actions.openDiffNotesSendMenuForActiveWorktree()) {
           input.preventDefault()
           notifyTerminalCapture('sourceControl.sendReviewNotes')
-          return
         }
-      }
-
-      if (matchShortcut('sidebar.checks.toggle')) {
-        input.preventDefault()
-        notifyTerminalCapture('sidebar.checks.toggle')
-        actions.setRightSidebarTab('checks')
-        actions.setRightSidebarOpen(true)
-        return
-      }
-
-      // Cmd+Shift+I — ports tab (macOS only); Ctrl+Shift+I is the DevTools accelerator on Windows/Linux.
-      if (matchShortcut('sidebar.ports.toggle')) {
-        input.preventDefault()
-        notifyTerminalCapture('sidebar.ports.toggle')
-        actions.setRightSidebarTab('ports')
-        actions.setRightSidebarOpen(true)
       }
     }
 
     const onKeyDown = (e: KeyboardEvent): void => {
+      const gesture = resolveImeModifierGesture(imeOwnedModifierGesture, e)
+      imeOwnedModifierGesture = gesture.active
+      if (gesture.owned || isImeOwnedKeyboardEvent(e)) {
+        if (gesture.carried) {
+          markImeOwnedShortcutEvent(e)
+        }
+        doubleTapDetector.reset()
+        return
+      }
       const detected = doubleTapDetector.process(
         toModifierDoubleTapEvent({
           type: 'keyDown',
@@ -1830,6 +1996,12 @@ function App(): React.JSX.Element {
     }
 
     const onKeyUp = (e: KeyboardEvent): void => {
+      const gesture = resolveImeModifierGesture(imeOwnedModifierGesture, e)
+      imeOwnedModifierGesture = gesture.active
+      if (gesture.owned || isImeOwnedKeyboardEvent(e)) {
+        doubleTapDetector.reset()
+        return
+      }
       doubleTapDetector.process(
         toModifierDoubleTapEvent({
           type: 'keyUp',
@@ -1845,12 +2017,16 @@ function App(): React.JSX.Element {
     }
 
     // Why: a window blur mid-gesture must not leave the detector armed.
-    const onBlur = (): void => doubleTapDetector.reset()
+    const onBlur = (): void => {
+      imeOwnedModifierGesture = false
+      doubleTapDetector.reset()
+    }
 
     window.addEventListener('keydown', onKeyDown, { capture: true })
     window.addEventListener('keyup', onKeyUp, { capture: true })
     window.addEventListener('blur', onBlur)
     return () => {
+      unregisterAppCommandDispatcher()
       window.removeEventListener('keydown', onKeyDown, { capture: true })
       window.removeEventListener('keyup', onKeyUp, { capture: true })
       window.removeEventListener('blur', onBlur)
@@ -2057,37 +2233,16 @@ function App(): React.JSX.Element {
           </TooltipContent>
         </Tooltip>
       )}
-      {showProfileSwitcherInTopRight ? <OrcaProfileSwitcher /> : null}
       {/* Why: the open right sidebar's header renders its own close button, so hide this duplicate. */}
       {!rightSidebarOpen && rightSidebarToggle}
       {/* Why: reserve space so the Windows/Linux window-controls overlay doesn't obscure content. */}
       {hasCustomTitleBar && <div className="window-controls-titlebar-spacer" />}
     </>
   )
-  const workspaceProfileSwitcher =
-    showProfileSwitcherInTopRight &&
-    workspaceChromeActive &&
-    leftTitlebarChromeLayout.shouldMount &&
-    !stackedSidebarOpen ? (
-      <div
-        className="absolute top-0 z-10 flex h-[36px] items-center"
-        style={
-          {
-            right: showRightSidebarControls
-              ? 'calc(var(--window-controls-width) + 42px)'
-              : 'var(--window-controls-width)',
-            WebkitAppRegion: 'no-drag'
-          } as React.CSSProperties
-        }
-      >
-        <OrcaProfileSwitcher />
-      </div>
-    ) : null
-
   return (
     <div
       ref={setAppRootNode}
-      className="flex flex-col h-dvh w-screen overflow-hidden"
+      className="app-layout"
       style={
         {
           '--collapsed-sidebar-header-width': `${collapsedSidebarHeaderWidth}px`,
@@ -2102,8 +2257,16 @@ function App(): React.JSX.Element {
         <ConfirmationDialogProvider>
           <LinkRoutingPreferenceDialogProvider>
             <WorkspacePortScanner enabled={workspaceSessionReady} />
+            {/* Why: plugin language-pack discovery must not re-render the App shell. */}
+            <MacosTccPromptNoticeHost />
             {/* Why: leaf-mounted retention sync keeps agent-status subscriptions out of the App render tree. */}
             <RetainedAgentsSyncGate />
+            <AiVaultTabTitleSyncGate />
+            {settings?.experimentalAgentDashboardPopout === true ? (
+              <Suspense fallback={null}>
+                <DashboardPopoutBridge />
+              </Suspense>
+            ) : null}
             <AgentHibernationGate />
             {/* Why: workspace activation is a hot path; activeWorktreeId in reset keys would remount whole surfaces during wake. */}
             <RecoverableRenderErrorBoundary
@@ -2212,7 +2375,6 @@ function App(): React.JSX.Element {
                             {rightSidebarToggle}
                           </div>
                         )}
-                        {workspaceProfileSwitcher}
                         <div className="flex flex-1 min-w-0 min-h-0 flex-col">
                           {shouldMountTerminalWorkbench ? (
                             <div
@@ -2254,6 +2416,7 @@ function App(): React.JSX.Element {
                             >
                               {activeView === 'settings' ? <Settings /> : null}
                               {activeView === 'skills' ? <SkillsPage /> : null}
+                              {activeView === 'artifacts' ? <ArtifactsPage /> : null}
                               {activeView === 'tasks' ? <TaskPage /> : null}
                               {activeView === 'automations' ? <AutomationsPage /> : null}
                               {activeView === 'todos' ? <TodoPage /> : null}
@@ -2653,7 +2816,9 @@ function App(): React.JSX.Element {
       </TooltipProvider>
       <Toaster closeButton toastOptions={{ className: 'font-sans text-sm' }} />
       <SkillFreshnessNudge />
+      <WorktreeBaseFallbackDialog />
       <PinnedTabCloseDialog />
+      <RunningTerminalCloseDialog />
       {/* Why: Electron's drag-region hit-test is DOM-order-based (ignores z-index); render last so WindowControls stay clickable. */}
       {hasCustomTitleBar && <WindowControls />}
     </div>

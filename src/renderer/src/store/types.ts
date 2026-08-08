@@ -39,6 +39,7 @@ import type { OrcaProfilesSlice } from './slices/orca-profiles'
 import type { NewIssueDraftSlice } from './slices/new-issue-draft'
 import type { TodosSlice } from './slices/todos'
 import type { AcpSlice } from './slices/acp'
+import type { TaskCreationDraftsSlice } from './slices/task-creation-drafts'
 import type { RemoteServerUpdatesSlice } from './slices/remote-server-updates'
 
 export type AppState = RepoSlice &
@@ -82,4 +83,5 @@ export type AppState = RepoSlice &
   NewIssueDraftSlice &
   TodosSlice &
   AcpSlice &
+  TaskCreationDraftsSlice &
   RemoteServerUpdatesSlice

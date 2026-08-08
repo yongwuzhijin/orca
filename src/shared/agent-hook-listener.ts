@@ -20,7 +20,6 @@ import { isAbsolute, join } from 'node:path'
 import {
   AGENT_MODEL_MAX_LENGTH,
   normalizeAgentStatusPayload,
-  parseAgentStatusPayload,
   type AgentStatusState,
   type AgentSubagentSnapshot,
   type ParsedAgentStatusPayload
@@ -33,11 +32,12 @@ import {
   claudeTeammateIdMatchesName,
   foldClaudeBackgroundTasksIntoRoster,
   idleClaudeTeammateByName,
-  readClaudeBackgroundAgentTasks,
+  reapRestoredClaudeSubagentsWithoutLiveAgent,
   stopClaudeSubagent,
   upsertWorkingClaudeSubagent,
   type ClaudeSubagentRoster
 } from './claude-subagent-roster'
+import { readClaudeBackgroundAgentTasks } from './claude-background-task-inventory'
 import {
   codexRosterEffectiveState,
   codexRosterToSnapshots,
@@ -46,14 +46,24 @@ import {
   upsertCodexSubagent,
   type CodexSubagentRoster
 } from './codex-subagent-roster'
+import {
+  createCodexSubagentTranscriptState,
+  hasTrackedCodexTranscriptSubagents,
+  reconcileCodexSubagentTranscript,
+  type CodexSubagentTranscriptState
+} from './codex-subagent-transcript'
 import { ORCA_HOOK_PROTOCOL_VERSION } from './agent-hook-types'
 import { REMOTE_AGENT_HOOK_ENV, type AgentHookSource } from './agent-hook-relay'
 import {
+  agentProviderSessionsEqual,
   extractAgentProviderSession,
   type AgentProviderSessionMetadata
 } from './agent-session-resume'
 import { parsePaneKey } from './stable-pane-id'
-import { isKnownHarnessInjectedUserTurnText } from './harness-injected-user-turns'
+import {
+  isCompactContinuationUserTurnText,
+  isKnownHarnessInjectedUserTurnText
+} from './harness-injected-user-turns'
 import {
   buildGrokChatHistoryPathCandidates,
   findGrokChatHistoryBySessionId,
@@ -96,6 +106,15 @@ function capOpenCodeHookText(text: string): string {
 
 /** Bound paneKey size (real keys are well under 200); caps per-pane caches against pathological input. Exported so non-HTTP ingest (`ingestRemote`) applies the same cap as defense-in-depth. */
 export const MAX_PANE_KEY_LEN = 200
+const CLAUDE_PROMPT_ID_RE = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
+
+export function normalizeClaudePromptId(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined
+  }
+  const normalized = value.trim().toLowerCase()
+  return CLAUDE_PROMPT_ID_RE.test(normalized) ? normalized : undefined
+}
 
 /** Per-listener-instance caches needing per-PTY teardown; Orca's main process and the relay each get their own, never shared. */
 export type HookListenerState = {
@@ -110,8 +129,14 @@ export type HookListenerState = {
   claudeSubagentRosterByPaneKey: Map<string, ClaudeSubagentRoster>
   /** Last state from the LEAD session's own events (subagent events carry agent_id, excluded), so a SubagentStop can re-emit pane status; `interrupted` persists so the eventual done still carries it. */
   claudeLeadStateByPaneKey: Map<string, ClaudeLeadTurnState>
+  /** Panes whose latest authoritative Claude task inventory still has running non-agent work. */
+  claudeRunningNonAgentTaskPaneKeys: Set<string>
+  /** Panes whose latest authoritative Claude cron inventory still has a scheduled job. */
+  claudeActiveSessionCronPaneKeys: Set<string>
   /** Live thread-spawn children per Codex pane. */
   codexSubagentRosterByPaneKey: Map<string, CodexSubagentRoster>
+  /** Incremental parent/child rollout cursors for Codex collaboration v2. */
+  codexSubagentTranscriptByPaneKey: Map<string, CodexSubagentTranscriptState>
   /** Root Codex state/model, kept separate from child hook traffic. */
   codexLeadStateByPaneKey: Map<string, CodexLeadTurnState>
 }
@@ -141,7 +166,10 @@ export function createHookListenerState(): HookListenerState {
     ampCompletedCacheKeys: new Set(),
     claudeSubagentRosterByPaneKey: new Map(),
     claudeLeadStateByPaneKey: new Map(),
+    claudeRunningNonAgentTaskPaneKeys: new Set(),
+    claudeActiveSessionCronPaneKeys: new Set(),
     codexSubagentRosterByPaneKey: new Map(),
+    codexSubagentTranscriptByPaneKey: new Map(),
     codexLeadStateByPaneKey: new Map()
   }
 }
@@ -154,7 +182,10 @@ export function clearPaneCacheState(state: HookListenerState, paneKey: string): 
   deletePaneScopedSetEntry(state.ampCompletedCacheKeys, paneKey)
   state.claudeSubagentRosterByPaneKey.delete(paneKey)
   state.claudeLeadStateByPaneKey.delete(paneKey)
+  state.claudeRunningNonAgentTaskPaneKeys.delete(paneKey)
+  state.claudeActiveSessionCronPaneKeys.delete(paneKey)
   state.codexSubagentRosterByPaneKey.delete(paneKey)
+  state.codexSubagentTranscriptByPaneKey.delete(paneKey)
   state.codexLeadStateByPaneKey.delete(paneKey)
 }
 
@@ -197,7 +228,10 @@ export function movePaneCacheState(
   movePaneScopedSetEntries(state.ampCompletedCacheKeys, fromPaneKey, toPaneKey)
   movePaneScopedMapEntries(state.claudeSubagentRosterByPaneKey, fromPaneKey, toPaneKey)
   movePaneScopedMapEntries(state.claudeLeadStateByPaneKey, fromPaneKey, toPaneKey)
+  movePaneScopedSetEntries(state.claudeRunningNonAgentTaskPaneKeys, fromPaneKey, toPaneKey)
+  movePaneScopedSetEntries(state.claudeActiveSessionCronPaneKeys, fromPaneKey, toPaneKey)
   movePaneScopedMapEntries(state.codexSubagentRosterByPaneKey, fromPaneKey, toPaneKey)
+  movePaneScopedMapEntries(state.codexSubagentTranscriptByPaneKey, fromPaneKey, toPaneKey)
   movePaneScopedMapEntries(state.codexLeadStateByPaneKey, fromPaneKey, toPaneKey)
 }
 
@@ -238,7 +272,10 @@ export function clearAllListenerCaches(state: HookListenerState): void {
   state.warnedEnvs.clear()
   state.claudeSubagentRosterByPaneKey.clear()
   state.claudeLeadStateByPaneKey.clear()
+  state.claudeRunningNonAgentTaskPaneKeys.clear()
+  state.claudeActiveSessionCronPaneKeys.clear()
   state.codexSubagentRosterByPaneKey.clear()
+  state.codexSubagentTranscriptByPaneKey.clear()
   state.codexLeadStateByPaneKey.clear()
 }
 
@@ -274,6 +311,8 @@ export function warnOnHookEnvOrVersionMismatch(
 
 export type AgentHookEventPayload = {
   paneKey: string
+  /** Authenticated hook route that produced this event. */
+  source?: AgentHookSource
   /** Ephemeral Orca launch identity stamped into the PTY env for this process. */
   launchToken?: string
   tabId?: string
@@ -286,6 +325,10 @@ export type AgentHookEventPayload = {
   promptInteractionKey?: string
   /** Raw agent hook event name, used by main-process transition guards. */
   hookEventName?: string
+  /** Claude's provider-owned user-prompt UUID. */
+  providerPromptId?: string
+  /** Active Claude compact generation, keyed by provider prompt identity. */
+  compactTrigger?: 'manual' | 'auto'
   /** Claude tool-use identifier when the hook source exposes one. */
   toolUseId?: string
   /** Claude agent/subagent identifier when the hook source exposes one. */
@@ -298,7 +341,95 @@ export type AgentHookEventPayload = {
   providerSessionOnly?: boolean
   /** True when this event is a relay cache replay rather than a live hook. */
   isReplay?: boolean
+  /** Transport-only Claude background-work evidence used to reject false input-based interrupts. */
+  claudeRunningNonAgentTask?: boolean
   payload: ParsedAgentStatusPayload
+}
+
+type ClaudeCompactIdentity = Pick<
+  AgentHookEventPayload,
+  | 'source'
+  | 'connectionId'
+  | 'hookEventName'
+  | 'providerPromptId'
+  | 'compactTrigger'
+  | 'providerSession'
+>
+
+export function canAcceptClaudeCompactTransition(
+  previous: AgentHookEventPayload | undefined,
+  incoming: ClaudeCompactIdentity,
+  options: { allowUnanchoredPreCompact?: boolean; allowUnanchoredPostCompact?: boolean } = {}
+): boolean {
+  if (
+    incoming.source !== 'claude' ||
+    incoming.compactTrigger === undefined ||
+    incoming.providerPromptId === undefined ||
+    (incoming.hookEventName !== 'PreCompact' && incoming.hookEventName !== 'PostCompact')
+  ) {
+    return false
+  }
+  if (incoming.hookEventName === 'PreCompact' && options.allowUnanchoredPreCompact) {
+    return true
+  }
+  if (incoming.hookEventName === 'PostCompact' && options.allowUnanchoredPostCompact) {
+    return true
+  }
+  if (
+    previous?.source !== 'claude' ||
+    previous.payload.agentType !== 'claude' ||
+    previous.connectionId !== incoming.connectionId ||
+    !agentProviderSessionsEqual('claude', previous.providerSession, incoming.providerSession)
+  ) {
+    return false
+  }
+  if (incoming.hookEventName === 'PostCompact') {
+    return (
+      previous.compactTrigger === incoming.compactTrigger &&
+      previous.providerPromptId === incoming.providerPromptId
+    )
+  }
+  return incoming.compactTrigger === 'manual'
+    ? previous.providerPromptId !== undefined
+    : previous.providerPromptId === incoming.providerPromptId
+}
+
+export function resolveCachedClaudeCompactOwnership(
+  previous: AgentHookEventPayload | undefined,
+  incoming: AgentHookEventPayload
+): AgentHookEventPayload {
+  const sameClaudeOwner =
+    previous?.source === 'claude' &&
+    previous.payload.agentType === 'claude' &&
+    incoming.source === 'claude' &&
+    incoming.payload.agentType === 'claude' &&
+    incoming.connectionId === previous.connectionId &&
+    agentProviderSessionsEqual('claude', previous.providerSession, incoming.providerSession)
+      ? previous
+      : undefined
+  if (incoming.hookEventName === 'PreCompact' && incoming.compactTrigger) {
+    return sameClaudeOwner?.payload.prompt && incoming.payload.prompt.length === 0
+      ? { ...incoming, payload: { ...incoming.payload, prompt: sameClaudeOwner.payload.prompt } }
+      : incoming
+  }
+  if (incoming.hookEventName === 'PostCompact') {
+    return incoming.compactTrigger ? { ...incoming, compactTrigger: undefined } : incoming
+  }
+  const ownsCompact =
+    sameClaudeOwner?.compactTrigger !== undefined &&
+    sameClaudeOwner.providerPromptId !== undefined &&
+    incoming.providerPromptId === sameClaudeOwner.providerPromptId
+  if (ownsCompact) {
+    return {
+      ...incoming,
+      compactTrigger: sameClaudeOwner.compactTrigger,
+      payload:
+        incoming.payload.prompt.length === 0 && sameClaudeOwner.payload.prompt
+          ? { ...incoming.payload, prompt: sameClaudeOwner.payload.prompt }
+          : incoming.payload
+    }
+  }
+  return incoming.compactTrigger ? { ...incoming, compactTrigger: undefined } : incoming
 }
 
 // ─── Body parsing ───────────────────────────────────────────────────
@@ -476,6 +607,14 @@ function stripGrokUserQueryWrapper(promptText: string): string {
   const text = wrappedText.endsWith(closer) ? wrappedText.slice(0, -closer.length) : wrappedText
   // Why: Grok wraps the submitted prompt in a `<user_query>` envelope; the status cache should hold the plain user text.
   return text.trim()
+}
+
+// Why: the post-compact continuation prompt has no matching Stop and would resurrect working.
+function shouldIgnoreCompactContinuationUserPromptSubmit(
+  eventName: unknown,
+  promptText: string
+): boolean {
+  return eventName === 'UserPromptSubmit' && isCompactContinuationUserTurnText(promptText)
 }
 
 function resolvePrompt(
@@ -836,6 +975,7 @@ function extractToolResponseText(toolResponse: unknown): string | undefined {
 
 const TRANSCRIPT_CHUNK_BYTES = 64 * 1024
 const TRANSCRIPT_MAX_SCAN_BYTES = 4 * 1024 * 1024
+const EMPTY_TRANSCRIPT_REGION = Buffer.alloc(0)
 const AMP_THREAD_ID_MAX_LENGTH = 256
 const AMP_MAX_SCOPED_THREAD_CACHE_KEYS = 32
 const GROK_SESSION_CWD_MAX_LENGTH = 4096
@@ -960,7 +1100,32 @@ function hashInteractionKeyPart(value: string): string {
   return createHash('sha256').update(value).digest('hex').slice(0, 12)
 }
 
-function readLastCommandCodeUserPromptEntryFromTranscript(
+// Why byte offsets: the caller's interactionKey embeds the prompt's absolute
+// position, so the backward scan has to report the same offset the old
+// read-everything-then-take-the-last-match pass produced.
+function findLastCommandCodePromptInRegion(
+  region: Buffer
+): { prompt: string; byteOffset: number } | undefined {
+  let lineEnd = region.length
+  for (let index = region.length - 1; index >= -1; index--) {
+    if (index >= 0 && region[index] !== 0x0a) {
+      continue
+    }
+    const lineStart = index + 1
+    if (lineEnd > lineStart) {
+      const prompt = extractCommandCodeUserPromptFromLine(
+        region.subarray(lineStart, lineEnd).toString('utf8').trim()
+      )
+      if (prompt !== undefined) {
+        return { prompt, byteOffset: lineStart }
+      }
+    }
+    lineEnd = index
+  }
+  return undefined
+}
+
+export function readLastCommandCodeUserPromptEntryFromTranscript(
   transcriptPath: unknown
 ): { text: string; interactionKey: string } | undefined {
   if (typeof transcriptPath !== 'string' || transcriptPath.length === 0) {
@@ -972,69 +1137,84 @@ function readLastCommandCodeUserPromptEntryFromTranscript(
     if (size <= 0) {
       return undefined
     }
-    const bytesToRead = Math.min(size, TRANSCRIPT_MAX_SCAN_BYTES)
-    const position = size - bytesToRead
     const fd = openSync(transcriptPath, 'r')
     try {
-      const buffer = Buffer.alloc(bytesToRead)
-      let filled = 0
-      while (filled < bytesToRead) {
-        const n = readSync(fd, buffer, filled, bytesToRead - filled, position + filled)
-        if (n === 0) {
+      // Why scan backward: the answer is the LAST user line, so walking up from
+      // EOF returns on the first hit instead of parsing every line of a
+      // multi-megabyte transcript on every hook event.
+      // Why a chunk list: carry holds a partial line, and re-concatenating it per
+      // block made one oversized line (a big tool result) cost O(line^2).
+      let carryChunks: Buffer[] = []
+      let bytesRead = 0
+      let scanEnd = size
+      while (scanEnd > 0 && bytesRead < TRANSCRIPT_MAX_SCAN_BYTES) {
+        const chunkSize = Math.min(
+          scanEnd,
+          TRANSCRIPT_CHUNK_BYTES,
+          TRANSCRIPT_MAX_SCAN_BYTES - bytesRead
+        )
+        const position = scanEnd - chunkSize
+        const buffer = Buffer.alloc(chunkSize)
+        let filled = 0
+        while (filled < chunkSize) {
+          const n = readSync(fd, buffer, filled, chunkSize - filled, position + filled)
+          if (n === 0) {
+            break
+          }
+          filled += n
+        }
+        // Why bail on a short read: the file shrank under us, so the bytes above
+        // this block no longer line up and any stitched offset would be wrong.
+        if (filled < chunkSize) {
           break
         }
-        filled += n
-      }
-      let text = buffer.subarray(0, filled).toString('utf8')
-      let textBasePosition = position
-      if (position > 0) {
-        const firstNewline = text.indexOf('\n')
-        textBasePosition += firstNewline + 1
-        text = firstNewline === -1 ? '' : text.slice(firstNewline + 1)
-      }
-      let lastPrompt: string | undefined
-      let lastPromptOffset = 0
-      for (const { line, byteOffset } of iterateTranscriptLinesWithByteOffsets(text)) {
-        const prompt = extractCommandCodeUserPromptFromLine(line.trim())
-        if (prompt !== undefined) {
-          lastPrompt = prompt
-          lastPromptOffset = textBasePosition + byteOffset
+        bytesRead += filled
+        scanEnd = position
+        // Why search only the new block: carry is always the run before a newline,
+        // so it holds none of its own.
+        const firstNewline = buffer.indexOf(0x0a)
+        // Why only at a true file start: a scan that stops on the size cap must
+        // discard its leading partial line, exactly as the capped read did.
+        const atStart = position === 0
+        let completeRegion: Buffer
+        let regionPosition: number
+        if (atStart) {
+          completeRegion =
+            carryChunks.length === 0 ? buffer : Buffer.concat([buffer, ...carryChunks])
+          regionPosition = position
+          carryChunks = []
+        } else if (firstNewline === -1) {
+          completeRegion = EMPTY_TRANSCRIPT_REGION
+          regionPosition = position
+          carryChunks.unshift(buffer)
+        } else {
+          const afterNewline = buffer.subarray(firstNewline + 1)
+          completeRegion =
+            carryChunks.length === 0 ? afterNewline : Buffer.concat([afterNewline, ...carryChunks])
+          regionPosition = position + firstNewline + 1
+          carryChunks = [buffer.subarray(0, firstNewline)]
+        }
+        if (completeRegion.length > 0) {
+          const found = findLastCommandCodePromptInRegion(completeRegion)
+          if (found) {
+            return {
+              text: found.prompt,
+              interactionKey: [
+                'command-code-transcript',
+                hashInteractionKeyPart(transcriptPath),
+                String(regionPosition + found.byteOffset),
+                hashInteractionKeyPart(found.prompt)
+              ].join('-')
+            }
+          }
         }
       }
-      return lastPrompt
-        ? {
-            text: lastPrompt,
-            interactionKey: [
-              'command-code-transcript',
-              hashInteractionKeyPart(transcriptPath),
-              String(lastPromptOffset),
-              hashInteractionKeyPart(lastPrompt)
-            ].join('-')
-          }
-        : undefined
+      return undefined
     } finally {
       closeSync(fd)
     }
   } catch {
     return undefined
-  }
-}
-
-function* iterateTranscriptLinesWithByteOffsets(
-  text: string
-): Generator<{ line: string; byteOffset: number }> {
-  let lineStart = 0
-  let byteOffset = 0
-
-  for (let index = 0; index <= text.length; index++) {
-    if (index < text.length && text.charCodeAt(index) !== 10) {
-      continue
-    }
-
-    const line = text.slice(lineStart, index)
-    yield { line, byteOffset }
-    byteOffset += Buffer.byteLength(line, 'utf8') + (index < text.length ? 1 : 0)
-    lineStart = index + 1
   }
 }
 
@@ -1297,11 +1477,14 @@ function readLastTextFromTranscriptOnce(
     }
     const fd = openSync(transcriptPath, 'r')
     try {
-      let carryBytes: Buffer = Buffer.alloc(0)
+      // Why a chunk list: carry holds a partial line, and re-joining it per block
+      // made one oversized line (a big tool result or pasted prompt) cost O(line^2).
+      let carryChunks: Buffer[] = []
       let bytesRead = 0
-      while (bytesRead < size && bytesRead < TRANSCRIPT_MAX_SCAN_BYTES) {
-        const chunkSize = Math.min(size - bytesRead, TRANSCRIPT_CHUNK_BYTES)
-        const position = size - bytesRead - chunkSize
+      let scanEnd = size
+      while (scanEnd > 0 && bytesRead < TRANSCRIPT_MAX_SCAN_BYTES) {
+        const chunkSize = Math.min(scanEnd, TRANSCRIPT_CHUNK_BYTES)
+        const position = scanEnd - chunkSize
         const buffer = Buffer.alloc(chunkSize)
         let filled = 0
         while (filled < chunkSize) {
@@ -1311,25 +1494,30 @@ function readLastTextFromTranscriptOnce(
           }
           filled += n
         }
-        const n = filled
-        bytesRead += n
-        if (n === 0) {
+        // Why bail on a short read: the file shrank under us, so the bytes above
+        // this block no longer line up with what the earlier ones assumed.
+        if (filled < chunkSize) {
           break
         }
-        const combined = Buffer.concat([buffer.subarray(0, n), carryBytes])
-        const atStart = bytesRead >= size
-        const firstNewline = combined.indexOf(0x0a)
+        bytesRead += filled
+        scanEnd = position
+        // Why search only the new block: carry is always the run before a newline,
+        // so it holds none of its own.
+        const firstNewline = buffer.indexOf(0x0a)
+        const atStart = position === 0
         let completeRegion: Buffer
-        let nextCarry: Buffer
         if (atStart) {
-          completeRegion = combined
-          nextCarry = Buffer.alloc(0)
+          completeRegion =
+            carryChunks.length === 0 ? buffer : Buffer.concat([buffer, ...carryChunks])
+          carryChunks = []
         } else if (firstNewline === -1) {
-          completeRegion = Buffer.alloc(0)
-          nextCarry = combined
+          completeRegion = EMPTY_TRANSCRIPT_REGION
+          carryChunks.unshift(buffer)
         } else {
-          nextCarry = combined.subarray(0, firstNewline)
-          completeRegion = combined.subarray(firstNewline + 1)
+          const afterNewline = buffer.subarray(firstNewline + 1)
+          completeRegion =
+            carryChunks.length === 0 ? afterNewline : Buffer.concat([afterNewline, ...carryChunks])
+          carryChunks = [buffer.subarray(0, firstNewline)]
         }
         if (completeRegion.length > 0) {
           const extracted = findLastExtractedTranscriptLineText(
@@ -1340,7 +1528,6 @@ function readLastTextFromTranscriptOnce(
             return extracted
           }
         }
-        carryBytes = nextCarry
       }
       return undefined
     } finally {
@@ -2218,8 +2405,11 @@ function isNewTurnEvent(source: AgentHookSource, eventName: unknown): boolean {
   // Why: exhaustive switch so a new AgentHookSource fails typecheck here instead of falling through to false.
   switch (source) {
     case 'claude':
-    // Why: Kimi Code emits Claude-compatible hook events, so UserPromptSubmit is its new-turn boundary too.
+      // Why: SessionStart lands an idle row (STA-3386) and must also drop stale
+      // tool/prompt caches left by the pane's previous session.
+      return eventName === 'SessionStart' || eventName === 'UserPromptSubmit'
     case 'kimi':
+      // Why: Kimi Code emits Claude-compatible hook events, so UserPromptSubmit is its new-turn boundary too.
       return eventName === 'UserPromptSubmit'
     case 'codex':
       return eventName === 'SessionStart' || eventName === 'UserPromptSubmit'
@@ -2312,6 +2502,7 @@ function extractToolFields(
   switch (source) {
     case 'claude':
     // Why: Kimi Code uses Claude's tool_name/tool_input payload fields verbatim.
+    // falls through
     case 'kimi':
       return extractClaudeToolFields(eventName, hookPayload)
     case 'codex':
@@ -2357,6 +2548,36 @@ function getOrCreateClaudeSubagentRoster(
   return roster
 }
 
+function updateClaudeRunningNonAgentTask(
+  state: HookListenerState,
+  paneKey: string,
+  hasRunningNonAgentTask: boolean,
+  interrupted: boolean
+): void {
+  if (hasRunningNonAgentTask && !interrupted) {
+    state.claudeRunningNonAgentTaskPaneKeys.add(paneKey)
+  } else {
+    state.claudeRunningNonAgentTaskPaneKeys.delete(paneKey)
+  }
+}
+
+function resolveClaudePaneState(
+  state: HookListenerState,
+  paneKey: string,
+  lead: Pick<ClaudeLeadTurnState, 'state' | 'interrupted'>
+): AgentStatusState {
+  if (lead.state !== 'done') {
+    return lead.state
+  }
+  const roster = state.claudeSubagentRosterByPaneKey.get(paneKey)
+  return claudeRosterHasWorkingSubagent(roster) ||
+    (!lead.interrupted &&
+      (state.claudeRunningNonAgentTaskPaneKeys.has(paneKey) ||
+        state.claudeActiveSessionCronPaneKeys.has(paneKey)))
+    ? 'working'
+    : 'done'
+}
+
 /** SubagentStart/Stop/TeammateIdle update the roster and re-emit the lead's last known state with the fresh child list, so the sidebar reflects spawn/finish even when a background child outlives the lead turn with no other hook traffic. */
 function normalizeClaudeSubagentLifecycleEvent(
   state: HookListenerState,
@@ -2399,6 +2620,8 @@ function normalizeClaudeSubagentLifecycleEvent(
 /** Sync the Claude lead-turn record when the SERVER infers an interrupt outside the hook stream (Ctrl+C with a missed Stop); else a later child lifecycle event resurrects the cancelled pane. */
 export function markClaudeLeadTurnInterrupted(state: HookListenerState, paneKey: string): void {
   state.claudeLeadStateByPaneKey.set(paneKey, { state: 'done', interrupted: true })
+  state.claudeRunningNonAgentTaskPaneKeys.delete(paneKey)
+  state.claudeActiveSessionCronPaneKeys.delete(paneKey)
 }
 
 /** Rebuild a pane's working roster from a persisted snapshot; live activity confirms a seed, a complete task inventory may reap an unconfirmed one whose finish hook arrived while Orca was offline. */
@@ -2422,9 +2645,30 @@ export function seedClaudeSubagentRosterFromSnapshots(
       agentType: snapshot.agentType,
       description: snapshot.description,
       // Why: the seed can be a phantom (child finished while Orca was down, SubagentStop lost); let a PRESENT background_tasks list omitting the id remove it, not gate the pane 'working' forever.
-      backgroundTasksAuthoritative: true
+      backgroundTasksAuthoritative: true,
+      // Why: an idle parent never emits that list, so the inventory reap alone can strand the seed; mark it for the liveness reap below.
+      restoredFromSnapshot: true
     })
   }
+}
+
+/** Reap this pane's unconfirmed restored seeds because no live agent process backs
+ *  the pane any more (its PTY died while Orca was down, so no finish hook could
+ *  arrive). Callers must have proven the pane is LOCAL-launched — a remote/SSH
+ *  agent runs on the far host and can never appear in a local process index.
+ *  Returns whether the roster changed. */
+export function reapRestoredClaudeSubagentsForDeadPane(
+  state: HookListenerState,
+  paneKey: string
+): boolean {
+  const roster = state.claudeSubagentRosterByPaneKey.get(paneKey)
+  if (!roster || !reapRestoredClaudeSubagentsWithoutLiveAgent(roster)) {
+    return false
+  }
+  if (roster.size === 0) {
+    state.claudeSubagentRosterByPaneKey.delete(paneKey)
+  }
+  return true
 }
 
 /** Drop a child-owned waiting state when the child stops/idles, restoring the displaced lead state; without a stash, fall back to 'working' (a transient spinner beats a permanently stuck card). */
@@ -2458,10 +2702,8 @@ export function clearClaudeAnsweredQuestionWait(
       ? { lastAssistantMessage: previousTool.lastAssistantMessage }
       : {}
   )
-  const roster = state.claudeSubagentRosterByPaneKey.get(paneKey)
-  return restored.state === 'done' && claudeRosterHasWorkingSubagent(roster)
-    ? { state: 'working' }
-    : restored
+  const effectiveState = resolveClaudePaneState(state, paneKey, restored)
+  return effectiveState === restored.state ? restored : { state: effectiveState }
 }
 
 /** Re-emit the lead's cached state on child activity — gated up to 'working' while a child works — without touching the lead's tool/prompt caches, so a live card or permission wait survives child churn. */
@@ -2474,10 +2716,11 @@ function buildClaudeChildDrivenStatusPayload(
   // Why: default 'working' — a spawn proves activity even before the lead's first state-bearing event (e.g. Orca restarted mid-session).
   const lead = state.claudeLeadStateByPaneKey.get(paneKey)
   const leadState = lead?.state ?? 'working'
-  const roster = state.claudeSubagentRosterByPaneKey.get(paneKey)
   return buildClaudeStatusPayload(state, eventName, '', paneKey, hookPayload, {
-    stateName:
-      leadState === 'done' && claudeRosterHasWorkingSubagent(roster) ? 'working' : leadState,
+    stateName: resolveClaudePaneState(state, paneKey, {
+      state: leadState,
+      interrupted: lead?.interrupted
+    }),
     updateToolSnapshot: false,
     interrupted: lead?.interrupted
   })
@@ -2490,6 +2733,7 @@ function normalizeClaudeEvent(
   paneKey: string,
   hookPayload: Record<string, unknown>
 ): ParsedAgentStatusPayload | null {
+  const eventAgentId = readString(hookPayload, 'agent_id')
   if (
     eventName === 'SubagentStart' ||
     eventName === 'SubagentStop' ||
@@ -2497,31 +2741,98 @@ function normalizeClaudeEvent(
   ) {
     return normalizeClaudeSubagentLifecycleEvent(state, eventName, paneKey, hookPayload)
   }
+  if (eventName === 'SessionStart') {
+    // Why: SessionStart is the only signal a resumed session emits before its first prompt
+    // (STA-3386). Land it as a session-boundary 'done' row: 'working' would show a phantom
+    // spinner on an idle TUI (why Devin/Pi/Grok drop the event), and the sessionBoundary
+    // flag keeps completion-reactive consumers (notifications, automation runs) out of it.
+    const sessionStartSource = hookPayload['source']
+    if (
+      eventAgentId !== undefined ||
+      (sessionStartSource !== 'startup' &&
+        sessionStartSource !== 'resume' &&
+        sessionStartSource !== 'clear')
+    ) {
+      // Why: allowlist idle boundaries and fail closed — a compact restart (or any unknown
+      // source) fires mid-turn, and a child-attributed SessionStart must not flip the lead's
+      // live turn to an idle row.
+      return null
+    }
+    // Why: a new process owns the pane; stale children/tasks/crons must not gate the
+    // fresh session's idle row back up to 'working' (same reset Codex does on SessionStart).
+    state.claudeSubagentRosterByPaneKey.delete(paneKey)
+    state.claudeRunningNonAgentTaskPaneKeys.delete(paneKey)
+    state.claudeActiveSessionCronPaneKeys.delete(paneKey)
+    state.claudeLeadStateByPaneKey.set(paneKey, { state: 'done' })
+    return buildClaudeStatusPayload(state, eventName, promptText, paneKey, hookPayload, {
+      stateName: 'done',
+      updateToolSnapshot: true,
+      sessionBoundary: true
+    })
+  }
+  const previousLead = state.claudeLeadStateByPaneKey.get(paneKey)
+  // Why: only a turn boundary may declare an interrupt or carry a prior one forward; any other event starts a fresh turn and drops it.
+  const isTurnBoundary = eventName === 'Stop' || eventName === 'StopFailure'
+  const interrupted =
+    isTurnBoundary &&
+    ((eventAgentId === undefined && hookPayload['is_interrupt'] === true) ||
+      previousLead?.interrupted === true)
+      ? true
+      : undefined
+  const backgroundTasks = readClaudeBackgroundAgentTasks(hookPayload)
+  const sessionCrons = hookPayload['session_crons']
+  const sessionCronInventoryPresent = Array.isArray(sessionCrons)
+  const hasActiveSessionCron = sessionCronInventoryPresent && sessionCrons.length > 0
+
+  if (shouldIgnoreCompactContinuationUserPromptSubmit(eventName, promptText)) {
+    return null
+  }
 
   // Why: Claude's auto-allowed AskUserQuestion emits PreToolUse (not PermissionRequest; its Notification hook isn't registered) while blocked on a human answer.
   // Treat that PreToolUse as waiting so the sidebar shows amber attention, not a spinner that decays to grey. Mirrors normalizeKimiEvent.
   const isAskUserQuestion =
     eventName === 'PreToolUse' && isAskUserQuestionTool(readString(hookPayload, 'tool_name'))
-  const stateName =
+  // Why: /compact can take minutes and does not emit Stop. PreCompact marks the pane busy;
+  // PostCompact clears it so a finished compact cannot leave a sticky working spinner (#11352).
+  const reportedStateName =
     eventName === 'UserPromptSubmit' ||
     eventName === 'PostToolUse' ||
     eventName === 'PostToolUseFailure' ||
+    eventName === 'PreCompact' ||
+    (eventName === 'PostCompact' && hookPayload.trigger === 'auto') ||
     (eventName === 'PreToolUse' && !isAskUserQuestion)
       ? 'working'
       : eventName === 'PermissionRequest' || isAskUserQuestion
         ? 'waiting'
-        : eventName === 'Stop' || eventName === 'StopFailure'
+        : isTurnBoundary || (eventName === 'PostCompact' && hookPayload.trigger === 'manual')
           ? 'done'
           : null
 
-  if (!stateName) {
+  if (!reportedStateName) {
     return null
   }
+  if (backgroundTasks.present && eventAgentId === undefined) {
+    updateClaudeRunningNonAgentTask(
+      state,
+      paneKey,
+      backgroundTasks.hasRunningNonAgentTask,
+      interrupted === true
+    )
+  }
+  if (sessionCronInventoryPresent && eventAgentId === undefined) {
+    if (hasActiveSessionCron && interrupted !== true) {
+      state.claudeActiveSessionCronPaneKeys.add(paneKey)
+    } else {
+      state.claudeActiveSessionCronPaneKeys.delete(paneKey)
+    }
+  } else if (eventAgentId === undefined && isTurnBoundary && backgroundTasks.present) {
+    // Why: current Claude may omit an empty cron inventory while still emitting background_tasks.
+    state.claudeActiveSessionCronPaneKeys.delete(paneKey)
+  }
 
-  const eventAgentId = readString(hookPayload, 'agent_id')
   // Why: subagent/teammate events carry `agent_id` (lead's don't); child tool activity keeps its row live but must not become the lead's state or overwrite its tool/prompt caches (a live card would vanish).
   // Two exceptions take the full path below: waiting-inducing events (a child needs human attention on this pane) and the blocked child's own next tool event (approval granted — clear the wait as for the lead).
-  const isWaitingInducing = stateName === 'waiting'
+  const isWaitingInducing = reportedStateName === 'waiting'
   const subagentOriginId =
     !isWaitingInducing &&
     (eventName === 'PreToolUse' ||
@@ -2546,30 +2857,21 @@ function normalizeClaudeEvent(
     // Restore the stashed lead state, not this child's 'working': the lead may already be done, and the done-gate never upgrades working back to done once the roster drains.
     const restored = lead.stateBeforeWait ?? { state: 'working' as const }
     state.claudeLeadStateByPaneKey.set(paneKey, restored)
-    const roster = state.claudeSubagentRosterByPaneKey.get(paneKey)
     return buildClaudeStatusPayload(state, eventName, promptText, paneKey, hookPayload, {
-      stateName:
-        restored.state === 'done' && claudeRosterHasWorkingSubagent(roster)
-          ? 'working'
-          : restored.state,
+      stateName: resolveClaudePaneState(state, paneKey, restored),
       updateToolSnapshot: true,
       interrupted: restored.interrupted
     })
   }
 
-  // Why: lead events never carry agent_id, so a known child's id on a turn-boundary event must not retire/resurrect the pane as if the lead spoke — re-emit as child activity.
-  if (
-    eventAgentId &&
-    !isWaitingInducing &&
-    state.claudeSubagentRosterByPaneKey.get(paneKey)?.has(eventAgentId)
-  ) {
+  // Why: lead events never carry agent_id; even a child missed by lifecycle tracking cannot own the lead turn or its background-work evidence.
+  if (eventAgentId && !isWaitingInducing) {
     return buildClaudeChildDrivenStatusPayload(state, eventName, paneKey, hookPayload)
   }
 
-  if (eventName === 'Stop' || eventName === 'StopFailure') {
+  if (isTurnBoundary && eventAgentId === undefined) {
     // Why: background_tasks is trusted only where unambiguous (see foldClaudeBackgroundTasksIntoRoster) — teammates report "running" here even while idle.
     // Older Claude builds without the field keep the incrementally tracked roster.
-    const backgroundTasks = readClaudeBackgroundAgentTasks(hookPayload)
     if (backgroundTasks.present) {
       foldClaudeBackgroundTasksIntoRoster(
         getOrCreateClaudeSubagentRoster(state, paneKey),
@@ -2579,10 +2881,7 @@ function normalizeClaudeEvent(
       )
     }
   }
-  const interrupted =
-    eventName === 'Stop' && hookPayload['is_interrupt'] === true ? true : undefined
   // Why: a child-induced wait displaces the lead state; stash it so clearing restores reality (lead may be done). A 2nd child wait carries the ORIGINAL stash, not the intermediate waiting state.
-  const previousLead = state.claudeLeadStateByPaneKey.get(paneKey)
   const stateBeforeWait =
     isWaitingInducing && eventAgentId && previousLead
       ? previousLead.state === 'waiting'
@@ -2593,16 +2892,21 @@ function normalizeClaudeEvent(
           }
       : undefined
   state.claudeLeadStateByPaneKey.set(paneKey, {
-    state: stateName,
+    state: reportedStateName,
     ...(interrupted ? { interrupted } : {}),
     ...(isWaitingInducing && eventAgentId ? { waitingAgentId: eventAgentId } : {}),
     ...(stateBeforeWait ? { stateBeforeWait } : {})
   })
 
-  // Why: a lead Stop isn't "done" while subagents/teammates run (would show a finished row mid-flight); Claude re-wakes the lead, so a later empty-roster Stop resolves to done.
-  const roster = state.claudeSubagentRosterByPaneKey.get(paneKey)
-  const effectiveState =
-    stateName === 'done' && claudeRosterHasWorkingSubagent(roster) ? 'working' : stateName
+  if (interrupted && eventAgentId === undefined) {
+    state.claudeRunningNonAgentTaskPaneKeys.delete(paneKey)
+    state.claudeActiveSessionCronPaneKeys.delete(paneKey)
+  }
+
+  const effectiveState = resolveClaudePaneState(state, paneKey, {
+    state: reportedStateName,
+    interrupted
+  })
 
   return buildClaudeStatusPayload(state, eventName, promptText, paneKey, hookPayload, {
     stateName: effectiveState,
@@ -2617,7 +2921,12 @@ function buildClaudeStatusPayload(
   promptText: string,
   paneKey: string,
   hookPayload: Record<string, unknown>,
-  options: { stateName: AgentStatusState; updateToolSnapshot: boolean; interrupted?: boolean }
+  options: {
+    stateName: AgentStatusState
+    updateToolSnapshot: boolean
+    interrupted?: boolean
+    sessionBoundary?: boolean
+  }
 ): ParsedAgentStatusPayload | null {
   // Why: child-driven refreshes are roster bookkeeping, not lead tool activity; read the cached snapshot without merging so they can't clear a live AskUserQuestion card or clobber the tool preview.
   const snapshot = options.updateToolSnapshot
@@ -2640,6 +2949,7 @@ function buildClaudeStatusPayload(
     interactivePrompt: snapshot.interactivePrompt,
     lastAssistantMessage: snapshot.lastAssistantMessage,
     interrupted: options.interrupted,
+    sessionBoundary: options.sessionBoundary,
     subagents: claudeRosterToSnapshots(state.claudeSubagentRosterByPaneKey.get(paneKey))
   })
 }
@@ -2684,20 +2994,18 @@ function normalizeDevinEvent(
   const interrupted =
     eventName === 'Stop' && hookPayload['is_interrupt'] === true ? true : undefined
 
-  return parseAgentStatusPayload(
-    JSON.stringify({
-      state: stateName,
-      prompt: resolvePrompt(state, paneKey, promptText, {
-        resetOnNewTurn: isNewTurnEvent('devin', eventName)
-      }),
-      agentType: 'devin',
-      toolName: snapshot.toolName,
-      toolInput: snapshot.toolInput,
-      interactivePrompt: snapshot.interactivePrompt,
-      lastAssistantMessage: snapshot.lastAssistantMessage,
-      interrupted
-    })
-  )
+  return normalizeAgentStatusPayload({
+    state: stateName,
+    prompt: resolvePrompt(state, paneKey, promptText, {
+      resetOnNewTurn: isNewTurnEvent('devin', eventName)
+    }),
+    agentType: 'devin',
+    toolName: snapshot.toolName,
+    toolInput: snapshot.toolInput,
+    interactivePrompt: snapshot.interactivePrompt,
+    lastAssistantMessage: snapshot.lastAssistantMessage,
+    interrupted
+  })
 }
 
 // Why: Kimi's auto-allowed AskUserQuestion emits PreToolUse (not PermissionRequest) while awaiting an answer; treat as waiting so the UI shows the attention icon, not a spinner.
@@ -2713,6 +3021,10 @@ function normalizeKimiEvent(
   paneKey: string,
   hookPayload: Record<string, unknown>
 ): ParsedAgentStatusPayload | null {
+  if (shouldIgnoreCompactContinuationUserPromptSubmit(eventName, promptText)) {
+    return null
+  }
+
   const toolName = readString(hookPayload, 'tool_name')
   const isUserInputTool = isKimiUserInputTool(toolName)
 
@@ -2744,19 +3056,17 @@ function normalizeKimiEvent(
   const interrupted =
     eventName === 'Stop' && hookPayload['is_interrupt'] === true ? true : undefined
 
-  return parseAgentStatusPayload(
-    JSON.stringify({
-      state: stateName,
-      prompt: resolvePrompt(state, paneKey, promptText, {
-        resetOnNewTurn: isNewTurnEvent('kimi', eventName)
-      }),
-      agentType: 'kimi',
-      toolName: snapshot.toolName,
-      toolInput: snapshot.toolInput,
-      lastAssistantMessage: snapshot.lastAssistantMessage,
-      interrupted
-    })
-  )
+  return normalizeAgentStatusPayload({
+    state: stateName,
+    prompt: resolvePrompt(state, paneKey, promptText, {
+      resetOnNewTurn: isNewTurnEvent('kimi', eventName)
+    }),
+    agentType: 'kimi',
+    toolName: snapshot.toolName,
+    toolInput: snapshot.toolInput,
+    lastAssistantMessage: snapshot.lastAssistantMessage,
+    interrupted
+  })
 }
 
 function normalizeGeminiEvent(
@@ -2789,19 +3099,17 @@ function normalizeGeminiEvent(
     { resetOnNewTurn: isNewTurnEvent('gemini', eventName) }
   )
 
-  return parseAgentStatusPayload(
-    JSON.stringify({
-      state: stateName,
-      prompt: resolvePrompt(state, paneKey, promptText, {
-        resetOnNewTurn: isNewTurnEvent('gemini', eventName)
-      }),
-      agentType: 'gemini',
-      toolName: snapshot.toolName,
-      toolInput: snapshot.toolInput,
-      interactivePrompt: snapshot.interactivePrompt,
-      lastAssistantMessage: snapshot.lastAssistantMessage
-    })
-  )
+  return normalizeAgentStatusPayload({
+    state: stateName,
+    prompt: resolvePrompt(state, paneKey, promptText, {
+      resetOnNewTurn: isNewTurnEvent('gemini', eventName)
+    }),
+    agentType: 'gemini',
+    toolName: snapshot.toolName,
+    toolInput: snapshot.toolInput,
+    interactivePrompt: snapshot.interactivePrompt,
+    lastAssistantMessage: snapshot.lastAssistantMessage
+  })
 }
 
 function isAntigravityFeedbackTool(toolName: string | undefined): boolean {
@@ -2863,19 +3171,17 @@ function normalizeAntigravityEvent(
     { resetOnNewTurn: resetsTurn }
   )
 
-  const payload = parseAgentStatusPayload(
-    JSON.stringify({
-      state: stateName,
-      prompt: resolvePrompt(state, paneKey, effectivePrompt, {
-        resetOnNewTurn: resetsTurn
-      }),
-      agentType: 'antigravity',
-      toolName: snapshot.toolName,
-      toolInput: snapshot.toolInput,
-      interactivePrompt: snapshot.interactivePrompt,
-      lastAssistantMessage: snapshot.lastAssistantMessage
-    })
-  )
+  const payload = normalizeAgentStatusPayload({
+    state: stateName,
+    prompt: resolvePrompt(state, paneKey, effectivePrompt, {
+      resetOnNewTurn: resetsTurn
+    }),
+    agentType: 'antigravity',
+    toolName: snapshot.toolName,
+    toolInput: snapshot.toolInput,
+    interactivePrompt: snapshot.interactivePrompt,
+    lastAssistantMessage: snapshot.lastAssistantMessage
+  })
   // Why: Antigravity can emit Stop with fullyIdle=false between tool steps; only a fully idle Stop is terminal, else the sidebar bounces done -> working and ignores later tool updates.
   if (eventName === 'Stop' && !stopStillBusy && transcriptPath) {
     state.antigravityCompletedTranscriptByPaneKey.set(paneKey, transcriptPath)
@@ -2941,21 +3247,19 @@ function normalizeAmpEvent(
     (eventName === 'agent.end' && !state.lastPromptByPaneKey.has(ampCacheKey))
   const ampPromptText = explicitPrompt ?? (canUseMessageAsPrompt ? promptText : '')
 
-  const normalized = parseAgentStatusPayload(
-    JSON.stringify({
-      state: stateName,
-      // Why: Amp tool/result events may use `message` for tool output; only lifecycle events may treat it as the turn prompt.
-      prompt: resolvePrompt(state, ampCacheKey, ampPromptText, {
-        resetOnNewTurn: isNewTurnEvent('amp', eventName)
-      }),
-      agentType: 'amp',
-      toolName: snapshot.toolName,
-      toolInput: snapshot.toolInput,
-      interactivePrompt: snapshot.interactivePrompt,
-      lastAssistantMessage: snapshot.lastAssistantMessage,
-      interrupted
-    })
-  )
+  const normalized = normalizeAgentStatusPayload({
+    state: stateName,
+    // Why: Amp tool/result events may use `message` for tool output; only lifecycle events may treat it as the turn prompt.
+    prompt: resolvePrompt(state, ampCacheKey, ampPromptText, {
+      resetOnNewTurn: isNewTurnEvent('amp', eventName)
+    }),
+    agentType: 'amp',
+    toolName: snapshot.toolName,
+    toolInput: snapshot.toolInput,
+    interactivePrompt: snapshot.interactivePrompt,
+    lastAssistantMessage: snapshot.lastAssistantMessage,
+    interrupted
+  })
   if (normalized && eventName === 'agent.end') {
     state.ampCompletedCacheKeys.add(ampCacheKey)
   }
@@ -3059,6 +3363,22 @@ function getOrCreateCodexSubagentRoster(
   return roster
 }
 
+function getOrCreateCodexSubagentTranscriptState(
+  state: HookListenerState,
+  paneKey: string
+): CodexSubagentTranscriptState {
+  let transcriptState = state.codexSubagentTranscriptByPaneKey.get(paneKey)
+  if (!transcriptState) {
+    transcriptState = createCodexSubagentTranscriptState()
+    state.codexSubagentTranscriptByPaneKey.set(paneKey, transcriptState)
+  }
+  return transcriptState
+}
+
+export function hasCodexTranscriptSubagents(state: HookListenerState, paneKey: string): boolean {
+  return hasTrackedCodexTranscriptSubagents(state.codexSubagentTranscriptByPaneKey.get(paneKey))
+}
+
 export function seedCodexStateFromSnapshot(
   state: HookListenerState,
   paneKey: string,
@@ -3139,7 +3459,7 @@ export function reconcileRemoteCodexState(
     }
   } else {
     const leadState = codexLeadStateForHookEvent(eventName)
-    if (eventName === 'SessionStart' || eventName === 'Stop') {
+    if (eventName === 'SessionStart' || (eventName === 'Stop' && !payload.subagents)) {
       roster.clear()
     }
     if (leadState) {
@@ -3286,7 +3606,17 @@ function normalizeCodexEvent(
   if (eventName === 'SessionStart') {
     // Why: a pane can host a new Codex process after the old one exited without child Stop hooks.
     state.codexSubagentRosterByPaneKey.delete(paneKey)
-  } else if (eventName === 'Stop') {
+    state.codexSubagentTranscriptByPaneKey.delete(paneKey)
+  }
+  const transcriptPath = readFirstString(hookPayload, ['transcript_path', 'transcriptPath'])
+  if (transcriptPath) {
+    reconcileCodexSubagentTranscript(
+      getOrCreateCodexSubagentTranscriptState(state, paneKey),
+      getOrCreateCodexSubagentRoster(state, paneKey),
+      transcriptPath
+    )
+  }
+  if (eventName === 'Stop' && !hasCodexTranscriptSubagents(state, paneKey)) {
     // Why: Codex CLI 0.144 can omit child Stop hooks; later child activity safely recreates any agent still running.
     state.codexSubagentRosterByPaneKey.delete(paneKey)
   }
@@ -3335,19 +3665,17 @@ function normalizeOpenCodeFamilyEvent(
     { resetOnNewTurn: isNewTurnEvent(source, eventName) }
   )
 
-  return parseAgentStatusPayload(
-    JSON.stringify({
-      state: stateName,
-      prompt: resolvePrompt(state, paneKey, promptText, {
-        resetOnNewTurn: isNewTurnEvent(source, eventName)
-      }),
-      agentType: source,
-      toolName: snapshot.toolName,
-      toolInput: snapshot.toolInput,
-      interactivePrompt: snapshot.interactivePrompt,
-      lastAssistantMessage: snapshot.lastAssistantMessage
-    })
-  )
+  return normalizeAgentStatusPayload({
+    state: stateName,
+    prompt: resolvePrompt(state, paneKey, promptText, {
+      resetOnNewTurn: isNewTurnEvent(source, eventName)
+    }),
+    agentType: source,
+    toolName: snapshot.toolName,
+    toolInput: snapshot.toolInput,
+    interactivePrompt: snapshot.interactivePrompt,
+    lastAssistantMessage: snapshot.lastAssistantMessage
+  })
 }
 
 function normalizeCursorEvent(
@@ -3395,20 +3723,18 @@ function normalizeCursorEvent(
       ? true
       : undefined
 
-  return parseAgentStatusPayload(
-    JSON.stringify({
-      state: stateName,
-      prompt: resolvePrompt(state, paneKey, promptText, {
-        resetOnNewTurn: isNewTurnEvent('cursor', eventName)
-      }),
-      agentType: 'cursor',
-      toolName: snapshot.toolName,
-      toolInput: snapshot.toolInput,
-      interactivePrompt: snapshot.interactivePrompt,
-      lastAssistantMessage: snapshot.lastAssistantMessage,
-      interrupted
-    })
-  )
+  return normalizeAgentStatusPayload({
+    state: stateName,
+    prompt: resolvePrompt(state, paneKey, promptText, {
+      resetOnNewTurn: isNewTurnEvent('cursor', eventName)
+    }),
+    agentType: 'cursor',
+    toolName: snapshot.toolName,
+    toolInput: snapshot.toolInput,
+    interactivePrompt: snapshot.interactivePrompt,
+    lastAssistantMessage: snapshot.lastAssistantMessage,
+    interrupted
+  })
 }
 
 // Why: Copilot PermissionRequest fires before allow/ask/deny (stays working); ask_user and notification prompts are the real blocked signals.
@@ -3458,19 +3784,17 @@ function normalizeCopilotEvent(
 
   const effectivePrompt = normalizedEventName === 'Notification' ? '' : promptText
 
-  return parseAgentStatusPayload(
-    JSON.stringify({
-      state: stateName,
-      prompt: resolvePrompt(state, paneKey, effectivePrompt, {
-        resetOnNewTurn: isNewTurnEvent('copilot', normalizedEventName)
-      }),
-      agentType: 'copilot',
-      toolName: snapshot.toolName,
-      toolInput: snapshot.toolInput,
-      interactivePrompt: snapshot.interactivePrompt,
-      lastAssistantMessage: snapshot.lastAssistantMessage
-    })
-  )
+  return normalizeAgentStatusPayload({
+    state: stateName,
+    prompt: resolvePrompt(state, paneKey, effectivePrompt, {
+      resetOnNewTurn: isNewTurnEvent('copilot', normalizedEventName)
+    }),
+    agentType: 'copilot',
+    toolName: snapshot.toolName,
+    toolInput: snapshot.toolInput,
+    interactivePrompt: snapshot.interactivePrompt,
+    lastAssistantMessage: snapshot.lastAssistantMessage
+  })
 }
 
 function normalizePiCompatibleEvent(
@@ -3517,19 +3841,17 @@ function normalizePiCompatibleEvent(
     { resetOnNewTurn: isNewTurnEvent(agentType, eventName) }
   )
 
-  return parseAgentStatusPayload(
-    JSON.stringify({
-      state: stateName,
-      prompt: resolvePrompt(state, paneKey, promptText, {
-        resetOnNewTurn: isNewTurnEvent(agentType, eventName)
-      }),
-      agentType,
-      toolName: snapshot.toolName,
-      toolInput: snapshot.toolInput,
-      interactivePrompt: snapshot.interactivePrompt,
-      lastAssistantMessage: snapshot.lastAssistantMessage
-    })
-  )
+  return normalizeAgentStatusPayload({
+    state: stateName,
+    prompt: resolvePrompt(state, paneKey, promptText, {
+      resetOnNewTurn: isNewTurnEvent(agentType, eventName)
+    }),
+    agentType,
+    toolName: snapshot.toolName,
+    toolInput: snapshot.toolInput,
+    interactivePrompt: snapshot.interactivePrompt,
+    lastAssistantMessage: snapshot.lastAssistantMessage
+  })
 }
 
 function normalizeDroidEvent(
@@ -3584,19 +3906,17 @@ function normalizeDroidEvent(
   // Why: Droid Notification.message is status text, not the prompt; '' keeps resolvePrompt's cached UserPromptSubmit value.
   const effectivePrompt = eventName === 'Notification' ? '' : promptText
 
-  return parseAgentStatusPayload(
-    JSON.stringify({
-      state: stateName,
-      prompt: resolvePrompt(state, paneKey, effectivePrompt, {
-        resetOnNewTurn: isNewTurnEvent('droid', eventName)
-      }),
-      agentType: 'droid',
-      toolName: snapshot.toolName,
-      toolInput: snapshot.toolInput,
-      interactivePrompt: snapshot.interactivePrompt,
-      lastAssistantMessage: snapshot.lastAssistantMessage
-    })
-  )
+  return normalizeAgentStatusPayload({
+    state: stateName,
+    prompt: resolvePrompt(state, paneKey, effectivePrompt, {
+      resetOnNewTurn: isNewTurnEvent('droid', eventName)
+    }),
+    agentType: 'droid',
+    toolName: snapshot.toolName,
+    toolInput: snapshot.toolInput,
+    interactivePrompt: snapshot.interactivePrompt,
+    lastAssistantMessage: snapshot.lastAssistantMessage
+  })
 }
 
 function normalizeCommandCodeEvent(
@@ -3623,19 +3943,17 @@ function normalizeCommandCodeEvent(
     { resetOnNewTurn: isNewTurnEvent('command-code', eventName) }
   )
 
-  return parseAgentStatusPayload(
-    JSON.stringify({
-      state: stateName,
-      prompt: resolvePrompt(state, paneKey, promptText, {
-        resetOnNewTurn: isNewTurnEvent('command-code', eventName)
-      }),
-      agentType: 'command-code',
-      toolName: snapshot.toolName,
-      toolInput: snapshot.toolInput,
-      interactivePrompt: snapshot.interactivePrompt,
-      lastAssistantMessage: snapshot.lastAssistantMessage
-    })
-  )
+  return normalizeAgentStatusPayload({
+    state: stateName,
+    prompt: resolvePrompt(state, paneKey, promptText, {
+      resetOnNewTurn: isNewTurnEvent('command-code', eventName)
+    }),
+    agentType: 'command-code',
+    toolName: snapshot.toolName,
+    toolInput: snapshot.toolInput,
+    interactivePrompt: snapshot.interactivePrompt,
+    lastAssistantMessage: snapshot.lastAssistantMessage
+  })
 }
 
 function normalizeGrokEvent(
@@ -3709,19 +4027,17 @@ function normalizeGrokEvent(
     ? ''
     : stripGrokUserQueryWrapper(promptText)
 
-  return parseAgentStatusPayload(
-    JSON.stringify({
-      state: stateName,
-      prompt: resolvePrompt(state, paneKey, effectivePrompt, {
-        resetOnNewTurn: isNewTurnEvent('grok', eventName)
-      }),
-      agentType: 'grok',
-      toolName: snapshot.toolName,
-      toolInput: snapshot.toolInput,
-      interactivePrompt: snapshot.interactivePrompt,
-      lastAssistantMessage: snapshot.lastAssistantMessage
-    })
-  )
+  return normalizeAgentStatusPayload({
+    state: stateName,
+    prompt: resolvePrompt(state, paneKey, effectivePrompt, {
+      resetOnNewTurn: isNewTurnEvent('grok', eventName)
+    }),
+    agentType: 'grok',
+    toolName: snapshot.toolName,
+    toolInput: snapshot.toolInput,
+    interactivePrompt: snapshot.interactivePrompt,
+    lastAssistantMessage: snapshot.lastAssistantMessage
+  })
 }
 
 function normalizeHermesEvent(
@@ -3758,19 +4074,17 @@ function normalizeHermesEvent(
     { resetOnNewTurn: isNewTurnEvent('hermes', eventName) }
   )
 
-  return parseAgentStatusPayload(
-    JSON.stringify({
-      state: stateName,
-      prompt: resolvePrompt(state, paneKey, promptText, {
-        resetOnNewTurn: isNewTurnEvent('hermes', eventName)
-      }),
-      agentType: 'hermes',
-      toolName: snapshot.toolName,
-      toolInput: snapshot.toolInput,
-      interactivePrompt: snapshot.interactivePrompt,
-      lastAssistantMessage: snapshot.lastAssistantMessage
-    })
-  )
+  return normalizeAgentStatusPayload({
+    state: stateName,
+    prompt: resolvePrompt(state, paneKey, promptText, {
+      resetOnNewTurn: isNewTurnEvent('hermes', eventName)
+    }),
+    agentType: 'hermes',
+    toolName: snapshot.toolName,
+    toolInput: snapshot.toolInput,
+    interactivePrompt: snapshot.interactivePrompt,
+    lastAssistantMessage: snapshot.lastAssistantMessage
+  })
 }
 
 function readStringField(record: Record<string, unknown>, key: string): string | undefined {
@@ -3786,7 +4100,8 @@ export function normalizeHookPayload(
   state: HookListenerState,
   source: AgentHookSource,
   body: unknown,
-  expectedEnv: string
+  expectedEnv: string,
+  options: { allowUnanchoredPreCompact?: boolean; allowUnanchoredPostCompact?: boolean } = {}
 ): AgentHookEventPayload | null {
   if (typeof body !== 'object' || body === null) {
     return null
@@ -3835,6 +4150,52 @@ export function normalizeHookPayload(
     readFirstString(record, ['hook_event_name', 'hookEventName', 'hook_type', 'hookType']) ??
     hookPayloadRecord.hook_event_name ??
     hookPayloadRecord.hookEventName
+  // Why: Codex child hooks expose the child's session_id on the parent's pane.
+  const providerSession =
+    source === 'codex' && readString(hookPayloadRecord, 'agent_id')
+      ? null
+      : extractAgentProviderSession(source, hookPayloadRecord)
+  const providerPromptId =
+    source === 'claude' ? normalizeClaudePromptId(hookPayloadRecord.prompt_id) : undefined
+  const compactTrigger =
+    source === 'claude' &&
+    (eventName === 'PreCompact' || eventName === 'PostCompact') &&
+    (hookPayloadRecord.trigger === 'manual' || hookPayloadRecord.trigger === 'auto')
+      ? hookPayloadRecord.trigger
+      : undefined
+  const isCompactEvent = eventName === 'PreCompact' || eventName === 'PostCompact'
+  if (isCompactEvent && compactTrigger === undefined) {
+    return null
+  }
+  const previousStatus = state.lastStatusByPaneKey.get(paneKey)
+  if (
+    compactTrigger !== undefined &&
+    !canAcceptClaudeCompactTransition(
+      previousStatus,
+      {
+        source,
+        connectionId: null,
+        hookEventName: typeof eventName === 'string' ? eventName : undefined,
+        providerPromptId,
+        compactTrigger,
+        providerSession: providerSession ?? undefined
+      },
+      {
+        allowUnanchoredPreCompact: options.allowUnanchoredPreCompact,
+        allowUnanchoredPostCompact: options.allowUnanchoredPostCompact
+      }
+    )
+  ) {
+    return null
+  }
+  if (
+    eventName === 'PostCompact' &&
+    compactTrigger !== undefined &&
+    previousStatus?.payload.prompt &&
+    !state.lastPromptByPaneKey.has(paneKey)
+  ) {
+    state.lastPromptByPaneKey.set(paneKey, previousStatus.payload.prompt)
+  }
   const extractedPrompt = extractPromptText(hookPayload as Record<string, unknown>)
   const promptText = extractedPrompt.text
   let resolvedPromptText = promptText
@@ -3956,12 +4317,6 @@ export function normalizeHookPayload(
   }
 
   // Why: connectionId is null here; ingestRemote stamps it from mux identity on receive. See docs/design/agent-status-over-ssh.md §5.
-  // Why: Codex child hooks expose the child's session_id on the parent's pane;
-  // treating it as the root resume id would replace the terminal's real session.
-  const providerSession =
-    source === 'codex' && readString(hookPayloadRecord, 'agent_id')
-      ? null
-      : extractAgentProviderSession(source, hookPayloadRecord)
   const providerSessionOnly =
     source === 'pi' && eventName === 'session_start' && providerSession !== null
   // Why: Pi session_start carries resume identity while idle; providerSessionOnly makes receivers discard the placeholder row.
@@ -3973,6 +4328,7 @@ export function normalizeHookPayload(
   return transportPayload
     ? {
         paneKey,
+        source,
         launchToken,
         tabId,
         worktreeId,
@@ -3991,9 +4347,18 @@ export function normalizeHookPayload(
               ),
         promptInteractionKey,
         hookEventName: typeof eventName === 'string' ? eventName : undefined,
+        providerPromptId,
+        compactTrigger,
         toolUseId: readFirstString(hookPayloadRecord, ['tool_use_id', 'toolUseId']),
         toolAgentId: readFirstString(hookPayloadRecord, ['agent_id', 'agentId']),
         toolAgentType: readString(hookPayloadRecord, 'agent_type'),
+        ...(source === 'claude'
+          ? {
+              claudeRunningNonAgentTask:
+                state.claudeRunningNonAgentTaskPaneKeys.has(paneKey) ||
+                state.claudeActiveSessionCronPaneKeys.has(paneKey)
+            }
+          : {}),
         ...(providerSession ? { providerSession } : {}),
         ...(providerSessionOnly ? { providerSessionOnly: true } : {}),
         payload: transportPayload
