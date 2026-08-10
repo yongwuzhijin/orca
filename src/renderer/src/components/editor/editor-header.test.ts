@@ -106,7 +106,8 @@ describe('getEditorHeaderCopyState', () => {
       )
     ).toEqual({
       copyText: null,
-      copyToastLabel: getJsonFormatterTabLabel(),
+      // Why: the field is the copied-confirmation phrase, not the tab name.
+      copyToastLabel: 'JSON Formatter copied',
       pathLabel: getJsonFormatterTabLabel(),
       pathTitle: getJsonFormatterTabLabel()
     })
