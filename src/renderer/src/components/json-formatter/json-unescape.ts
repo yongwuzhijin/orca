@@ -11,6 +11,11 @@ const ESCAPE_REPLACEMENTS: Record<string, string> = {
   t: '\t'
 }
 
+const UNESCAPED_QUOTE_RE = /(^|[^\\])(\\\\)*"/
+// Why: an odd backslash run at the end of the slice escapes the closing quote,
+// so the outer pair is not a real pair (`"abc\"` is what JSON.parse rejects).
+const ESCAPED_CLOSING_QUOTE_RE = /(^|[^\\])(\\\\)*\\$/
+
 // Why: pasted payloads are usually a quoted JSON string ("{\"a\":1}"); leaving
 // the outer quotes in place would keep the result unparseable.
 function stripWrappingQuotes(text: string): string {
@@ -19,7 +24,7 @@ function stripWrappingQuotes(text: string): string {
     return text
   }
   const inner = trimmed.slice(1, -1)
-  if (/(^|[^\\])(\\\\)*"/.test(inner)) {
+  if (UNESCAPED_QUOTE_RE.test(inner) || ESCAPED_CLOSING_QUOTE_RE.test(inner)) {
     return text
   }
   return inner

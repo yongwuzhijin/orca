@@ -20,13 +20,32 @@ describe('unescapeJsonText', () => {
     expect(unescapeJsonText('\\u4e2d\\u6587')).toBe('中文')
   })
 
+  it('recombines a surrogate pair into one code point', () => {
+    const emoji = unescapeJsonText('"\\ud83d\\ude00"')
+    expect(emoji).toBe('😀')
+    expect(emoji.length).toBe(2)
+  })
+
   it('strips a matching pair of wrapping quotes', () => {
     expect(unescapeJsonText('"{\\"a\\":1}"')).toBe('{"a":1}')
+  })
+
+  it('strips wrapping quotes that are padded with whitespace', () => {
+    expect(unescapeJsonText('  "{\\"a\\":1}"  ')).toBe('{"a":1}')
   })
 
   it('keeps quotes that are not a wrapping pair', () => {
     expect(unescapeJsonText('"a"+"b"')).toBe('"a"+"b"')
     expect(unescapeJsonText('"unterminated')).toBe('"unterminated')
+  })
+
+  // Why: the bail only skips quote stripping — the escape pass still peels one layer.
+  it('does not treat an escaped closing quote as a wrapping pair', () => {
+    expect(unescapeJsonText('"abc\\"')).toBe('"abc"')
+  })
+
+  it('does not treat a quote after an escaped backslash as a wrapping pair', () => {
+    expect(unescapeJsonText('"a\\\\"b"')).toBe('"a\\"b"')
   })
 
   it('peels only one layer of escaping', () => {
