@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_JSON_INPUT_BYTES, parseJsonInput } from './parse-json-input'
+import { MAX_JSON_INPUT_CHARS, parseJsonInput } from './parse-json-input'
 
 describe('parseJsonInput', () => {
   it('reports an empty result for blank input', () => {
@@ -70,7 +70,7 @@ describe('parseJsonInput', () => {
   })
 
   it('refuses input above the size limit', () => {
-    const huge = `"${'x'.repeat(MAX_JSON_INPUT_BYTES)}"`
+    const huge = `"${'x'.repeat(MAX_JSON_INPUT_CHARS)}"`
     expect(parseJsonInput(huge, { keepEscapes: true })).toEqual({
       status: 'error',
       code: 'too-large',
@@ -79,11 +79,17 @@ describe('parseJsonInput', () => {
     })
   })
 
+  it('accepts input exactly at the size limit', () => {
+    const atLimit = `"${'x'.repeat(MAX_JSON_INPUT_CHARS - 2)}"`
+    expect(atLimit).toHaveLength(MAX_JSON_INPUT_CHARS)
+    expect(parseJsonInput(atLimit, { keepEscapes: true }).status).toBe('ok')
+  })
+
   // Why: parse() recurses, so nesting overflows the stack at a size the guard lets through.
   it('reports too-deep instead of throwing on deeply nested input', () => {
     const depth = 20_000
     const nested = `${'['.repeat(depth)}1${']'.repeat(depth)}`
-    expect(nested.length).toBeLessThan(MAX_JSON_INPUT_BYTES)
+    expect(nested.length).toBeLessThan(MAX_JSON_INPUT_CHARS)
     expect(parseJsonInput(nested, { keepEscapes: true })).toEqual({
       status: 'error',
       code: 'too-deep',

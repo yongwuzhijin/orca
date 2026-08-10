@@ -15284,9 +15284,6 @@
           "9b1c4d7e02": "JSON Formatter"
         },
         "error": {
-          "tooLarge": {
-            "3af12b9c40": "Content is too large to preview (limit {{limit}} MB)."
-          },
           "unexpectedEnd": {
             "7d05ea1f66": "Unexpected end of JSON input."
           },
@@ -15307,6 +15304,9 @@
           },
           "tooDeep": {
             "a97483a5ec": "JSON is nested too deeply to preview."
+          },
+          "tooLarge": {
+            "a3e7b3ed6a": "Content is too large to preview."
           }
         }
       }

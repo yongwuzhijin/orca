@@ -1,20 +1,17 @@
 import { translate } from '@/i18n/i18n'
-import {
-  MAX_JSON_INPUT_BYTES,
-  type JsonParseErrorCode,
-  type JsonParseResult
-} from './parse-json-input'
+import type { JsonParseErrorCode, JsonParseResult } from './parse-json-input'
 
 // Why: both are whole-input verdicts, so their line/column is fabricated, not derived.
 const CODES_WITHOUT_POSITION = new Set<JsonParseErrorCode>(['too-large', 'too-deep'])
 
 function describeCode(code: JsonParseErrorCode): string {
   switch (code) {
+    // Why: no threshold — it is not actionable, and a UTF-16 code-unit count reads worse
+    // than no number at all.
     case 'too-large':
       return translate(
-        'auto.components.jsonFormatter.error.tooLarge.3af12b9c40',
-        'Content is too large to preview (limit {{limit}} MB).',
-        { limit: MAX_JSON_INPUT_BYTES / (1024 * 1024) }
+        'auto.components.jsonFormatter.error.tooLarge.a3e7b3ed6a',
+        'Content is too large to preview.'
       )
     case 'too-deep':
       return translate(

@@ -1,7 +1,9 @@
 import { type ParseError, parse, printParseErrorCode } from 'jsonc-parser'
 import { unescapeJsonText } from './json-unescape'
 
-export const MAX_JSON_INPUT_BYTES = 5 * 1024 * 1024
+// Why: UTF-16 code units, not bytes — jsonc-parser's scanner is charCodeAt-driven, so
+// code units track the renderer hang this guard exists to prevent better than bytes do.
+export const MAX_JSON_INPUT_CHARS = 5 * 1024 * 1024
 
 export type JsonParseErrorCode =
   | 'too-large'
@@ -48,7 +50,7 @@ export function parseJsonInput(input: string, options: { keepEscapes: boolean })
   if (input.trim().length === 0) {
     return { status: 'empty' }
   }
-  if (input.length > MAX_JSON_INPUT_BYTES) {
+  if (input.length > MAX_JSON_INPUT_CHARS) {
     return { status: 'error', code: 'too-large', line: 1, column: 1 }
   }
 
