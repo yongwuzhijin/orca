@@ -155,13 +155,6 @@
   --orca-security-ring: #a1a1a1;
   --background: #fff;
   --editor-surface: #ffffff;
-  /* JSON syntax colors, mirroring VS Code's light+ theme. */
-  --json-key: #0451a5;
-  --json-string: #a31515;
-  --json-number: #098658;
-  --json-boolean: #0000ff;
-  --json-null: #6b7280;
-  --json-punctuation: #6b7280;
   --foreground: #0a0a0a;
   --card: #fff;
   --card-foreground: #0a0a0a;
@@ -241,6 +234,13 @@
      meet >=3:1 against `--card`, not only the hover/drag strong state. */
   --tab-group-split-divider: #868690;
   --tab-group-split-divider-strong: #71717a;
+  /* key/string/number/boolean track VS Code light+; null/punctuation are muted gray so structure recedes. */
+  --json-key: #0451a5;
+  --json-string: #a31515;
+  --json-number: #098658;
+  --json-boolean: #0000ff;
+  --json-null: #6b7280;
+  --json-punctuation: #6b7280;
 }
 
 /* ── Dark Mode ───────────────────────────────────────── */
@@ -265,13 +265,6 @@
   --orca-security-ring: #737373;
   --background: #0a0a0a;
   --editor-surface: #1e1e1e;
-  /* JSON syntax colors, mirroring VS Code's dark+ theme. */
-  --json-key: #9cdcfe;
-  --json-string: #ce9178;
-  --json-number: #b5cea8;
-  --json-boolean: #569cd6;
-  --json-null: #9ca3af;
-  --json-punctuation: #9ca3af;
   --foreground: #fafafa;
   --card: #171717;
   --card-foreground: #fafafa;
@@ -353,6 +346,13 @@
   /* Brighter than terminal defaults so the always-visible line clears 3:1 on `--card`. */
   --tab-group-split-divider: #71717a;
   --tab-group-split-divider-strong: #a1a1aa;
+  /* key/string/number/boolean track VS Code dark+; null/punctuation are muted gray so structure recedes. */
+  --json-key: #9cdcfe;
+  --json-string: #ce9178;
+  --json-number: #b5cea8;
+  --json-boolean: #569cd6;
+  --json-null: #9ca3af;
+  --json-punctuation: #9ca3af;
 }
 
 .plugin-security-chrome {
