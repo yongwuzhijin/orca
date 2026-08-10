@@ -1,8 +1,8 @@
 export type JsonExpansionState = {
-  defaultCollapsed: boolean
+  readonly defaultCollapsed: boolean
   // Why: holds paths whose state is the inverse of defaultCollapsed, so
   // collapse-all / expand-all stay O(1) instead of enumerating every node.
-  overrides: ReadonlySet<string>
+  readonly overrides: ReadonlySet<string>
 }
 
 export function createJsonExpansion(): JsonExpansionState {

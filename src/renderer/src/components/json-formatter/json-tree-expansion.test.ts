@@ -48,11 +48,16 @@ describe('collapseAllJsonNodes', () => {
     expect(isJsonNodeCollapsed(expansion, 'b')).toBe(true)
   })
 
-  it('drops overrides from the previous state', () => {
-    const toggled = toggleJsonNode(createJsonExpansion(), 'a')
-    expect(isJsonNodeCollapsed(toggled, 'a')).toBe(true)
-    const expansion = collapseAllJsonNodes()
-    expect(isJsonNodeCollapsed(expansion, 'a')).toBe(true)
+  it('drops overrides so a bulk action reaches every path', () => {
+    const overridden = toggleJsonNode(createJsonExpansion(), 'a')
+    expect(isJsonNodeCollapsed(overridden, 'a')).toBe(true)
+
+    // Why: a surviving override would invert 'a' back out of each bulk action.
+    expect(isJsonNodeCollapsed(collapseAllJsonNodes(), 'a')).toBe(true)
+    expect(isJsonNodeCollapsed(expandAllJsonNodes(), 'a')).toBe(false)
+    expect(isJsonNodeCollapsed(collapseAllJsonNodes(), 'a')).toBe(
+      isJsonNodeCollapsed(collapseAllJsonNodes(), 'never-overridden')
+    )
   })
 })
 
