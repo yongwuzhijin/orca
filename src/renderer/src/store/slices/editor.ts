@@ -232,7 +232,7 @@ export type CombinedDiffSkippedConflict = {
   conflictKind: GitConflictKind
 }
 
-/** State of the JSON Formatter tool tab; lives on the tab so switching tabs doesn't discard the pasted payload. */
+/** Why: lives on the tab so switching away doesn't discard the user's input. */
 export type OpenJsonFormatterState = {
   input: string
   keepEscapes: boolean
@@ -3882,7 +3882,7 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
     void openWorkspaceEditorItem(get(), id, worktreeId, label, 'check-details')
   },
 
-  // Why: the JSON Formatter is a tool, not a file — one virtual tab per worktree, opened from the tab-bar tools menu.
+  // Why: one payload per worktree, but each split group gets its own header so both sides share the input.
   openJsonFormatter: (worktreeId, options) => {
     const id = buildJsonFormatterTabId(worktreeId)
     const label = getJsonFormatterTabLabel()
@@ -3926,13 +3926,24 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
   },
 
   updateJsonFormatterState: (fileId, patch) => {
-    set((s) => ({
-      openFiles: s.openFiles.map((f) =>
-        f.id === fileId && f.jsonFormatter
-          ? { ...f, jsonFormatter: { ...f.jsonFormatter, ...patch } }
-          : f
-      )
-    }))
+    set((s) => {
+      const target = s.openFiles.find((f) => f.id === fileId)
+      // Why: a debounced write can land after the tab closed — skip it so openFiles keeps its identity.
+      if (!target?.jsonFormatter) {
+        return s
+      }
+      const next = { ...target.jsonFormatter, ...patch }
+      if (
+        next.input === target.jsonFormatter.input &&
+        next.keepEscapes === target.jsonFormatter.keepEscapes &&
+        next.showLineNumbers === target.jsonFormatter.showLineNumbers
+      ) {
+        return s
+      }
+      return {
+        openFiles: s.openFiles.map((f) => (f === target ? { ...f, jsonFormatter: next } : f))
+      }
+    })
   },
 
   // Why: sidebar detail fetches can finish after the full-details tab is open; update the snapshot without stealing focus.
