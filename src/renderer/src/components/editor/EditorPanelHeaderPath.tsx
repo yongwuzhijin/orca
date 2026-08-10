@@ -49,7 +49,8 @@ export function EditorPanelHeaderPath({
   const skipMenuFocusRestoreRef = useRef(false)
   const headerCopyState = getEditorHeaderCopyState(activeFile)
   const canCopyHeaderPath = headerCopyState.copyText !== null
-  const isVirtualEditorTab = activeFile.mode === 'check-details'
+  const isVirtualEditorTab =
+    activeFile.mode === 'check-details' || activeFile.mode === 'json-formatter'
   const markdownPreviewShortcutLabel = useShortcutLabel('editor.markdownPreview')
   const {
     canRename,

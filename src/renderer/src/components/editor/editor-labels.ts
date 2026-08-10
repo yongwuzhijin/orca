@@ -1,5 +1,6 @@
 import type { OpenFile } from '@/store/slices/editor'
 import { basename } from '@/lib/path'
+import { getJsonFormatterTabLabel } from '@/components/json-formatter/json-formatter-tab'
 
 type EditorLabelVariant = 'fileName' | 'relativePath' | 'fullPath'
 
@@ -31,6 +32,10 @@ export function getEditorDisplayLabel(
 
   if (file.mode === 'check-details') {
     return file.checkRunDetails?.check.name ?? getBaseLabel(file, variant)
+  }
+
+  if (file.mode === 'json-formatter') {
+    return getJsonFormatterTabLabel()
   }
 
   if (file.mode === 'markdown-preview') {

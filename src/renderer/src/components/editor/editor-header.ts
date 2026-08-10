@@ -33,6 +33,12 @@ export function getEditorHeaderCopyState(file: OpenFile): EditorHeaderCopyState 
     }
   }
 
+  // Why: tool tabs have a synthetic filePath, so there is nothing copyable.
+  if (file.mode === 'json-formatter') {
+    const label = getEditorDisplayLabel(file)
+    return { copyText: null, copyToastLabel: label, pathLabel: label, pathTitle: label }
+  }
+
   const isCombinedDiff =
     file.mode === 'diff' &&
     (file.diffSource === 'combined-all' ||
