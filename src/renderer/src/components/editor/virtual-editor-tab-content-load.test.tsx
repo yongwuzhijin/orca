@@ -56,11 +56,19 @@ import type { FileContent } from './editor-panel-content-types'
 const authorizeExternalPath = vi.fn()
 let latestFileContents: Record<string, FileContent> = {}
 
-function HookProbe({ activeFile }: { activeFile: OpenFile }): null {
+// Why: openFiles must be a stable array — rebuilding it per render re-arms the
+// hook's load effect forever.
+function HookProbe({
+  activeFile,
+  openFiles
+}: {
+  activeFile: OpenFile
+  openFiles: OpenFile[]
+}): null {
   const state = useEditorPanelContentState({
     activeFile,
     isChangesMode: false,
-    openFiles: [activeFile],
+    openFiles,
     gitStatusEntries: undefined,
     editorViewMode: {}
   })
@@ -128,8 +136,9 @@ describe('virtual editor tab content loading', () => {
   async function mountTab(activeFile: OpenFile): Promise<void> {
     container = document.body.appendChild(document.createElement('div'))
     root = createRoot(container)
+    const openFiles = [activeFile]
     await act(async () => {
-      root?.render(<HookProbe activeFile={activeFile} />)
+      root?.render(<HookProbe activeFile={activeFile} openFiles={openFiles} />)
     })
     // Drain any load promise the effect could have started.
     await act(async () => {

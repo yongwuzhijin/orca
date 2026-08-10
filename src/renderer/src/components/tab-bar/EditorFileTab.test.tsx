@@ -100,6 +100,12 @@ vi.mock('lucide-react', () => ({
   GitCompareArrows: function GitCompareArrows(props: Record<string, unknown>) {
     return { type: 'GitCompareArrows', props }
   },
+  Braces: function Braces(props: Record<string, unknown>) {
+    return { type: 'Braces', props }
+  },
+  ListChecks: function ListChecks(props: Record<string, unknown>) {
+    return { type: 'ListChecks', props }
+  },
   Pencil: function Pencil(props: Record<string, unknown>) {
     return { type: 'Pencil', props }
   },
@@ -525,5 +531,35 @@ describe('EditorFileTab rename menu', () => {
       (await renderEditorFileTab(file, onActivate, onMakePermanent)).element
     )
     expect(findElementsByType(secondRender, 'input')).toHaveLength(0)
+  })
+
+  it('marks the json formatter tab with the braces icon, not the check-details one', async () => {
+    const file = baseFile({
+      id: 'wt-1::json-formatter',
+      filePath: 'wt-1::json-formatter',
+      relativePath: 'wt-1::json-formatter',
+      language: 'json',
+      mode: 'json-formatter',
+      jsonFormatter: { input: '', keepEscapes: true, showLineNumbers: false }
+    })
+    const element = expandNode((await renderEditorFileTab(file)).element)
+
+    expect(findElementsByType(element, 'Braces')).toHaveLength(1)
+    expect(findElementsByType(element, 'ListChecks')).toHaveLength(0)
+    expect(findElementsByType(element, 'GitCompareArrows')).toHaveLength(0)
+  })
+
+  it('disables Rename for the json formatter tab', async () => {
+    const file = baseFile({
+      id: 'wt-1::json-formatter',
+      filePath: 'wt-1::json-formatter',
+      relativePath: 'wt-1::json-formatter',
+      language: 'json',
+      mode: 'json-formatter',
+      jsonFormatter: { input: '', keepEscapes: true, showLineNumbers: false }
+    })
+    const element = expandNode((await renderEditorFileTab(file)).element)
+
+    expect(findMenuItemByText(element, 'Rename').props.disabled).toBe(true)
   })
 })

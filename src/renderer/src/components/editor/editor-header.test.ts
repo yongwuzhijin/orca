@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getEditorHeaderCopyState, getEditorHeaderOpenFileState } from './editor-header'
+import { getJsonFormatterTabLabel } from '@/components/json-formatter/json-formatter-tab'
 import type { OpenFile } from '@/store/slices/editor'
 
 function makeOpenFile(overrides: Partial<OpenFile> = {}): OpenFile {
@@ -87,6 +88,27 @@ describe('getEditorHeaderCopyState', () => {
       copyToastLabel: 'Check details copied',
       pathLabel: 'verify',
       pathTitle: 'verify'
+    })
+  })
+
+  it('offers no copyable path for the json formatter tab', () => {
+    // Why: filePath is the synthetic tab id, so copying it would paste garbage.
+    expect(
+      getEditorHeaderCopyState(
+        makeOpenFile({
+          id: 'wt-1::json-formatter',
+          filePath: 'wt-1::json-formatter',
+          relativePath: 'wt-1::json-formatter',
+          language: 'json',
+          mode: 'json-formatter',
+          jsonFormatter: { input: '', keepEscapes: true, showLineNumbers: false }
+        })
+      )
+    ).toEqual({
+      copyText: null,
+      copyToastLabel: getJsonFormatterTabLabel(),
+      pathLabel: getJsonFormatterTabLabel(),
+      pathTitle: getJsonFormatterTabLabel()
     })
   })
 
