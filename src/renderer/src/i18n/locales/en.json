@@ -15278,6 +15278,11 @@
             "unavailable": "n/a"
           }
         }
+      },
+      "jsonFormatter": {
+        "tab": {
+          "9b1c4d7e02": "JSON Formatter"
+        }
       }
     },
     "i18n": {
