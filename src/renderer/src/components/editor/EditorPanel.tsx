@@ -24,6 +24,7 @@ import {
 } from './editor-panel-git-entry-selector'
 import { createEditorPanelDraftSelector } from './editor-panel-draft-selector'
 import { attemptEditorFileSave } from './editor-file-save-attempt'
+import { isVirtualEditorTabMode } from './virtual-editor-tab-mode'
 
 function EditorPanelInner({
   activeFileId: activeFileIdProp,
@@ -305,7 +306,7 @@ function EditorPanelInner({
   }
   const handleOpenContainingFolder = (): void => {
     // Why: virtual editor tabs use synthetic ids instead of on-disk paths.
-    if (activeFile.mode === 'check-details' || activeFile.mode === 'json-formatter') {
+    if (isVirtualEditorTabMode(activeFile)) {
       return
     }
     if (
