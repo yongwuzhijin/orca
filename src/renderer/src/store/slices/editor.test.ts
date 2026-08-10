@@ -3529,6 +3529,27 @@ describe('createEditorSlice JSON formatter tab', () => {
     store.getState().updateJsonFormatterState('/repo/other.ts', { input: '{}' })
     expect(store.getState().openFiles).toBe(beforePayloadLess)
   })
+
+  it('keeps openFiles identity when a patch repeats the values already held', () => {
+    const store = createEditorTabsStore()
+    const payload = { input: '{"a":1}', keepEscapes: false, showLineNumbers: true }
+
+    store.getState().openJsonFormatter('wt-1')
+    store.getState().updateJsonFormatterState(jsonFormatterId, payload)
+
+    // Debounced keystrokes replay the whole payload; a toolbar toggle replays one field.
+    const beforeFullPatch = store.getState().openFiles
+    store.getState().updateJsonFormatterState(jsonFormatterId, payload)
+    expect(store.getState().openFiles).toBe(beforeFullPatch)
+
+    const beforePartialPatch = store.getState().openFiles
+    store.getState().updateJsonFormatterState(jsonFormatterId, { showLineNumbers: true })
+    expect(store.getState().openFiles).toBe(beforePartialPatch)
+
+    expect(
+      store.getState().openFiles.find((file) => file.id === jsonFormatterId)?.jsonFormatter
+    ).toEqual(payload)
+  })
 })
 
 describe('createEditorSlice combined diff exclusions', () => {
