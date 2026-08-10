@@ -334,7 +334,8 @@ function isReplaceablePreviewContentType(contentType: Tab['contentType']): boole
     contentType === 'editor' ||
     contentType === 'diff' ||
     contentType === 'conflict-review' ||
-    contentType === 'check-details'
+    contentType === 'check-details' ||
+    contentType === 'json-formatter'
   )
 }
 
@@ -479,7 +480,8 @@ function deriveActiveSurfaceForWorktree(
       activeUnifiedTab.contentType === 'editor' ||
       activeUnifiedTab.contentType === 'diff' ||
       activeUnifiedTab.contentType === 'conflict-review' ||
-      activeUnifiedTab.contentType === 'check-details'
+      activeUnifiedTab.contentType === 'check-details' ||
+      activeUnifiedTab.contentType === 'json-formatter'
         ? activeUnifiedTab.entityId
         : fileStillOpen
           ? restoredFileId
