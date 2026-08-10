@@ -15314,6 +15314,11 @@
           "commentsNotAllowed": {
             "6334eeb62b": "Comments are not allowed in JSON."
           }
+        },
+        "tree": {
+          "empty": {
+            "8c31d70b45": "Paste JSON on the left to preview it here."
+          }
         }
       }
     },
