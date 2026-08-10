@@ -32,6 +32,20 @@ describe('appendJsonObjectKey', () => {
     expect(appendJsonObjectKey('a', 'say "hi"')).toBe('a["say \\"hi\\""]')
     expect(appendJsonObjectKey('a', 'back\\slash')).toBe('a["back\\\\slash"]')
   })
+
+  it('escapes control characters inside bracketed keys', () => {
+    expect(appendJsonObjectKey('a', 'x\ny')).toBe('a["x\\ny"]')
+    expect(appendJsonObjectKey('a', 'x\ry')).toBe('a["x\\ry"]')
+    expect(appendJsonObjectKey('a', 'x\ty')).toBe('a["x\\ty"]')
+    expect(appendJsonObjectKey('a', 'x\by')).toBe('a["x\\by"]')
+    expect(appendJsonObjectKey('a', 'x\fy')).toBe('a["x\\fy"]')
+  })
+
+  it('keeps a bracketed key single-line and JSON-parseable', () => {
+    const path = appendJsonObjectKey('a', 'x\n"y"\\z')
+    expect(path).not.toMatch(/\n/)
+    expect(JSON.parse(path.slice(2, -1))).toBe('x\n"y"\\z')
+  })
 })
 
 describe('appendJsonArrayIndex', () => {
