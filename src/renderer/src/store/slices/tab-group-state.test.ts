@@ -202,6 +202,12 @@ describe('isTransientEditorContentType', () => {
     expect(isTransientEditorContentType('json-formatter')).toBe(true)
   })
 
+  it('treats every pre-existing transient editor type as transient', () => {
+    expect(isTransientEditorContentType('diff')).toBe(true)
+    expect(isTransientEditorContentType('conflict-review')).toBe(true)
+    expect(isTransientEditorContentType('check-details')).toBe(true)
+  })
+
   it('keeps real editor tabs persistent', () => {
     expect(isTransientEditorContentType('editor')).toBe(false)
     expect(isTransientEditorContentType('terminal')).toBe(false)
