@@ -1,4 +1,4 @@
-import { ParseErrorCode, type ParseError, parse } from 'jsonc-parser'
+import { type ParseError, parse, printParseErrorCode } from 'jsonc-parser'
 import { unescapeJsonText } from './json-unescape'
 
 export const MAX_JSON_INPUT_BYTES = 5 * 1024 * 1024
@@ -16,18 +16,20 @@ export type JsonParseResult =
   | { status: 'ok'; value: unknown }
   | { status: 'error'; code: JsonParseErrorCode; line: number; column: number }
 
+// Why: ParseErrorCode is an ambient const enum, unusable as a value under isolatedModules.
 function mapErrorCode(error: ParseError['error']): JsonParseErrorCode {
-  switch (error) {
-    case ParseErrorCode.UnexpectedEndOfObject:
-    case ParseErrorCode.UnexpectedEndOfArray:
-    case ParseErrorCode.UnexpectedEndOfString:
-    case ParseErrorCode.UnexpectedEndOfComment:
+  switch (printParseErrorCode(error)) {
+    case 'CloseBraceExpected':
+    case 'CloseBracketExpected':
+    case 'UnexpectedEndOfString':
+    case 'UnexpectedEndOfNumber':
+    case 'UnexpectedEndOfComment':
       return 'unexpected-end'
-    case ParseErrorCode.InvalidSymbol:
+    case 'InvalidSymbol':
       return 'invalid-symbol'
-    case ParseErrorCode.InvalidNumberFormat:
+    case 'InvalidNumberFormat':
       return 'invalid-number'
-    case ParseErrorCode.EndOfFileExpected:
+    case 'EndOfFileExpected':
       return 'trailing-content'
     default:
       return 'syntax'

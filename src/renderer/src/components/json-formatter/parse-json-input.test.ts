@@ -45,6 +45,18 @@ describe('parseJsonInput', () => {
     expect(result.column).toBe(1)
   })
 
+  it('maps truncated input to unexpected-end and extra input to trailing-content', () => {
+    const codeOf = (input: string): unknown => {
+      const result = parseJsonInput(input, { keepEscapes: true })
+      return result.status === 'error' ? result.code : result.status
+    }
+    expect(codeOf('{"a":1')).toBe('unexpected-end')
+    expect(codeOf('[1,2')).toBe('unexpected-end')
+    expect(codeOf('"abc')).toBe('unexpected-end')
+    expect(codeOf('{"a":1}{')).toBe('trailing-content')
+    expect(codeOf('{"a":@}')).toBe('invalid-symbol')
+  })
+
   it('unescapes before parsing when keepEscapes is false', () => {
     const escaped = '"{\\"a\\":1}"'
     expect(parseJsonInput(escaped, { keepEscapes: true })).toEqual({
