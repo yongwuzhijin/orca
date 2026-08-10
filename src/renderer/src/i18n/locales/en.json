@@ -15282,6 +15282,29 @@
       "jsonFormatter": {
         "tab": {
           "9b1c4d7e02": "JSON Formatter"
+        },
+        "error": {
+          "tooLarge": {
+            "3af12b9c40": "Content is too large to preview (limit {{limit}} MB)."
+          },
+          "unexpectedEnd": {
+            "7d05ea1f66": "Unexpected end of JSON input."
+          },
+          "invalidSymbol": {
+            "5c8b30de71": "Unexpected token in JSON."
+          },
+          "invalidNumber": {
+            "2e6f94ba18": "Invalid number format in JSON."
+          },
+          "trailingContent": {
+            "9014cbe7d3": "Unexpected content after the end of JSON."
+          },
+          "syntax": {
+            "61bd7f4a29": "Invalid JSON syntax."
+          },
+          "position": {
+            "44a2c0e8fb": "Line {{line}}, column {{column}}"
+          }
         }
       }
     },
