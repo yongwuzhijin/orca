@@ -112,6 +112,12 @@
   --color-git-graph-lane-4: var(--git-graph-lane-4);
   --color-git-graph-lane-5: var(--git-graph-lane-5);
   --color-annotation-highlight: var(--annotation-highlight);
+  --color-json-key: var(--json-key);
+  --color-json-string: var(--json-string);
+  --color-json-number: var(--json-number);
+  --color-json-boolean: var(--json-boolean);
+  --color-json-null: var(--json-null);
+  --color-json-punctuation: var(--json-punctuation);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -149,6 +155,13 @@
   --orca-security-ring: #a1a1a1;
   --background: #fff;
   --editor-surface: #ffffff;
+  /* JSON syntax colors, mirroring VS Code's light+ theme. */
+  --json-key: #0451a5;
+  --json-string: #a31515;
+  --json-number: #098658;
+  --json-boolean: #0000ff;
+  --json-null: #6b7280;
+  --json-punctuation: #6b7280;
   --foreground: #0a0a0a;
   --card: #fff;
   --card-foreground: #0a0a0a;
@@ -252,6 +265,13 @@
   --orca-security-ring: #737373;
   --background: #0a0a0a;
   --editor-surface: #1e1e1e;
+  /* JSON syntax colors, mirroring VS Code's dark+ theme. */
+  --json-key: #9cdcfe;
+  --json-string: #ce9178;
+  --json-number: #b5cea8;
+  --json-boolean: #569cd6;
+  --json-null: #9ca3af;
+  --json-punctuation: #9ca3af;
   --foreground: #fafafa;
   --card: #171717;
   --card-foreground: #fafafa;
