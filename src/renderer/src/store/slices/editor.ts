@@ -19,6 +19,10 @@ import {
   type CheckRunDetailsTabPatch,
   type OpenCheckRunDetailsState
 } from '@/components/editor/check-run-details-tab'
+import {
+  buildJsonFormatterTabId,
+  getJsonFormatterTabLabel
+} from '@/components/json-formatter/json-formatter-tab'
 import { openHttpLink, type HttpLinkSourceOwner } from '@/lib/http-link-routing'
 import { getConnectionIdForFileFromState } from '@/lib/connection-owner-resolution'
 import { isLocalPathOpenBlocked, showLocalPathOpenBlockedToast } from '@/lib/local-path-open-guard'
@@ -228,6 +232,13 @@ export type CombinedDiffSkippedConflict = {
   conflictKind: GitConflictKind
 }
 
+/** State of the JSON Formatter tool tab; lives on the tab so switching tabs doesn't discard the pasted payload. */
+export type OpenJsonFormatterState = {
+  input: string
+  keepEscapes: boolean
+  showLineNumbers: boolean
+}
+
 // OpenFile is one type (not a `mode` union); consumers reading `filePath` must check `mode` first — conflict-review tabs use the worktree root, not a real file.
 // `skippedConflicts` lives on the tab so the combined-diff exclusion notice stays stable; live status changing between polls would make it flicker.
 // `branchEntriesSnapshot` keeps a combined-branch tab's file list known after switching away from an inactive worktree whose compare data is stale.
@@ -283,13 +294,21 @@ export type OpenFile = {
   fileContentReloadNonce?: number
   /** Why: CI check-details tabs are virtual editor tabs backed by fetched PR check-run metadata, not a file on disk. */
   checkRunDetails?: OpenCheckRunDetailsState
+  /** Why: the JSON Formatter tool is a virtual editor tab; its payload is user input, not disk content. */
+  jsonFormatter?: OpenJsonFormatterState
   /** Why: web-client tab mirrored from the host snapshot; only mirrored tabs may be culled when they vanish, locally-opened tabs must survive. */
   mirroredFromRuntimeSession?: boolean
   /** Why: orthogonal to `mode` — an edit-mode tab that must never accept edits/autosave/rename (AI Vault View Log). Persisted only when true. */
   readOnly?: boolean
   /** Why: explicit live tail, only meaningful for a read-only local log. */
   liveTail?: boolean
-  mode: 'edit' | 'diff' | 'conflict-review' | 'markdown-preview' | 'check-details'
+  mode:
+    | 'edit'
+    | 'diff'
+    | 'conflict-review'
+    | 'markdown-preview'
+    | 'check-details'
+    | 'json-formatter'
 }
 
 export type ActivityBarPosition = 'top' | 'side'
@@ -606,6 +625,8 @@ export type EditorSlice = {
     state: CheckRunDetailsTabPatch
   ) => void
   reloadOpenCheckRunDetailsTab: (fileId: string) => Promise<void>
+  openJsonFormatter: (worktreeId: string, options?: { targetGroupId?: string }) => void
+  updateJsonFormatterState: (fileId: string, patch: Partial<OpenJsonFormatterState>) => void
   openBranchAllDiffs: (
     worktreeId: string,
     worktreePath: string,
@@ -762,7 +783,7 @@ function openWorkspaceEditorItem(
   fileId: string,
   worktreeId: string,
   label: string,
-  contentType: 'editor' | 'diff' | 'conflict-review' | 'check-details',
+  contentType: 'editor' | 'diff' | 'conflict-review' | 'check-details' | 'json-formatter',
   isPreview?: boolean,
   targetGroupId?: string
 ): string {
@@ -794,7 +815,8 @@ function isEditorTabContentType(contentType: Tab['contentType']): boolean {
     contentType === 'editor' ||
     contentType === 'diff' ||
     contentType === 'conflict-review' ||
-    contentType === 'check-details'
+    contentType === 'check-details' ||
+    contentType === 'json-formatter'
   )
 }
 
@@ -1706,14 +1728,21 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
     let editorItemWorktreeId = file.worktreeId
     let editorItemFileId = file.filePath
     let editorItemLabel = file.relativePath
-    let editorItemContentType: 'editor' | 'diff' | 'conflict-review' | 'check-details' =
+    let editorItemContentType:
+      | 'editor'
+      | 'diff'
+      | 'conflict-review'
+      | 'check-details'
+      | 'json-formatter' =
       file.mode === 'conflict-review'
         ? 'conflict-review'
         : file.mode === 'check-details'
           ? 'check-details'
-          : file.mode === 'diff'
-            ? 'diff'
-            : 'editor'
+          : file.mode === 'json-formatter'
+            ? 'json-formatter'
+            : file.mode === 'diff'
+              ? 'diff'
+              : 'editor'
     let editorItemTargetGroupId = options?.targetGroupId
     set((s) => {
       const worktreeId = file.worktreeId
@@ -2338,7 +2367,8 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
           (entry.contentType === 'editor' ||
             entry.contentType === 'diff' ||
             entry.contentType === 'conflict-review' ||
-            entry.contentType === 'check-details')
+            entry.contentType === 'check-details' ||
+            entry.contentType === 'json-formatter')
       )
       if (unifiedTab) {
         get().closeUnifiedTab(unifiedTab.id)
@@ -2393,7 +2423,8 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
           (item.contentType === 'editor' ||
             item.contentType === 'diff' ||
             item.contentType === 'conflict-review' ||
-            item.contentType === 'check-details') &&
+            item.contentType === 'check-details' ||
+            item.contentType === 'json-formatter') &&
           (!activeWorktreeId || item.worktreeId === activeWorktreeId)
       )
       .map((item) => item.id)
@@ -3851,6 +3882,59 @@ export const createEditorSlice: StateCreator<AppState, [], [], EditorSlice> = (s
     void openWorkspaceEditorItem(get(), id, worktreeId, label, 'check-details')
   },
 
+  // Why: the JSON Formatter is a tool, not a file — one virtual tab per worktree, opened from the tab-bar tools menu.
+  openJsonFormatter: (worktreeId, options) => {
+    const id = buildJsonFormatterTabId(worktreeId)
+    const label = getJsonFormatterTabLabel()
+    const targetGroupId = options?.targetGroupId
+
+    set((s) => {
+      const activation = {
+        activeFileId: id,
+        activeTabType: 'editor' as const,
+        activeFileIdByWorktree: { ...s.activeFileIdByWorktree, [worktreeId]: id },
+        activeTabTypeByWorktree: { ...s.activeTabTypeByWorktree, [worktreeId]: 'editor' as const }
+      }
+      const existing = s.openFiles.find((f) => f.id === id)
+      if (existing) {
+        // Why: reopening the tool must not wipe what the user already typed, so `jsonFormatter` is left untouched.
+        return activation
+      }
+
+      const newFile: OpenFile = {
+        id,
+        filePath: id,
+        relativePath: label,
+        worktreeId,
+        language: 'json',
+        isDirty: false,
+        mode: 'json-formatter',
+        jsonFormatter: { input: '', keepEscapes: true, showLineNumbers: false }
+      }
+
+      return { openFiles: [...s.openFiles, newFile], ...activation }
+    })
+    void openWorkspaceEditorItem(
+      get(),
+      id,
+      worktreeId,
+      label,
+      'json-formatter',
+      undefined,
+      targetGroupId
+    )
+  },
+
+  updateJsonFormatterState: (fileId, patch) => {
+    set((s) => ({
+      openFiles: s.openFiles.map((f) =>
+        f.id === fileId && f.jsonFormatter
+          ? { ...f, jsonFormatter: { ...f.jsonFormatter, ...patch } }
+          : f
+      )
+    }))
+  },
+
   // Why: sidebar detail fetches can finish after the full-details tab is open; update the snapshot without stealing focus.
   patchOpenCheckRunDetails: (worktreeId, contextKey, check, state) => {
     const id = buildCheckRunDetailsTabId(worktreeId, check)
@@ -5260,7 +5344,11 @@ function reconcileOpenFilesForStatus(
       return [file]
     }
 
-    if (file.mode === 'conflict-review' || file.mode === 'check-details') {
+    if (
+      file.mode === 'conflict-review' ||
+      file.mode === 'check-details' ||
+      file.mode === 'json-formatter'
+    ) {
       return [file]
     }
 
