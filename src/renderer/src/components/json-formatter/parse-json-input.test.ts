@@ -31,8 +31,18 @@ describe('parseJsonInput', () => {
       return
     }
     expect(result.line).toBe(4)
-    expect(result.column).toBeGreaterThan(0)
-    expect(result.code).toBeTruthy()
+    expect(result.column).toBe(1)
+    expect(result.code).toBe('syntax')
+  })
+
+  it('ignores the carriage return when computing a column on CRLF input', () => {
+    const result = parseJsonInput('{\r\n  "a" 1\r\n}', { keepEscapes: true })
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') {
+      return
+    }
+    expect(result.line).toBe(2)
+    expect(result.column).toBe(7)
   })
 
   it('reports column 1-based on the first line', () => {
