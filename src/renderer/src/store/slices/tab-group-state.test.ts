@@ -9,7 +9,8 @@ import {
   pushRecentTabId,
   sanitizeRecentTabIds,
   updateGroup,
-  patchTab
+  patchTab,
+  isTransientEditorContentType
 } from './tab-group-state'
 
 function makeTab(overrides: Partial<Tab> & { id: string; worktreeId: string }): Tab {
@@ -193,5 +194,16 @@ describe('patchTab', () => {
     }
     const result = patchTab(tabs, 't1', { label: 'changed' })
     expect(result!.unifiedTabsByWorktree.w1[1].label).toBe('b')
+  })
+})
+
+describe('isTransientEditorContentType', () => {
+  it('treats json-formatter tabs as transient so hydration drops them', () => {
+    expect(isTransientEditorContentType('json-formatter')).toBe(true)
+  })
+
+  it('keeps real editor tabs persistent', () => {
+    expect(isTransientEditorContentType('editor')).toBe(false)
+    expect(isTransientEditorContentType('terminal')).toBe(false)
   })
 })
