@@ -1,6 +1,7 @@
 import type { AppState } from '../store/types'
+import type { TabContentType } from '../../../shared/types'
 
-const EDITOR_SESSION_CONTENT_TYPES = new Set([
+const EDITOR_SESSION_CONTENT_TYPES = new Set<TabContentType>([
   'editor',
   'diff',
   'conflict-review',

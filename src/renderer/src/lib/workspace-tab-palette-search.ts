@@ -15,13 +15,16 @@ export {
   type WorkspaceTabPaletteSearchResult
 } from './workspace-tab-palette-results'
 
-export type WorkspaceTabContentType =
-  | 'terminal'
-  | 'editor'
-  | 'diff'
-  | 'conflict-review'
-  | 'check-details'
-  | 'json-formatter'
+const WORKSPACE_TAB_CONTENT_TYPES = [
+  'terminal',
+  'editor',
+  'diff',
+  'conflict-review',
+  'check-details',
+  'json-formatter'
+] as const satisfies readonly TabContentType[]
+
+export type WorkspaceTabContentType = (typeof WORKSPACE_TAB_CONTENT_TYPES)[number]
 
 export type SearchableWorkspaceTab = {
   tab: Tab & { contentType: WorkspaceTabContentType }
@@ -132,14 +135,7 @@ function isCurrentWorkspaceTab({
 function isWorkspaceTabContentType(
   contentType: TabContentType
 ): contentType is WorkspaceTabContentType {
-  return (
-    contentType === 'terminal' ||
-    contentType === 'editor' ||
-    contentType === 'diff' ||
-    contentType === 'conflict-review' ||
-    contentType === 'check-details' ||
-    contentType === 'json-formatter'
-  )
+  return (WORKSPACE_TAB_CONTENT_TYPES as readonly TabContentType[]).includes(contentType)
 }
 
 export function buildSearchableWorkspaceTabs({
