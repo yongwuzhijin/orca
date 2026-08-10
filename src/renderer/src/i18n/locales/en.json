@@ -15307,6 +15307,12 @@
           },
           "tooLarge": {
             "a3e7b3ed6a": "Content is too large to preview."
+          },
+          "invalidEscape": {
+            "2fc79688b3": "Invalid escape sequence in JSON text."
+          },
+          "commentsNotAllowed": {
+            "6334eeb62b": "Comments are not allowed in JSON."
           }
         }
       }

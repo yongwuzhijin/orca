@@ -57,6 +57,26 @@ describe('parseJsonInput', () => {
     expect(codeOf('{"a":@}')).toBe('invalid-symbol')
   })
 
+  it('maps complete but malformed numbers to invalid-number', () => {
+    const codeOf = (input: string): unknown => {
+      const result = parseJsonInput(input, { keepEscapes: true })
+      return result.status === 'error' ? result.code : result.status
+    }
+    expect(codeOf('{"a":1e}')).toBe('invalid-number')
+    expect(codeOf('{"a":1.}')).toBe('invalid-number')
+  })
+
+  it('maps comments to comments-not-allowed and bad escapes to invalid-escape', () => {
+    const codeOf = (input: string): unknown => {
+      const result = parseJsonInput(input, { keepEscapes: true })
+      return result.status === 'error' ? result.code : result.status
+    }
+    expect(codeOf('{"a":1} // note')).toBe('comments-not-allowed')
+    expect(codeOf('{"a":1 /* note */}')).toBe('comments-not-allowed')
+    expect(codeOf('{"a":"\\q"}')).toBe('invalid-escape')
+    expect(codeOf('{"a":"\\u12"}')).toBe('invalid-escape')
+  })
+
   it('unescapes before parsing when keepEscapes is false', () => {
     const escaped = '"{\\"a\\":1}"'
     expect(parseJsonInput(escaped, { keepEscapes: true })).toEqual({

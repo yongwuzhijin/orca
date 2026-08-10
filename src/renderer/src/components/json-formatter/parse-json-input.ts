@@ -11,6 +11,8 @@ export type JsonParseErrorCode =
   | 'unexpected-end'
   | 'invalid-symbol'
   | 'invalid-number'
+  | 'invalid-escape'
+  | 'comments-not-allowed'
   | 'trailing-content'
   | 'syntax'
 
@@ -25,13 +27,19 @@ function mapErrorCode(error: ParseError['error']): JsonParseErrorCode {
     case 'CloseBraceExpected':
     case 'CloseBracketExpected':
     case 'UnexpectedEndOfString':
-    case 'UnexpectedEndOfNumber':
     case 'UnexpectedEndOfComment':
       return 'unexpected-end'
     case 'InvalidSymbol':
       return 'invalid-symbol'
+    // Why: `1e` / `1.` are complete input with a malformed number, not truncated input.
+    case 'UnexpectedEndOfNumber':
     case 'InvalidNumberFormat':
       return 'invalid-number'
+    case 'InvalidEscapeCharacter':
+    case 'InvalidUnicode':
+      return 'invalid-escape'
+    case 'InvalidCommentToken':
+      return 'comments-not-allowed'
     case 'EndOfFileExpected':
       return 'trailing-content'
     default:

@@ -8,6 +8,8 @@ const CODES: JsonParseErrorCode[] = [
   'unexpected-end',
   'invalid-symbol',
   'invalid-number',
+  'invalid-escape',
+  'comments-not-allowed',
   'trailing-content',
   'syntax'
 ]

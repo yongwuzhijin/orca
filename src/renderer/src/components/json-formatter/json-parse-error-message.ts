@@ -33,6 +33,16 @@ function describeCode(code: JsonParseErrorCode): string {
         'auto.components.jsonFormatter.error.invalidNumber.2e6f94ba18',
         'Invalid number format in JSON.'
       )
+    case 'invalid-escape':
+      return translate(
+        'auto.components.jsonFormatter.error.invalidEscape.2fc79688b3',
+        'Invalid escape sequence in JSON text.'
+      )
+    case 'comments-not-allowed':
+      return translate(
+        'auto.components.jsonFormatter.error.commentsNotAllowed.6334eeb62b',
+        'Comments are not allowed in JSON.'
+      )
     case 'trailing-content':
       return translate(
         'auto.components.jsonFormatter.error.trailingContent.9014cbe7d3',
