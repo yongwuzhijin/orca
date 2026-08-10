@@ -263,7 +263,14 @@ describe('workspace-tab-palette-search', () => {
       relativePath: 'CI / Typecheck',
       mode: 'check-details'
     })
-    const files = [editorFile, diffFile, conflictReviewFile, checkDetailsFile]
+    const jsonFormatterFile = makeOpenFile({
+      id: 'wt-1::json-formatter',
+      filePath: WT_ROOT,
+      relativePath: 'JSON Formatter',
+      language: 'json',
+      mode: 'json-formatter'
+    })
+    const files = [editorFile, diffFile, conflictReviewFile, checkDetailsFile, jsonFormatterFile]
     const entries = buildEntries({
       unifiedTabsByWorktree: {
         'wt-1': [
@@ -286,6 +293,11 @@ describe('workspace-tab-palette-search', () => {
             id: 'check-tab',
             entityId: checkDetailsFile.id,
             contentType: 'check-details'
+          }),
+          makeUnifiedTab({
+            id: 'json-formatter-tab',
+            entityId: jsonFormatterFile.id,
+            contentType: 'json-formatter'
           })
         ]
       },
@@ -294,17 +306,25 @@ describe('workspace-tab-palette-search', () => {
         'wt-1': [
           makeGroup({
             activeTabId: 'editor-tab',
-            tabOrder: ['editor-tab', 'diff-tab', 'conflict-tab', 'check-tab']
+            tabOrder: ['editor-tab', 'diff-tab', 'conflict-tab', 'check-tab', 'json-formatter-tab']
           })
         ]
       }
     })
 
+    expect(entries.map((entry) => entry.tab.id)).toEqual([
+      'editor-tab',
+      'diff-tab',
+      'conflict-tab',
+      'check-tab',
+      'json-formatter-tab'
+    ])
     expect(entries.map((entry) => entry.tab.contentType)).toEqual([
       'editor',
       'diff',
       'conflict-review',
-      'check-details'
+      'check-details',
+      'json-formatter'
     ])
     expect(searchWorkspaceTabs(entries, 'staged diff')[0]?.tabId).toBe('diff-tab')
     expect(searchWorkspaceTabs(entries, 'conflict review')[0]?.tabId).toBe('conflict-tab')

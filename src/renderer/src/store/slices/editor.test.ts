@@ -3550,6 +3550,27 @@ describe('createEditorSlice JSON formatter tab', () => {
       store.getState().openFiles.find((file) => file.id === jsonFormatterId)?.jsonFormatter
     ).toEqual(payload)
   })
+
+  // Why: the formatter hardcodes isDirty: false, so a previewable header would let preview replacement discard typed JSON.
+  it('never opens as a replaceable preview', () => {
+    const store = createEditorTabsStore()
+
+    store.getState().openJsonFormatter('wt-1')
+
+    const file = store.getState().openFiles.find((f) => f.id === jsonFormatterId)
+    if (!file) {
+      throw new Error('Expected the formatter file')
+    }
+    const header = store
+      .getState()
+      .unifiedTabsByWorktree['wt-1']?.find((tab) => tab.entityId === jsonFormatterId)
+    if (!header) {
+      throw new Error('Expected the formatter header')
+    }
+
+    expect(file.isPreview).toBeFalsy()
+    expect(header.isPreview).toBeFalsy()
+  })
 })
 
 describe('createEditorSlice combined diff exclusions', () => {

@@ -897,6 +897,30 @@ describe('TabsSlice', () => {
       expect(store.getState().unreadTerminalTabs[tabA.entityId]).toBeUndefined()
       expect(store.getState().unreadTerminalTabs[tabB.entityId]).toBeUndefined()
     })
+
+    it('derives the active file from a focused json-formatter tab instead of the restored file', () => {
+      const formatterFileId = `${WT}::json-formatter`
+      const otherFileId = '/tmp/feature/src/other.ts'
+      const formatterTab = store.getState().createUnifiedTab(WT, 'json-formatter', {
+        entityId: formatterFileId,
+        label: 'JSON Formatter'
+      })
+      store.setState({
+        activeWorktreeId: WT,
+        openFiles: [
+          makeOpenFile({ id: formatterFileId, worktreeId: WT, mode: 'json-formatter' }),
+          // Why: without a second restorable file the fallback would answer null and hide a missing arm.
+          makeOpenFile({ id: otherFileId, worktreeId: WT })
+        ],
+        activeFileId: otherFileId,
+        activeFileIdByWorktree: { [WT]: otherFileId }
+      })
+
+      store.getState().focusGroup(WT, formatterTab.groupId)
+
+      expect(store.getState().activeFileId).toBe(formatterFileId)
+      expect(store.getState().activeFileIdByWorktree[WT]).toBe(formatterFileId)
+    })
   })
 
   // ─── reorderUnifiedTabs ───────────────────────────────────────────
