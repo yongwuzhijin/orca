@@ -57,4 +57,37 @@ describe('buildVisibleJsonRows', () => {
     const rows = buildVisibleJsonRows({ 'my key': 1 }, createJsonExpansion())
     expect(rows[1]?.path).toBe('["my key"]')
   })
+
+  it('keeps siblings in source order while descending into each subtree', () => {
+    const rows = buildVisibleJsonRows(
+      { a: { a1: 1, a2: 2 }, b: [10, [11]], c: 3 },
+      createJsonExpansion()
+    )
+    expect(rows.map((row) => row.path)).toEqual([
+      '',
+      'a',
+      'a.a1',
+      'a.a2',
+      'b',
+      'b[0]',
+      'b[1]',
+      'b[1][0]',
+      'c'
+    ])
+  })
+
+  // Why: jsonc-parser accepts nesting deeper than closure recursion survived, so a paste
+  // in that gap parsed fine and then overflowed the stack while flattening rows.
+  it('walks nesting deeper than the call stack allows', () => {
+    const depth = 10_000
+    let deep: unknown = 1
+    for (let level = 0; level < depth; level += 1) {
+      deep = [deep]
+    }
+
+    const rows = buildVisibleJsonRows(deep, createJsonExpansion())
+    expect(rows).toHaveLength(depth + 1)
+    expect(rows.map((row) => row.depth)).toEqual(rows.map((_row, index) => index))
+    expect(rows.at(-1)).toMatchObject({ kind: 'number', value: 1, isExpandable: false })
+  })
 })

@@ -5,6 +5,7 @@ export const MAX_JSON_INPUT_BYTES = 5 * 1024 * 1024
 
 export type JsonParseErrorCode =
   | 'too-large'
+  | 'too-deep'
   | 'unexpected-end'
   | 'invalid-symbol'
   | 'invalid-number'
@@ -57,7 +58,14 @@ export function parseJsonInput(input: string, options: { keepEscapes: boolean })
   }
 
   const errors: ParseError[] = []
-  const value = parse(text, errors, { allowTrailingComma: false, disallowComments: true })
+  let value: unknown
+  try {
+    value = parse(text, errors, { allowTrailingComma: false, disallowComments: true })
+  } catch {
+    // Why: parse() recurses per nesting level, so ~40KB of brackets throws RangeError
+    // long before the size guard fires — this result union must never throw.
+    return { status: 'error', code: 'too-deep', line: 1, column: 1 }
+  }
   const firstError = errors[0]
   if (firstError) {
     return {

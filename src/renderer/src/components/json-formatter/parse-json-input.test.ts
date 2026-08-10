@@ -78,4 +78,17 @@ describe('parseJsonInput', () => {
       column: 1
     })
   })
+
+  // Why: parse() recurses, so nesting overflows the stack at a size the guard lets through.
+  it('reports too-deep instead of throwing on deeply nested input', () => {
+    const depth = 20_000
+    const nested = `${'['.repeat(depth)}1${']'.repeat(depth)}`
+    expect(nested.length).toBeLessThan(MAX_JSON_INPUT_BYTES)
+    expect(parseJsonInput(nested, { keepEscapes: true })).toEqual({
+      status: 'error',
+      code: 'too-deep',
+      line: 1,
+      column: 1
+    })
+  })
 })

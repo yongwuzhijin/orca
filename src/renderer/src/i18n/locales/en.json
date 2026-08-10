@@ -15304,6 +15304,9 @@
           },
           "position": {
             "44a2c0e8fb": "Line {{line}}, column {{column}}"
+          },
+          "tooDeep": {
+            "a97483a5ec": "JSON is nested too deeply to preview."
           }
         }
       }

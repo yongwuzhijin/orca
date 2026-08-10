@@ -4,6 +4,7 @@ import type { JsonParseErrorCode } from './parse-json-input'
 
 const CODES: JsonParseErrorCode[] = [
   'too-large',
+  'too-deep',
   'unexpected-end',
   'invalid-symbol',
   'invalid-number',

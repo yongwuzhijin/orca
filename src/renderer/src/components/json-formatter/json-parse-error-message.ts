@@ -5,6 +5,9 @@ import {
   type JsonParseResult
 } from './parse-json-input'
 
+// Why: both are whole-input verdicts, so their line/column is fabricated, not derived.
+const CODES_WITHOUT_POSITION = new Set<JsonParseErrorCode>(['too-large', 'too-deep'])
+
 function describeCode(code: JsonParseErrorCode): string {
   switch (code) {
     case 'too-large':
@@ -12,6 +15,11 @@ function describeCode(code: JsonParseErrorCode): string {
         'auto.components.jsonFormatter.error.tooLarge.3af12b9c40',
         'Content is too large to preview (limit {{limit}} MB).',
         { limit: MAX_JSON_INPUT_BYTES / (1024 * 1024) }
+      )
+    case 'too-deep':
+      return translate(
+        'auto.components.jsonFormatter.error.tooDeep.a97483a5ec',
+        'JSON is nested too deeply to preview.'
       )
     case 'unexpected-end':
       return translate(
@@ -45,7 +53,7 @@ export function describeJsonParseError(
   result: Extract<JsonParseResult, { status: 'error' }>
 ): string {
   const message = describeCode(result.code)
-  if (result.code === 'too-large') {
+  if (CODES_WITHOUT_POSITION.has(result.code)) {
     return message
   }
   const position = translate(

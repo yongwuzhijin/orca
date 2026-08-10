@@ -58,41 +58,56 @@ function childEntries(
   return []
 }
 
+type PendingJsonNode = {
+  value: unknown
+  path: string
+  depth: number
+  label: string | null
+  labelKind: 'key' | 'index' | null
+}
+
+// Why: an explicit stack, because JSON that jsonc-parser accepts can still nest
+// deeper than the call stack allows (closure recursion overflowed near 3.5k deep).
 export function buildVisibleJsonRows(value: unknown, expansion: JsonExpansionState): JsonTreeRow[] {
   const rows: JsonTreeRow[] = []
+  const pending: PendingJsonNode[] = [
+    { value, path: JSON_ROOT_PATH, depth: 0, label: null, labelKind: null }
+  ]
 
-  const visit = (
-    nodeValue: unknown,
-    path: string,
-    depth: number,
-    label: string | null,
-    labelKind: 'key' | 'index' | null
-  ): void => {
-    const kind = classify(nodeValue)
-    const children = childEntries(nodeValue, kind, path)
+  for (let node = pending.pop(); node !== undefined; node = pending.pop()) {
+    const kind = classify(node.value)
+    const children = childEntries(node.value, kind, node.path)
     const isExpandable = children.length > 0
-    const isCollapsed = isExpandable && isJsonNodeCollapsed(expansion, path)
+    const isCollapsed = isExpandable && isJsonNodeCollapsed(expansion, node.path)
 
     rows.push({
-      path,
-      depth,
+      path: node.path,
+      depth: node.depth,
       kind,
-      label,
-      labelKind,
-      value: nodeValue,
+      label: node.label,
+      labelKind: node.labelKind,
+      value: node.value,
       childCount: children.length,
       isExpandable,
       isCollapsed
     })
 
     if (!isExpandable || isCollapsed) {
-      return
+      continue
     }
-    for (const child of children) {
-      visit(child.value, child.path, depth + 1, child.label, child.labelKind)
+    // Why: reversed, so popping yields the original depth-first sibling order.
+    const childDepth = node.depth + 1
+    for (let index = children.length - 1; index >= 0; index -= 1) {
+      const child = children[index]
+      pending.push({
+        value: child.value,
+        path: child.path,
+        depth: childDepth,
+        label: child.label,
+        labelKind: child.labelKind
+      })
     }
   }
 
-  visit(value, JSON_ROOT_PATH, 0, null, null)
   return rows
 }
