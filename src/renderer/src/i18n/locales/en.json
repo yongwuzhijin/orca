@@ -15319,6 +15319,29 @@
           "empty": {
             "8c31d70b45": "Paste JSON on the left to preview it here."
           }
+        },
+        "toolbar": {
+          "format": {
+            "1f9d4c8a02": "Format"
+          },
+          "collapseAll": {
+            "7be2035dc1": "Collapse all"
+          },
+          "expandAll": {
+            "4a70cbe9d8": "Expand all"
+          },
+          "lineNumbers": {
+            "d3016fb2a7": "Show line numbers"
+          },
+          "copy": {
+            "20b8ce4f95": "Copy formatted JSON"
+          },
+          "clear": {
+            "6ea5138c70": "Clear input"
+          },
+          "keepEscapes": {
+            "95c2eb70a4": "Keep escapes"
+          }
         }
       }
     },
