@@ -265,7 +265,7 @@ describe('workspace-tab-palette-search', () => {
     })
     const jsonFormatterFile = makeOpenFile({
       id: 'wt-1::json-formatter',
-      filePath: WT_ROOT,
+      filePath: 'wt-1::json-formatter',
       relativePath: 'JSON Formatter',
       language: 'json',
       mode: 'json-formatter'

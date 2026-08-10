@@ -401,6 +401,54 @@ describe('TabsSlice', () => {
       expect(buildMobileSessionTabSnapshots(store.getState())[0]?.tabs ?? []).toEqual([])
     })
 
+    it('removes a mobile-closed json-formatter tab from open files so typed input is not orphaned', () => {
+      const groupId = 'formatter-group'
+      const fileId = `${WT}::json-formatter`
+      const file = makeOpenFile({
+        id: fileId,
+        relativePath: 'JSON Formatter',
+        language: 'json',
+        mode: 'json-formatter',
+        worktreeId: WT,
+        jsonFormatter: { input: '{"a":1}', keepEscapes: true, showLineNumbers: false }
+      })
+      const tab = makeUnifiedTab({
+        id: 'formatter-unified',
+        entityId: file.id,
+        contentType: 'json-formatter',
+        label: 'JSON Formatter',
+        worktreeId: WT,
+        groupId
+      })
+      store.setState({
+        openFiles: [file],
+        unifiedTabsByWorktree: { [WT]: [tab] },
+        groupsByWorktree: {
+          [WT]: [
+            makeTabGroup({
+              id: groupId,
+              worktreeId: WT,
+              activeTabId: tab.id,
+              tabOrder: [tab.id],
+              recentTabIds: [tab.id]
+            })
+          ]
+        },
+        activeGroupIdByWorktree: { [WT]: groupId },
+        activeFileId: file.id,
+        activeFileIdByWorktree: { [WT]: file.id },
+        activeWorktreeId: WT,
+        activeTabType: 'editor',
+        activeTabTypeByWorktree: { [WT]: 'editor' }
+      })
+
+      expect(closeMobileSessionTabInStore(store.getState(), WT, tab.id)).toBe(true)
+
+      // Why: falling through to closeUnifiedTab would drop the wrapper but leave the typed payload in openFiles.
+      expect(store.getState().openFiles).toEqual([])
+      expect(buildMobileSessionTabSnapshots(store.getState())[0]?.tabs ?? []).toEqual([])
+    })
+
     it('closes a mobile fallback file-id tab after the unified wrapper is already gone', () => {
       const file = makeOpenFile({
         id: '/tmp/feature/src/app.ts',
@@ -909,7 +957,7 @@ describe('TabsSlice', () => {
         activeWorktreeId: WT,
         openFiles: [
           makeOpenFile({ id: formatterFileId, worktreeId: WT, mode: 'json-formatter' }),
-          // Why: without a second restorable file the fallback would answer null and hide a missing arm.
+          // Why: a second restorable file makes a missing arm fail as "wrong file" rather than a bare null.
           makeOpenFile({ id: otherFileId, worktreeId: WT })
         ],
         activeFileId: otherFileId,
