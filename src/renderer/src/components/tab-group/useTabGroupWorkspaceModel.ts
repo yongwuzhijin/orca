@@ -90,6 +90,7 @@ export function useTabGroupWorkspaceModel({
   const openNewTerminalTabInActiveWorkspace = useAppStore(
     (state) => state.openNewTerminalTabInActiveWorkspace
   )
+  const openJsonFormatter = useAppStore((state) => state.openJsonFormatter)
   const closeFile = useAppStore((state) => state.closeFile)
   const makePreviewFilePermanent = useAppStore((state) => state.makePreviewFilePermanent)
   const pinFile = useAppStore((state) => state.pinFile)
@@ -636,6 +637,9 @@ export function useTabGroupWorkspaceModel({
       // Why: target the owning group explicitly; the "+" menu can fire from an unfocused panel without updating global group focus.
       newFileTab: async () => {
         await openNewMarkdownInActiveWorkspace(groupId)
+      },
+      openJsonFormatter: () => {
+        openJsonFormatter(worktreeId, { targetGroupId: groupId })
       },
       newTerminalTab: () => {
         void openNewTerminalTabInActiveWorkspace(groupId)
