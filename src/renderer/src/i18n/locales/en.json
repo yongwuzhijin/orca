@@ -15318,6 +15318,12 @@
         "tree": {
           "empty": {
             "8c31d70b45": "Paste JSON on the left to preview it here."
+          },
+          "expand": {
+            "b4d9e10c73": "Expand node"
+          },
+          "collapse": {
+            "5f28a6c1de": "Collapse node"
           }
         },
         "toolbar": {

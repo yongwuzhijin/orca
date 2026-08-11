@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
 import type { JsonTreeRow as JsonTreeRowData } from './json-tree-rows'
 
@@ -44,10 +45,16 @@ export function JsonTreeRow({
   onCopyPath
 }: JsonTreeRowProps): React.JSX.Element {
   const isContainer = row.kind === 'object' || row.kind === 'array'
+  const toggleLabel = row.isCollapsed
+    ? translate('auto.components.jsonFormatter.tree.expand.b4d9e10c73', 'Expand node')
+    : translate('auto.components.jsonFormatter.tree.collapse.5f28a6c1de', 'Collapse node')
   return (
-    <div className="flex items-start gap-1 font-mono text-xs leading-5">
+    <div className="flex items-start gap-1 font-mono text-xs leading-5" data-testid="json-tree-row">
       {lineNumber !== null && (
-        <span className="w-10 shrink-0 select-none pr-2 text-right text-muted-foreground">
+        <span
+          className="w-10 shrink-0 select-none pr-2 text-right text-muted-foreground"
+          data-testid="json-tree-line-number"
+        >
           {lineNumber}
         </span>
       )}
@@ -55,7 +62,9 @@ export function JsonTreeRow({
       {row.isExpandable ? (
         <button
           type="button"
-          className="mt-0.5 shrink-0 text-muted-foreground hover:text-foreground"
+          className="mt-0.5 shrink-0 cursor-pointer text-muted-foreground hover:text-foreground"
+          aria-label={toggleLabel}
+          aria-expanded={!row.isCollapsed}
           onClick={() => onToggle(row.path)}
         >
           {row.isCollapsed ? (
@@ -69,13 +78,14 @@ export function JsonTreeRow({
       )}
       <button
         type="button"
-        className="min-w-0 flex-1 truncate rounded px-1 text-left hover:bg-accent"
+        className="min-w-0 flex-1 cursor-pointer truncate rounded px-1 text-left hover:bg-accent"
         onClick={() => onCopyPath(row.path)}
       >
         {row.label !== null && (
           <>
             <span className={row.labelKind === 'index' ? 'text-json-punctuation' : 'text-json-key'}>
-              {row.labelKind === 'index' ? row.label : `"${row.label}"`}
+              {/* Why: an index is bare, but a key is JSON text — quotes and newlines in it must escape. */}
+              {row.labelKind === 'index' ? row.label : JSON.stringify(row.label)}
             </span>
             <span className="text-json-punctuation">{': '}</span>
           </>

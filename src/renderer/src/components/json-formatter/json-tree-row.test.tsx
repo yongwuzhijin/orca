@@ -82,6 +82,14 @@ describe('JsonTreeRow', () => {
     return span
   }
 
+  function chevron(label: string): HTMLButtonElement {
+    const node = container?.querySelector(`button[aria-label="${label}"]`)
+    if (!(node instanceof HTMLButtonElement)) {
+      throw new Error(`no chevron button labelled ${label}`)
+    }
+    return node
+  }
+
   it('quotes an object key label but leaves an array index bare', () => {
     mountRow(makeRow({ label: 'name', labelKind: 'key' }))
     const keyLabel = valueButton().firstElementChild
@@ -92,6 +100,20 @@ describe('JsonTreeRow', () => {
     const indexLabel = valueButton().firstElementChild
     expect(indexLabel?.textContent).toBe('2')
     expect(indexLabel?.className).toContain('text-json-punctuation')
+  })
+
+  it.each([
+    { label: 'a"b', text: '"a\\"b"' },
+    { label: 'a\nb', text: '"a\\nb"' },
+    { label: 'a\\b', text: '"a\\\\b"' }
+  ])('escapes $label in an object key instead of interpolating it raw', ({ label, text }) => {
+    mountRow(makeRow({ label, labelKind: 'key' }))
+    expect(valueButton().firstElementChild?.textContent).toBe(text)
+  })
+
+  it('leaves an index label unstringified so it renders without quotes', () => {
+    mountRow(makeRow({ label: '0', labelKind: 'index', path: '[0]' }))
+    expect(valueButton().firstElementChild?.textContent).toBe('0')
   })
 
   it('renders a label-less root row without a key segment', () => {
@@ -132,8 +154,7 @@ describe('JsonTreeRow', () => {
       onCopyPath
     })
 
-    const chevron = buttons()[0]
-    act(() => chevron?.click())
+    act(() => chevron('Collapse node').click())
     expect(onToggle).toHaveBeenCalledWith('a.b')
     expect(onCopyPath).not.toHaveBeenCalled()
   })
@@ -150,16 +171,18 @@ describe('JsonTreeRow', () => {
     expect(onToggle).not.toHaveBeenCalled()
   })
 
-  it('shows a chevron only while the row is expandable, pointing right when collapsed', () => {
+  it('names the chevron and reports its disclosure state in both directions', () => {
     mountRow(makeRow({ kind: 'object', childCount: 1, isExpandable: true, isCollapsed: true }))
     expect(buttons()).toHaveLength(2)
-    expect(buttons()[0]?.querySelector('.lucide-chevron-right')).not.toBeNull()
+    expect(chevron('Expand node').getAttribute('aria-expanded')).toBe('false')
 
     mountRow(makeRow({ kind: 'object', childCount: 1, isExpandable: true, isCollapsed: false }))
-    expect(buttons()[0]?.querySelector('.lucide-chevron-down')).not.toBeNull()
+    expect(chevron('Collapse node').getAttribute('aria-expanded')).toBe('true')
 
+    // Why: a leaf has nothing to disclose, so it must not offer a named toggle at all.
     mountRow(makeRow({ kind: 'string', isExpandable: false }))
     expect(buttons()).toHaveLength(1)
+    expect(container?.querySelector('button[aria-expanded]')).toBeNull()
   })
 
   it('renders the line-number gutter only when a line number is supplied', () => {

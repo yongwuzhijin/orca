@@ -117,9 +117,9 @@ export function JsonFormatterToolbar({
         </Tooltip>
       ))}
       <label className="ml-2 flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+        {/* Why: the wrapping label already names it; an aria-label would only shadow that. */}
         <Checkbox
           checked={keepEscapes}
-          aria-label={keepEscapesLabel}
           onCheckedChange={(checked) => onToggleKeepEscapes(checked === true)}
         />
         {keepEscapesLabel}

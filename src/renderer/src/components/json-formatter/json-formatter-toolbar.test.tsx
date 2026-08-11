@@ -170,6 +170,25 @@ describe('JsonFormatterToolbar', () => {
     expect(on.onToggleKeepEscapes).toHaveBeenCalledWith(false)
   })
 
+  it('names the keep-escapes checkbox from its wrapping label, and toggles once per label click', () => {
+    const handlers = mountToolbar({ keepEscapes: false })
+    const label = container?.querySelector('label')
+    const checkbox = container?.querySelector('[role="checkbox"]')
+    if (!(label instanceof HTMLLabelElement)) {
+      throw new Error('no keep-escapes label rendered')
+    }
+
+    // Why: the visible label text is the accessible name, so no aria-label may
+    // shadow it — and the association is what makes the text itself clickable.
+    expect(label.textContent).toBe('Keep escapes')
+    expect(label.control).toBe(checkbox)
+    expect(checkbox?.hasAttribute('aria-label')).toBe(false)
+
+    act(() => label.click())
+    expect(handlers.onToggleKeepEscapes).toHaveBeenCalledTimes(1)
+    expect(handlers.onToggleKeepEscapes).toHaveBeenCalledWith(true)
+  })
+
   it('treats the indeterminate checkbox value as unchecked', async () => {
     // Why: Radix's onCheckedChange can emit 'indeterminate', which is truthy —
     // the adapter must compare against true, not coerce with Boolean().
