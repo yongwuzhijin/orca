@@ -15370,6 +15370,46 @@
           },
           "copyFailed": {
             "7b3ce0a915": "Copy failed"
+          },
+          "pairCopied": {
+            "9d3b74e0a5": "Copied"
+          },
+          "valueCopied": {
+            "2c8f5a19d7": "Value copied"
+          },
+          "nodeDeleted": {
+            "6e1b93d84f": "Deleted {{path}}"
+          },
+          "undo": {
+            "71c5a8f2e9": "Undo"
+          }
+        },
+        "search": {
+          "noResults": {
+            "38c7b5f4e1": "No results"
+          },
+          "placeholder": {
+            "4b8d16e7c2": "Search keys and values"
+          },
+          "previous": {
+            "0d9f42a6b8": "Previous match"
+          },
+          "next": {
+            "a75e3c1d90": "Next match"
+          }
+        },
+        "rowActions": {
+          "copy": {
+            "3f1a7c9d05": "Copy"
+          },
+          "copyPath": {
+            "8b6e2d4a71": "Copy path"
+          },
+          "copyValue": {
+            "c40d9e5b28": "Copy value"
+          },
+          "delete": {
+            "5a2f81c6b3": "Delete node"
           }
         }
       }

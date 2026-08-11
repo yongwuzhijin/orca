@@ -14841,6 +14841,18 @@
           },
           "jsonCopied": {
             "c0f47b6e12": "JSON copiado"
+          },
+          "pairCopied": {
+            "9d3b74e0a5": "Copiado"
+          },
+          "valueCopied": {
+            "2c8f5a19d7": "Valor copiado"
+          },
+          "nodeDeleted": {
+            "6e1b93d84f": "{{path}} eliminado"
+          },
+          "undo": {
+            "71c5a8f2e9": "Deshacer"
           }
         },
         "tree": {
@@ -14856,6 +14868,34 @@
         },
         "tab": {
           "9b1c4d7e02": "Formateador JSON"
+        },
+        "rowActions": {
+          "copy": {
+            "3f1a7c9d05": "Copiar"
+          },
+          "copyPath": {
+            "8b6e2d4a71": "Copiar ruta"
+          },
+          "copyValue": {
+            "c40d9e5b28": "Copiar valor"
+          },
+          "delete": {
+            "5a2f81c6b3": "Eliminar nodo"
+          }
+        },
+        "search": {
+          "placeholder": {
+            "4b8d16e7c2": "Buscar claves y valores"
+          },
+          "previous": {
+            "0d9f42a6b8": "Coincidencia anterior"
+          },
+          "next": {
+            "a75e3c1d90": "Coincidencia siguiente"
+          },
+          "noResults": {
+            "38c7b5f4e1": "Sin resultados"
+          }
         }
       }
     },

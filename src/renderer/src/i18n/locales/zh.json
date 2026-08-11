@@ -14861,6 +14861,18 @@
           },
           "jsonCopied": {
             "c0f47b6e12": "已复制 JSON"
+          },
+          "pairCopied": {
+            "9d3b74e0a5": "已复制"
+          },
+          "valueCopied": {
+            "2c8f5a19d7": "已复制值"
+          },
+          "nodeDeleted": {
+            "6e1b93d84f": "已删除 {{path}}"
+          },
+          "undo": {
+            "71c5a8f2e9": "撤销"
           }
         },
         "tree": {
@@ -14876,6 +14888,34 @@
         },
         "tab": {
           "9b1c4d7e02": "JSON 格式化"
+        },
+        "rowActions": {
+          "copy": {
+            "3f1a7c9d05": "复制"
+          },
+          "copyPath": {
+            "8b6e2d4a71": "复制路径"
+          },
+          "copyValue": {
+            "c40d9e5b28": "复制值"
+          },
+          "delete": {
+            "5a2f81c6b3": "删除节点"
+          }
+        },
+        "search": {
+          "placeholder": {
+            "4b8d16e7c2": "搜索键和值"
+          },
+          "previous": {
+            "0d9f42a6b8": "上一个匹配"
+          },
+          "next": {
+            "a75e3c1d90": "下一个匹配"
+          },
+          "noResults": {
+            "38c7b5f4e1": "无结果"
+          }
         }
       }
     },

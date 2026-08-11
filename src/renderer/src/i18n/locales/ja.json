@@ -14841,6 +14841,18 @@
           },
           "jsonCopied": {
             "c0f47b6e12": "JSON をコピーしました"
+          },
+          "pairCopied": {
+            "9d3b74e0a5": "コピーしました"
+          },
+          "valueCopied": {
+            "2c8f5a19d7": "値をコピーしました"
+          },
+          "nodeDeleted": {
+            "6e1b93d84f": "{{path}} を削除しました"
+          },
+          "undo": {
+            "71c5a8f2e9": "元に戻す"
           }
         },
         "tree": {
@@ -14856,6 +14868,34 @@
         },
         "tab": {
           "9b1c4d7e02": "JSON フォーマッター"
+        },
+        "rowActions": {
+          "copy": {
+            "3f1a7c9d05": "コピー"
+          },
+          "copyPath": {
+            "8b6e2d4a71": "パスをコピー"
+          },
+          "copyValue": {
+            "c40d9e5b28": "値をコピー"
+          },
+          "delete": {
+            "5a2f81c6b3": "ノードを削除"
+          }
+        },
+        "search": {
+          "placeholder": {
+            "4b8d16e7c2": "キーと値を検索"
+          },
+          "previous": {
+            "0d9f42a6b8": "前の一致"
+          },
+          "next": {
+            "a75e3c1d90": "次の一致"
+          },
+          "noResults": {
+            "38c7b5f4e1": "結果なし"
+          }
         }
       }
     },
