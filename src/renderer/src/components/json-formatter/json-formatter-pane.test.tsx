@@ -38,7 +38,8 @@ vi.mock('@tanstack/react-virtual', () => ({
         key: index,
         start: index * estimateSize(0)
       })),
-    measureElement: (): void => {}
+    measureElement: (): void => {},
+    scrollToIndex: vi.fn()
   })
 }))
 
@@ -75,12 +76,36 @@ function mountPane(props: Partial<React.ComponentProps<typeof JsonFormatterPane>
   return { container, root }
 }
 
-function toolbarButton(container: HTMLDivElement, label: string): HTMLButtonElement {
+function buttonLabelled(container: HTMLDivElement, label: string): HTMLButtonElement {
   const node = container.querySelector(`button[aria-label="${label}"]`)
   if (!(node instanceof HTMLButtonElement)) {
-    throw new Error(`no toolbar button labelled ${label}`)
+    throw new Error(`no button labelled ${label}`)
   }
   return node
+}
+
+function searchInput(container: HTMLDivElement): HTMLInputElement {
+  const node = container.querySelector('input')
+  if (node === null) {
+    throw new Error('no search input')
+  }
+  return node
+}
+
+function typeSearch(container: HTMLDivElement, text: string): void {
+  act(() => {
+    // Why: React's value tracker shadows the `value` property, so a plain
+    // assignment would look like a no-op and never fire onChange.
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(
+      searchInput(container),
+      text
+    )
+    searchInput(container).dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
+
+function searchCount(container: HTMLDivElement): string | null {
+  return container.querySelector('[data-testid="json-search-count"]')?.textContent ?? null
 }
 
 describe('JsonFormatterPane', () => {
@@ -118,15 +143,9 @@ describe('JsonFormatterPane', () => {
 
   it('routes a node-path copy through the IPC bridge, not navigator.clipboard', async () => {
     mounted = mountPane()
-    const rowButton = mounted.container.querySelector(
-      '[data-testid="json-tree-row"] button:not([aria-expanded])'
-    )
-    if (!(rowButton instanceof HTMLButtonElement)) {
-      throw new Error('no copyable row button rendered')
-    }
 
     await act(async () => {
-      rowButton.click()
+      buttonLabelled(mounted!.container, 'Copy path').click()
     })
 
     expect(writeClipboardText).toHaveBeenCalledWith('$')
@@ -136,15 +155,9 @@ describe('JsonFormatterPane', () => {
   it('reports a rejected clipboard write instead of claiming success', async () => {
     writeClipboardText.mockRejectedValue(new Error('denied'))
     mounted = mountPane()
-    const rowButton = mounted.container.querySelector(
-      '[data-testid="json-tree-row"] button:not([aria-expanded])'
-    )
-    if (!(rowButton instanceof HTMLButtonElement)) {
-      throw new Error('no copyable row button rendered')
-    }
 
     await act(async () => {
-      rowButton.click()
+      buttonLabelled(mounted!.container, 'Copy path').click()
     })
 
     expect(toasts.error).toHaveBeenCalledWith('Copy failed')
@@ -155,7 +168,7 @@ describe('JsonFormatterPane', () => {
     mounted = mountPane()
 
     await act(async () => {
-      toolbarButton(mounted!.container, 'Copy formatted JSON').click()
+      buttonLabelled(mounted!.container, 'Copy formatted JSON').click()
     })
 
     expect(writeClipboardText).toHaveBeenCalledWith('{\n  "a": {\n    "b": 1\n  }\n}')
@@ -165,7 +178,7 @@ describe('JsonFormatterPane', () => {
   it('writes the formatted text back to the store when formatting', () => {
     mounted = mountPane()
 
-    act(() => toolbarButton(mounted!.container, 'Format').click())
+    act(() => buttonLabelled(mounted!.container, 'Format').click())
 
     expect(updateJsonFormatterState).toHaveBeenCalledWith(FILE_ID, {
       input: '{\n  "a": {\n    "b": 1\n  }\n}'
@@ -178,7 +191,7 @@ describe('JsonFormatterPane', () => {
   ])('patches the store from the $label action', ({ label, patch }) => {
     mounted = mountPane()
 
-    act(() => toolbarButton(mounted!.container, label).click())
+    act(() => buttonLabelled(mounted!.container, label).click())
 
     expect(updateJsonFormatterState).toHaveBeenCalledWith(FILE_ID, patch)
   })
@@ -186,8 +199,8 @@ describe('JsonFormatterPane', () => {
   it('disables format and copy while the input cannot be parsed', () => {
     mounted = mountPane({ input: '{"a":' })
 
-    expect(toolbarButton(mounted.container, 'Format').disabled).toBe(true)
-    expect(toolbarButton(mounted.container, 'Copy formatted JSON').disabled).toBe(true)
+    expect(buttonLabelled(mounted.container, 'Format').disabled).toBe(true)
+    expect(buttonLabelled(mounted.container, 'Copy formatted JSON').disabled).toBe(true)
     expect(mounted.container.textContent).toContain('Invalid JSON syntax.')
   })
 
@@ -219,5 +232,59 @@ describe('JsonFormatterPane', () => {
     rerender('{"a":1,"b":2}')
     act(() => vi.advanceTimersByTime(200))
     expect(mounted.container.querySelectorAll('[data-testid="json-tree-row"]').length).toBe(3)
+  })
+
+  describe('search', () => {
+    it('counts hits across the whole tree and moves through them', () => {
+      mounted = mountPane({ input: '{"a":{"b":"needle"},"c":"needle"}' })
+
+      typeSearch(mounted.container, 'needle')
+      expect(searchCount(mounted.container)).toBe('1/2')
+
+      act(() => buttonLabelled(mounted!.container, 'Next match').click())
+      expect(searchCount(mounted.container)).toBe('2/2')
+    })
+
+    it('reports an empty result set', () => {
+      mounted = mountPane({ input: '{"a":1}' })
+
+      typeSearch(mounted.container, 'zzz')
+
+      expect(searchCount(mounted.container)).toBe('No results')
+    })
+  })
+
+  describe('row actions', () => {
+    it('writes the deleted tree back to the input', () => {
+      mounted = mountPane({ input: '{"a":1,"b":2}' })
+
+      act(() => buttonLabelled(mounted!.container, 'Delete node').click())
+
+      expect(updateJsonFormatterState).toHaveBeenCalledWith(FILE_ID, {
+        input: '{\n  "b": 2\n}'
+      })
+    })
+
+    it('offers an undo that restores the previous input', () => {
+      mounted = mountPane({ input: '{"a":1,"b":2}' })
+
+      act(() => buttonLabelled(mounted!.container, 'Delete node').click())
+      const options = toasts.success.mock.calls.at(-1)?.[1]
+      expect(options?.action?.label).toBe('Undo')
+
+      act(() => options?.action?.onClick?.())
+
+      expect(updateJsonFormatterState).toHaveBeenLastCalledWith(FILE_ID, {
+        input: '{"a":1,"b":2}'
+      })
+    })
+
+    it('does not offer delete on the root row', () => {
+      mounted = mountPane({ input: '{"a":1}' })
+
+      const deletes = mounted.container.querySelectorAll('button[aria-label="Delete node"]')
+      const rows = mounted.container.querySelectorAll('[data-testid="json-tree-row"]')
+      expect(deletes).toHaveLength(rows.length - 1)
+    })
   })
 })

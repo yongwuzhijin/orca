@@ -13,6 +13,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { describeJsonParseError } from './json-parse-error-message'
+import type { JsonSearchMatch } from './json-search'
 import { createJsonExpansion, toggleJsonNode } from './json-tree-expansion'
 import type { JsonExpansionState } from './json-tree-expansion'
 import type * as JsonTreeRowsModule from './json-tree-rows'
@@ -23,6 +24,8 @@ const virtualWindow = vi.hoisted(() => ({
 }))
 
 const rowBuilds = vi.hoisted(() => ({ count: 0 }))
+
+const scrollToIndex = vi.hoisted(() => vi.fn())
 
 vi.mock('./json-tree-rows', async (importOriginal) => {
   const actual = await importOriginal<typeof JsonTreeRowsModule>()
@@ -54,7 +57,8 @@ vi.mock('@tanstack/react-virtual', () => ({
           key: start + offset,
           start: (start + offset) * size
         })),
-      measureElement: (): void => {}
+      measureElement: (): void => {},
+      scrollToIndex
     }
   }
 }))
@@ -87,6 +91,8 @@ describe('JsonTreeView', () => {
     options: {
       expansion?: JsonExpansionState
       showLineNumbers?: boolean
+      query?: string
+      activeMatch?: JsonSearchMatch | null
       onToggle?: (path: string) => void
       onCopyPath?: (path: string) => void
     } = {}
@@ -97,8 +103,15 @@ describe('JsonTreeView', () => {
           result={result}
           expansion={options.expansion ?? createJsonExpansion()}
           showLineNumbers={options.showLineNumbers ?? true}
+          query={options.query ?? ''}
+          activeMatch={options.activeMatch ?? null}
           onToggle={options.onToggle ?? ((): void => {})}
-          onCopyPath={options.onCopyPath ?? ((): void => {})}
+          actions={{
+            onCopyPair: (): void => {},
+            onCopyPath: options.onCopyPath ?? ((): void => {}),
+            onCopyValue: (): void => {},
+            onDelete: (): void => {}
+          }}
         />
       )
     })
@@ -146,16 +159,16 @@ describe('JsonTreeView', () => {
     expect(rowCount()).toBe(5)
     expect(gutterNumbers()).toEqual(['1', '2', '3', '4', '5'])
 
-    const chevrons = Array.from(container?.querySelectorAll('button') ?? []).filter(
-      (button) => button.querySelector('svg') !== null
+    const chevrons = container?.querySelectorAll<HTMLButtonElement>(
+      'button[aria-label="Collapse node"]'
     )
-    act(() => chevrons[1]?.click())
+    act(() => chevrons?.[1]?.click())
     expect(onToggle).toHaveBeenCalledWith('a')
 
-    const valueButtons = Array.from(container?.querySelectorAll('button') ?? []).filter(
-      (button) => button.querySelector('svg') === null
+    const copyPathButtons = container?.querySelectorAll<HTMLButtonElement>(
+      'button[aria-label="Copy path"]'
     )
-    act(() => valueButtons[2]?.click())
+    act(() => copyPathButtons?.[2]?.click())
     expect(onCopyPath).toHaveBeenCalledWith('a.b')
   })
 
@@ -218,5 +231,30 @@ describe('JsonTreeView', () => {
     const spacer = container?.querySelector('[data-testid="json-tree-row"]')?.parentElement
       ?.parentElement
     expect(spacer?.getAttribute('style')).toContain('height: 110px')
+  })
+
+  describe('active match scrolling', () => {
+    const activeMatch: JsonSearchMatch = { path: 'a.c', field: 'value', start: 0, end: 1 }
+
+    beforeEach(() => {
+      scrollToIndex.mockClear()
+    })
+
+    it('scrolls the active match to the middle of the viewport', () => {
+      mountView({ status: 'ok', value: NESTED_VALUE }, { activeMatch })
+      // Why: rows are '', 'a', 'a.b', 'a.c', 'd' — 'a.c' is the fourth.
+      expect(scrollToIndex).toHaveBeenCalledWith(3, { align: 'center' })
+    })
+
+    it('does not scroll again for the same match', () => {
+      mountView({ status: 'ok', value: NESTED_VALUE }, { activeMatch })
+      mountView({ status: 'ok', value: NESTED_VALUE }, { activeMatch })
+      expect(scrollToIndex).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not scroll without an active match', () => {
+      mountView({ status: 'ok', value: NESTED_VALUE })
+      expect(scrollToIndex).not.toHaveBeenCalled()
+    })
   })
 })

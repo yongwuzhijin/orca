@@ -1,12 +1,14 @@
 // @vitest-environment happy-dom
 
-// Why: the row is where a node's identity (path), its disclosure state and its
-// syntax colour all become DOM. Mount it instead of re-reading the JSX.
+// Why: the row is where a node's identity (path), its disclosure state, its
+// syntax colour and its search hits all become DOM. Mount it instead of
+// re-reading the JSX.
 
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { JsonTreeRow } from './JsonTreeRow'
+import type { JsonSearchMatch } from './json-search'
 import type { JsonTreeRow as JsonTreeRowData } from './json-tree-rows'
 
 function makeRow(overrides: Partial<JsonTreeRowData> = {}): JsonTreeRowData {
@@ -25,6 +27,14 @@ function makeRow(overrides: Partial<JsonTreeRowData> = {}): JsonTreeRowData {
   }
 }
 
+const handlers = {
+  onToggle: vi.fn(),
+  onCopyPair: vi.fn(),
+  onCopyPath: vi.fn(),
+  onCopyValue: vi.fn(),
+  onDelete: vi.fn()
+}
+
 describe('JsonTreeRow', () => {
   let container: HTMLDivElement | null = null
   let root: Root | null = null
@@ -32,6 +42,9 @@ describe('JsonTreeRow', () => {
   beforeEach(() => {
     container = document.body.appendChild(document.createElement('div'))
     root = createRoot(container)
+    for (const handler of Object.values(handlers)) {
+      handler.mockReset()
+    }
   })
 
   afterEach(() => {
@@ -47,8 +60,8 @@ describe('JsonTreeRow', () => {
     row: JsonTreeRowData,
     options: {
       lineNumber?: number | null
-      onToggle?: (path: string) => void
-      onCopyPath?: (path: string) => void
+      query?: string
+      activeMatch?: JsonSearchMatch | null
     } = {}
   ): void {
     act(() => {
@@ -56,49 +69,56 @@ describe('JsonTreeRow', () => {
         <JsonTreeRow
           row={row}
           lineNumber={options.lineNumber ?? null}
-          onToggle={options.onToggle ?? ((): void => {})}
-          onCopyPath={options.onCopyPath ?? ((): void => {})}
+          query={options.query ?? ''}
+          activeMatch={options.activeMatch ?? null}
+          onToggle={handlers.onToggle}
+          actions={{
+            onCopyPair: handlers.onCopyPair,
+            onCopyPath: handlers.onCopyPath,
+            onCopyValue: handlers.onCopyValue,
+            onDelete: handlers.onDelete
+          }}
         />
       )
     })
   }
 
-  function buttons(): HTMLButtonElement[] {
-    return Array.from(container?.querySelectorAll('button') ?? [])
-  }
-
-  function valueButton(): HTMLButtonElement {
-    const last = buttons().at(-1)
-    if (!last) {
-      throw new Error('no value button rendered')
+  function valueArea(): HTMLElement {
+    const node = container?.querySelector<HTMLElement>('.min-w-0')
+    if (!node) {
+      throw new Error('no value area rendered')
     }
-    return last
+    return node
   }
 
   function valueSpan(): HTMLElement {
-    const span = valueButton().lastElementChild
+    const span = valueArea().lastElementChild
     if (!(span instanceof HTMLElement)) {
       throw new Error('no value span rendered')
     }
     return span
   }
 
-  function chevron(label: string): HTMLButtonElement {
-    const node = container?.querySelector(`button[aria-label="${label}"]`)
-    if (!(node instanceof HTMLButtonElement)) {
-      throw new Error(`no chevron button labelled ${label}`)
+  function actionButton(label: string): HTMLButtonElement {
+    const found = container?.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
+    if (!found) {
+      throw new Error(`no button labelled ${label}`)
     }
-    return node
+    return found
+  }
+
+  function highlights(): HTMLElement[] {
+    return [...(container?.querySelectorAll<HTMLElement>('[data-testid="json-highlight"]') ?? [])]
   }
 
   it('quotes an object key label but leaves an array index bare', () => {
     mountRow(makeRow({ label: 'name', labelKind: 'key' }))
-    const keyLabel = valueButton().firstElementChild
+    const keyLabel = valueArea().firstElementChild
     expect(keyLabel?.textContent).toBe('"name"')
     expect(keyLabel?.className).toContain('text-json-key')
 
     mountRow(makeRow({ label: '2', labelKind: 'index', path: '[2]' }))
-    const indexLabel = valueButton().firstElementChild
+    const indexLabel = valueArea().firstElementChild
     expect(indexLabel?.textContent).toBe('2')
     expect(indexLabel?.className).toContain('text-json-punctuation')
   })
@@ -109,17 +129,17 @@ describe('JsonTreeRow', () => {
     { label: 'a\\b', text: '"a\\\\b"' }
   ])('escapes $label in an object key instead of interpolating it raw', ({ label, text }) => {
     mountRow(makeRow({ label, labelKind: 'key' }))
-    expect(valueButton().firstElementChild?.textContent).toBe(text)
+    expect(valueArea().firstElementChild?.textContent).toBe(text)
   })
 
   it('leaves an index label unstringified so it renders without quotes', () => {
     mountRow(makeRow({ label: '0', labelKind: 'index', path: '[0]' }))
-    expect(valueButton().firstElementChild?.textContent).toBe('0')
+    expect(valueArea().firstElementChild?.textContent).toBe('0')
   })
 
   it('renders a label-less root row without a key segment', () => {
     mountRow(makeRow({ label: null, labelKind: null, path: '', kind: 'null', value: null }))
-    expect(valueButton().textContent).toBe('null')
+    expect(valueArea().textContent).toBe('null')
   })
 
   it.each([
@@ -148,41 +168,26 @@ describe('JsonTreeRow', () => {
   })
 
   it('toggles with the row path when the chevron is clicked', () => {
-    const onToggle = vi.fn()
-    const onCopyPath = vi.fn()
-    mountRow(makeRow({ kind: 'object', childCount: 1, isExpandable: true, path: 'a.b' }), {
-      onToggle,
-      onCopyPath
-    })
+    mountRow(makeRow({ kind: 'object', childCount: 1, isExpandable: true, path: 'a.b' }))
 
-    act(() => chevron('Collapse node').click())
-    expect(onToggle).toHaveBeenCalledWith('a.b')
-    expect(onCopyPath).not.toHaveBeenCalled()
-  })
-
-  it('copies the raw row path when the value is clicked', () => {
-    const onToggle = vi.fn()
-    const onCopyPath = vi.fn()
-    // Why: '' is the root path, and the row must forward it verbatim — display
-    // formatting (toCopyablePath) belongs to the clipboard handler, not here.
-    mountRow(makeRow({ path: '', label: null, labelKind: null }), { onToggle, onCopyPath })
-
-    act(() => valueButton().click())
-    expect(onCopyPath).toHaveBeenCalledWith('')
-    expect(onToggle).not.toHaveBeenCalled()
+    act(() => actionButton('Collapse node').click())
+    expect(handlers.onToggle).toHaveBeenCalledWith('a.b')
+    expect(handlers.onCopyPath).not.toHaveBeenCalled()
   })
 
   it('names the chevron and reports its disclosure state in both directions', () => {
-    mountRow(makeRow({ kind: 'object', childCount: 1, isExpandable: true, isCollapsed: true }))
-    expect(buttons()).toHaveLength(2)
-    expect(chevron('Expand node').getAttribute('aria-expanded')).toBe('false')
+    mountRow(makeRow({ kind: 'object', childCount: 2, isExpandable: true, isCollapsed: true }))
+    expect(actionButton('Expand node').getAttribute('aria-expanded')).toBe('false')
 
-    mountRow(makeRow({ kind: 'object', childCount: 1, isExpandable: true, isCollapsed: false }))
-    expect(chevron('Collapse node').getAttribute('aria-expanded')).toBe('true')
+    mountRow(makeRow({ kind: 'object', childCount: 2, isExpandable: true, isCollapsed: false }))
+    expect(actionButton('Collapse node').getAttribute('aria-expanded')).toBe('true')
+  })
 
+  it('omits the chevron for leaf rows', () => {
     // Why: a leaf has nothing to disclose, so it must not offer a named toggle at all.
-    mountRow(makeRow({ kind: 'string', isExpandable: false }))
-    expect(buttons()).toHaveLength(1)
+    mountRow(makeRow())
+    expect(container?.querySelector('button[aria-label="Expand node"]')).toBeNull()
+    expect(container?.querySelector('button[aria-label="Collapse node"]')).toBeNull()
     expect(container?.querySelector('button[aria-expanded]')).toBeNull()
   })
 
@@ -208,5 +213,57 @@ describe('JsonTreeRow', () => {
     const root = container?.querySelector<HTMLElement>('[data-testid="json-tree-row"]')
     expect(root?.className).toContain('text-[13px]')
     expect(root?.className).toContain('leading-[22px]')
+  })
+
+  describe('row actions', () => {
+    it('no longer turns the value area into a button', () => {
+      mountRow(makeRow())
+      expect(container?.querySelector('button[aria-label="Copy path"]')).not.toBeNull()
+      for (const button of container?.querySelectorAll('button') ?? []) {
+        expect(button.textContent).toBe('')
+      }
+    })
+
+    it('routes the row-end buttons to their handlers', () => {
+      const row = makeRow()
+      mountRow(row)
+      act(() => actionButton('Copy').click())
+      act(() => actionButton('Copy path').click())
+      act(() => actionButton('Copy value').click())
+      act(() => actionButton('Delete node').click())
+      expect(handlers.onCopyPair).toHaveBeenCalledWith(row)
+      expect(handlers.onCopyPath).toHaveBeenCalledWith('a')
+      expect(handlers.onCopyValue).toHaveBeenCalledWith(row)
+      expect(handlers.onDelete).toHaveBeenCalledWith(row)
+    })
+  })
+
+  describe('search highlighting', () => {
+    it('highlights hits in the key and the value', () => {
+      mountRow(makeRow({ label: 'code', value: 'coder' }), { query: 'cod' })
+      expect(highlights().map((mark) => mark.textContent)).toEqual(['cod', 'cod'])
+    })
+
+    it('marks only the active field as the current hit', () => {
+      mountRow(makeRow({ label: 'code', value: 'coder' }), {
+        query: 'cod',
+        activeMatch: { path: 'a', field: 'value', start: 1, end: 4 }
+      })
+      const [keyHit, valueHit] = highlights()
+      expect(keyHit?.className).toContain('bg-search-match/50')
+      expect(valueHit?.className).toContain('bg-search-match-active/60')
+    })
+
+    it('never highlights inside a container summary', () => {
+      mountRow(makeRow({ kind: 'object', label: 'data', childCount: 8, value: {} }), {
+        query: '8'
+      })
+      expect(highlights()).toHaveLength(0)
+    })
+
+    it('renders no highlight spans without a query', () => {
+      mountRow(makeRow())
+      expect(highlights()).toHaveLength(0)
+    })
   })
 })

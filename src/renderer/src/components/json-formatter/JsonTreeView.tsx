@@ -1,8 +1,10 @@
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { translate } from '@/i18n/i18n'
 import { describeJsonParseError } from './json-parse-error-message'
+import type { JsonSearchMatch } from './json-search'
 import { JsonTreeRow } from './JsonTreeRow'
+import type { JsonRowActionHandlers } from './JsonTreeRowActions'
 import { buildVisibleJsonRows } from './json-tree-rows'
 import type { JsonTreeRow as JsonTreeRowData } from './json-tree-rows'
 import type { JsonExpansionState } from './json-tree-expansion'
@@ -18,16 +20,20 @@ type JsonTreeViewProps = {
   result: JsonParseResult
   expansion: JsonExpansionState
   showLineNumbers: boolean
+  query: string
+  activeMatch: JsonSearchMatch | null
   onToggle: (path: string) => void
-  onCopyPath: (path: string) => void
+  actions: JsonRowActionHandlers
 }
 
 export function JsonTreeView({
   result,
   expansion,
   showLineNumbers,
+  query,
+  activeMatch,
   onToggle,
-  onCopyPath
+  actions
 }: JsonTreeViewProps): React.JSX.Element {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const parsedValue = result.status === 'ok' ? result.value : undefined
@@ -44,6 +50,25 @@ export function JsonTreeView({
     estimateSize: () => JSON_TREE_ROW_HEIGHT,
     overscan: JSON_TREE_ROW_OVERSCAN
   })
+  const activeMatchPath = activeMatch?.path ?? null
+  // Why: virtualizer identity changes every render, so the effect must dedupe itself or it re-scrolls forever.
+  const lastScrollKeyRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (activeMatchPath === null) {
+      lastScrollKeyRef.current = null
+      return
+    }
+    const index = rows.findIndex((row) => row.path === activeMatchPath)
+    if (index < 0) {
+      return
+    }
+    const scrollKey = `${activeMatchPath}:${rows.length}:${index}`
+    if (lastScrollKeyRef.current === scrollKey) {
+      return
+    }
+    lastScrollKeyRef.current = scrollKey
+    virtualizer.scrollToIndex(index, { align: 'center' })
+  }, [activeMatchPath, rows, virtualizer])
 
   if (result.status === 'empty') {
     return (
@@ -83,8 +108,10 @@ export function JsonTreeView({
                 // Why: the virtual index is the row's absolute position, which is what
                 // the line number means — the render window must not shift it.
                 lineNumber={showLineNumbers ? virtualItem.index + 1 : null}
+                query={query}
+                activeMatch={activeMatch}
                 onToggle={onToggle}
-                onCopyPath={onCopyPath}
+                actions={actions}
               />
             </div>
           )
