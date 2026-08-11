@@ -29,9 +29,15 @@ function classify(value: unknown): JsonRowKind {
       return 'number'
     case 'boolean':
       return 'boolean'
-    default:
-      return 'string'
+    // Why: JSON.parse never yields these, but classify() takes unknown — render them as text.
+    case 'string':
+    case 'bigint':
+    case 'symbol':
+    case 'function':
+    case 'undefined':
+      break
   }
+  return 'string'
 }
 
 function childEntries(

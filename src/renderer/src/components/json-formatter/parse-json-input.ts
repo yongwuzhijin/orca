@@ -42,7 +42,13 @@ function mapErrorCode(error: ParseError['error']): JsonParseErrorCode {
       return 'comments-not-allowed'
     case 'EndOfFileExpected':
       return 'trailing-content'
-    default:
+    // Why: structural expectations carry no copy of their own, so they share the generic message.
+    case 'ColonExpected':
+    case 'CommaExpected':
+    case 'InvalidCharacter':
+    case 'PropertyNameExpected':
+    case 'ValueExpected':
+    case '<unknown ParseErrorCode>':
       return 'syntax'
   }
 }

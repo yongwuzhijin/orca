@@ -48,7 +48,7 @@ function describeCode(code: JsonParseErrorCode): string {
         'auto.components.jsonFormatter.error.trailingContent.9014cbe7d3',
         'Unexpected content after the end of JSON.'
       )
-    default:
+    case 'syntax':
       return translate(
         'auto.components.jsonFormatter.error.syntax.61bd7f4a29',
         'Invalid JSON syntax.'

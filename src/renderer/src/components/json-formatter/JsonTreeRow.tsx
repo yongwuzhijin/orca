@@ -18,7 +18,11 @@ function formatScalar(row: JsonTreeRowData): string {
       return JSON.stringify(row.value)
     case 'null':
       return 'null'
-    default:
+    // Why: containers render via formatContainer; listed here only to keep the switch exhaustive.
+    case 'number':
+    case 'boolean':
+    case 'object':
+    case 'array':
       return String(row.value)
   }
 }
