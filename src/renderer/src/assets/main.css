@@ -118,6 +118,8 @@
   --color-json-boolean: var(--json-boolean);
   --color-json-null: var(--json-null);
   --color-json-punctuation: var(--json-punctuation);
+  --color-search-match: var(--markdown-search-match);
+  --color-search-match-active: var(--markdown-search-match-active);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
