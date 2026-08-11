@@ -92,6 +92,43 @@ describe('tab create menu options', () => {
     ).toHaveLength(0)
   })
 
+  describe('json formatter option', () => {
+    const withTool = (hasJsonFormatter: boolean, terminalOnly = false): TabCreateMenuOption[] =>
+      buildTabCreateMenuOptions({
+        terminalOnly,
+        hasNewBrowser: true,
+        hasNewMarkdown: true,
+        hasOpenMarkdown: true,
+        hasSimulator: true,
+        simulatorIsGoTo: false,
+        hasJsonFormatter
+      })
+
+    it('is offered when the tool is available', () => {
+      expect(withTool(true).map((option) => option.kind)).toContain('new-json-formatter')
+    })
+
+    it('is searchable by json and by its own label', () => {
+      const options = withTool(true)
+      const label = options.find((option) => option.kind === 'new-json-formatter')?.label ?? ''
+
+      expect(
+        findMatchingTabCreateMenuOptions('json', options).map((option) => option.kind)
+      ).toContain('new-json-formatter')
+      expect(findMatchingTabCreateMenuOptions(label, options).map((option) => option.kind)).toEqual(
+        ['new-json-formatter']
+      )
+    })
+
+    it('is hidden when the tool is unavailable', () => {
+      expect(withTool(false).map((option) => option.kind)).not.toContain('new-json-formatter')
+    })
+
+    it('is hidden in terminal-only mode', () => {
+      expect(withTool(true, true).map((option) => option.kind)).not.toContain('new-json-formatter')
+    })
+  })
+
   it('rejects oversized pasted queries before scoring menu options', () => {
     const oversizedQuery = 'secret-tab-create-menu'.repeat(TAB_CREATE_MENU_QUERY_MAX_BYTES)
     const option = {

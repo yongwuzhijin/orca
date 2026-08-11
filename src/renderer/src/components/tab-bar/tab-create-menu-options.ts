@@ -6,6 +6,7 @@ import { isClipboardTextByteLengthOverLimit } from '../../../../shared/clipboard
 export type TabCreateMenuOptionKind =
   | 'go-to-simulator'
   | 'new-browser'
+  | 'new-json-formatter'
   | 'new-markdown'
   | 'new-simulator'
   | 'new-terminal'
@@ -21,6 +22,7 @@ export type TabCreateMenuOption = {
 }
 
 export type TabCreateMenuOptionsContext = {
+  hasJsonFormatter?: boolean
   hasNewBrowser: boolean
   hasNewMarkdown: boolean
   hasOpenMarkdown: boolean
@@ -161,6 +163,26 @@ export function buildTabCreateMenuOptions(
         translate('auto.components.tab.bar.tab.create.menu.options.8a580f88cf', 'iphone'),
         translate('auto.components.tab.bar.tab.create.menu.options.7ecdc5ef08', 'ipad'),
         translate('auto.components.tab.bar.tab.create.menu.options.14965cc123', 'mobile')
+      ]
+    })
+  }
+
+  if (context.hasJsonFormatter) {
+    const label = translate('auto.components.tab.bar.TabBar.7c9e04b1af', 'JSON Formatter')
+    options.push({
+      id: 'new-json-formatter',
+      kind: 'new-json-formatter',
+      label,
+      keywords: [
+        // Why: untranslated on purpose — the format name is the same in every
+        // locale, so searching "json" must hit even where the label is not.
+        'json',
+        translate('auto.components.tab.bar.tab.create.menu.options.9f4b2e7c81', 'json formatter'),
+        translate('auto.components.tab.bar.tab.create.menu.options.3c81d5a0e6', 'format json'),
+        translate('auto.components.tab.bar.tab.create.menu.options.6a2f9b40d7', 'formatter'),
+        translate('auto.components.tab.bar.tab.create.menu.options.b17e3c9a52', 'beautify'),
+        translate('auto.components.tab.bar.tab.create.menu.options.5d0a8f2b64', 'pretty'),
+        translate('auto.components.tab.bar.tab.create.menu.options.e94c6d13af', 'tools')
       ]
     })
   }

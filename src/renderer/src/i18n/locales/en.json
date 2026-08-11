@@ -3087,7 +3087,8 @@
             "2148f65e04": "PowerShell",
             "ab589350e5": "Could not build launch command for {{value0}}.",
             "7a9b4af2af": "Scroll tabs left",
-            "232e075b07": "Scroll tabs right"
+            "232e075b07": "Scroll tabs right",
+            "7c9e04b1af": "JSON Formatter"
           },
           "TabBarCreateEntry": {
             "d62d63b807": "Create file",
@@ -3165,7 +3166,13 @@
                   "1baeb07c17": "ios simulator",
                   "8a580f88cf": "iphone",
                   "7ecdc5ef08": "ipad",
-                  "14965cc123": "mobile"
+                  "14965cc123": "mobile",
+                  "9f4b2e7c81": "json formatter",
+                  "3c81d5a0e6": "format json",
+                  "6a2f9b40d7": "formatter",
+                  "b17e3c9a52": "beautify",
+                  "5d0a8f2b64": "pretty",
+                  "e94c6d13af": "tools"
                 }
               }
             }
@@ -13306,7 +13313,8 @@
           "3c6e71df22": "Text diff is unavailable for this file in branch compare.",
           "d07e4b8553": "branch",
           "d16e037f40": "rich",
-          "6c4f1a8d2e": "Check details are unavailable."
+          "6c4f1a8d2e": "Check details are unavailable.",
+          "b27f1cd049": "The JSON formatter is unavailable."
         },
         "EditorPanelHeader": {
           "fb8331694e": "Open Preview to the Side",
