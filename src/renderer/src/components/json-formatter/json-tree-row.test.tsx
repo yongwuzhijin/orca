@@ -202,4 +202,11 @@ describe('JsonTreeRow', () => {
     const spacer = container?.querySelector('span[style]')
     expect(spacer?.getAttribute('style')).toContain('36px')
   })
+
+  it('renders at the 13px/22px scale the virtual list assumes', () => {
+    mountRow(makeRow())
+    const root = container?.querySelector<HTMLElement>('[data-testid="json-tree-row"]')
+    expect(root?.className).toContain('text-[13px]')
+    expect(root?.className).toContain('leading-[22px]')
+  })
 })

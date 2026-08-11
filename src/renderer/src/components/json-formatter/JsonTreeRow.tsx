@@ -31,7 +31,10 @@ export function JsonTreeRow({
     ? translate('auto.components.jsonFormatter.tree.expand.b4d9e10c73', 'Expand node')
     : translate('auto.components.jsonFormatter.tree.collapse.5f28a6c1de', 'Collapse node')
   return (
-    <div className="flex items-start gap-1 font-mono text-xs leading-5" data-testid="json-tree-row">
+    <div
+      className="flex items-start gap-1 font-mono text-[13px] leading-[22px]"
+      data-testid="json-tree-row"
+    >
       {lineNumber !== null && (
         <span
           className="w-10 shrink-0 select-none pr-2 text-right text-muted-foreground"

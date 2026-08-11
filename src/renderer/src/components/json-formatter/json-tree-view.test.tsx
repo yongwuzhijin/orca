@@ -213,10 +213,10 @@ describe('JsonTreeView', () => {
     mountView({ status: 'ok', value: NESTED_VALUE })
 
     expect(rowCount()).toBe(1)
-    // Why: 5 rows x the fixed 20px row height — the spacer is what keeps the
+    // Why: 5 rows x the fixed 22px row height — the spacer is what keeps the
     // scrollbar honest while only one row is mounted.
     const spacer = container?.querySelector('[data-testid="json-tree-row"]')?.parentElement
       ?.parentElement
-    expect(spacer?.getAttribute('style')).toContain('height: 100px')
+    expect(spacer?.getAttribute('style')).toContain('height: 110px')
   })
 })

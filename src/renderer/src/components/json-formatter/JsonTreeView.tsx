@@ -8,8 +8,8 @@ import type { JsonTreeRow as JsonTreeRowData } from './json-tree-rows'
 import type { JsonExpansionState } from './json-tree-expansion'
 import type { JsonParseResult } from './parse-json-input'
 
-// Why: rows are single-line `leading-5`, so height is exact and needs no measurement.
-const JSON_TREE_ROW_HEIGHT = 20
+// Why: rows are single-line `leading-[22px]`, so height is exact and needs no measurement.
+const JSON_TREE_ROW_HEIGHT = 22
 const JSON_TREE_ROW_OVERSCAN = 12
 
 const NO_ROWS: JsonTreeRowData[] = []
