@@ -3,7 +3,9 @@ import {
   collapseAllJsonNodes,
   createJsonExpansion,
   expandAllJsonNodes,
+  expandJsonAncestors,
   isJsonNodeCollapsed,
+  pruneJsonSubtreeOverrides,
   toggleJsonNode
 } from './json-tree-expansion'
 
@@ -71,5 +73,63 @@ describe('expandAllJsonNodes', () => {
     const expansion = toggleJsonNode(expandAllJsonNodes(), 'a')
     expect(isJsonNodeCollapsed(expansion, 'a')).toBe(true)
     expect(isJsonNodeCollapsed(expansion, 'b')).toBe(false)
+  })
+})
+
+describe('expandJsonAncestors', () => {
+  it('adds overrides when the default is collapsed', () => {
+    const next = expandJsonAncestors(collapseAllJsonNodes(), 'data[0].code')
+    expect([...next.overrides].sort()).toEqual(['', 'data', 'data[0]'])
+    expect(isJsonNodeCollapsed(next, 'data[0]')).toBe(false)
+  })
+
+  it('removes overrides when the default is expanded', () => {
+    const collapsed = toggleJsonNode(toggleJsonNode(createJsonExpansion(), 'data'), 'data[0]')
+    expect(isJsonNodeCollapsed(collapsed, 'data')).toBe(true)
+    const next = expandJsonAncestors(collapsed, 'data[0].code')
+    expect(next.overrides.size).toBe(0)
+    expect(isJsonNodeCollapsed(next, 'data[0]')).toBe(false)
+  })
+
+  it('leaves the node itself alone', () => {
+    const next = expandJsonAncestors(collapseAllJsonNodes(), 'data')
+    expect([...next.overrides]).toEqual([''])
+  })
+
+  it('keeps identity when nothing changes', () => {
+    const state = expandJsonAncestors(collapseAllJsonNodes(), 'data[0]')
+    expect(expandJsonAncestors(state, 'data[0]')).toBe(state)
+  })
+
+  it('is a no-op for the root path', () => {
+    const state = collapseAllJsonNodes()
+    expect(expandJsonAncestors(state, '')).toBe(state)
+  })
+})
+
+describe('pruneJsonSubtreeOverrides', () => {
+  it('drops the node and its descendants', () => {
+    const state = {
+      defaultCollapsed: false,
+      overrides: new Set(['data[1]', 'data[1].code', 'data[1][0]', 'data[2]'])
+    }
+    const next = pruneJsonSubtreeOverrides(state, 'data[1]')
+    expect([...next.overrides]).toEqual(['data[2]'])
+  })
+
+  it('does not treat data[10] as a descendant of data[1]', () => {
+    const state = { defaultCollapsed: false, overrides: new Set(['data[10]']) }
+    const next = pruneJsonSubtreeOverrides(state, 'data[1]')
+    expect([...next.overrides]).toEqual(['data[10]'])
+  })
+
+  it('does not treat dataset as a descendant of data', () => {
+    const state = { defaultCollapsed: false, overrides: new Set(['dataset']) }
+    expect([...pruneJsonSubtreeOverrides(state, 'data').overrides]).toEqual(['dataset'])
+  })
+
+  it('keeps identity when nothing matches', () => {
+    const state = { defaultCollapsed: false, overrides: new Set(['other']) }
+    expect(pruneJsonSubtreeOverrides(state, 'data')).toBe(state)
   })
 })
