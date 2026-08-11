@@ -91,3 +91,20 @@ describe('buildVisibleJsonRows', () => {
     expect(rows.at(-1)).toMatchObject({ kind: 'number', value: 1, isExpandable: false })
   })
 })
+
+describe('segments', () => {
+  it('threads structural segments from the root down', () => {
+    const rows = buildVisibleJsonRows({ data: [{ code: 'x' }] }, createJsonExpansion())
+    expect(rows.map((row) => row.segments)).toEqual([
+      [],
+      ['data'],
+      ['data', 0],
+      ['data', 0, 'code']
+    ])
+  })
+
+  it('keeps array indices numeric and object keys verbatim', () => {
+    const rows = buildVisibleJsonRows({ 'a.b': [10] }, createJsonExpansion())
+    expect(rows.at(-1)?.segments).toEqual(['a.b', 0])
+  })
+})

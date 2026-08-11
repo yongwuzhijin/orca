@@ -12,6 +12,7 @@ import type { JsonTreeRow as JsonTreeRowData } from './json-tree-rows'
 function makeRow(overrides: Partial<JsonTreeRowData> = {}): JsonTreeRowData {
   return {
     path: 'a',
+    segments: ['a'],
     depth: 1,
     kind: 'string',
     label: 'a',

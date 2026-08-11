@@ -5,6 +5,7 @@ export type JsonRowKind = 'object' | 'array' | 'string' | 'number' | 'boolean' |
 
 export type JsonTreeRow = {
   path: string
+  segments: readonly (string | number)[]
   depth: number
   kind: JsonRowKind
   label: string | null
@@ -44,12 +45,19 @@ function childEntries(
   value: unknown,
   kind: JsonRowKind,
   path: string
-): { label: string; labelKind: 'key' | 'index'; path: string; value: unknown }[] {
+): {
+  label: string
+  labelKind: 'key' | 'index'
+  path: string
+  segment: string | number
+  value: unknown
+}[] {
   if (kind === 'array') {
     return (value as unknown[]).map((child, index) => ({
       label: String(index),
       labelKind: 'index' as const,
       path: appendJsonArrayIndex(path, index),
+      segment: index,
       value: child
     }))
   }
@@ -58,6 +66,7 @@ function childEntries(
       label: key,
       labelKind: 'key' as const,
       path: appendJsonObjectKey(path, key),
+      segment: key,
       value: child
     }))
   }
@@ -67,6 +76,7 @@ function childEntries(
 type PendingJsonNode = {
   value: unknown
   path: string
+  segments: readonly (string | number)[]
   depth: number
   label: string | null
   labelKind: 'key' | 'index' | null
@@ -77,7 +87,7 @@ type PendingJsonNode = {
 export function buildVisibleJsonRows(value: unknown, expansion: JsonExpansionState): JsonTreeRow[] {
   const rows: JsonTreeRow[] = []
   const pending: PendingJsonNode[] = [
-    { value, path: JSON_ROOT_PATH, depth: 0, label: null, labelKind: null }
+    { value, path: JSON_ROOT_PATH, segments: [], depth: 0, label: null, labelKind: null }
   ]
 
   for (let node = pending.pop(); node !== undefined; node = pending.pop()) {
@@ -88,6 +98,7 @@ export function buildVisibleJsonRows(value: unknown, expansion: JsonExpansionSta
 
     rows.push({
       path: node.path,
+      segments: node.segments,
       depth: node.depth,
       kind,
       label: node.label,
@@ -108,6 +119,7 @@ export function buildVisibleJsonRows(value: unknown, expansion: JsonExpansionSta
       pending.push({
         value: child.value,
         path: child.path,
+        segments: [...node.segments, child.segment],
         depth: childDepth,
         label: child.label,
         labelKind: child.labelKind
