@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
+import { formatJsonContainerText, formatJsonRowLabel, formatJsonScalarText } from './json-row-text'
 import type { JsonTreeRow as JsonTreeRowData } from './json-tree-rows'
 
 const VALUE_COLOR_BY_KIND: Record<JsonTreeRowData['kind'], string> = {
@@ -10,29 +11,6 @@ const VALUE_COLOR_BY_KIND: Record<JsonTreeRowData['kind'], string> = {
   number: 'text-json-number',
   boolean: 'text-json-boolean',
   null: 'text-json-null'
-}
-
-function formatScalar(row: JsonTreeRowData): string {
-  switch (row.kind) {
-    case 'string':
-      return JSON.stringify(row.value)
-    case 'null':
-      return 'null'
-    // Why: containers render via formatContainer; listed here only to keep the switch exhaustive.
-    case 'number':
-    case 'boolean':
-    case 'object':
-    case 'array':
-      return String(row.value)
-  }
-}
-
-function formatContainer(row: JsonTreeRowData): string {
-  const [open, close] = row.kind === 'array' ? ['[', ']'] : ['{', '}']
-  if (row.childCount === 0) {
-    return `${open}${close}`
-  }
-  return `${open} … ${close}  ${row.childCount}`
 }
 
 type JsonTreeRowProps = {
@@ -88,14 +66,15 @@ export function JsonTreeRow({
         {row.label !== null && (
           <>
             <span className={row.labelKind === 'index' ? 'text-json-punctuation' : 'text-json-key'}>
-              {/* Why: an index is bare, but a key is JSON text — quotes and newlines in it must escape. */}
-              {row.labelKind === 'index' ? row.label : JSON.stringify(row.label)}
+              {formatJsonRowLabel(row.label, row.labelKind === 'index' ? 'index' : 'key')}
             </span>
             <span className="text-json-punctuation">{': '}</span>
           </>
         )}
         <span className={cn(VALUE_COLOR_BY_KIND[row.kind])}>
-          {isContainer ? formatContainer(row) : formatScalar(row)}
+          {isContainer
+            ? formatJsonContainerText(row.kind, row.childCount)
+            : formatJsonScalarText(row.value, row.kind)}
         </span>
       </button>
     </div>

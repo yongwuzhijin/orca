@@ -15,7 +15,7 @@ export type JsonTreeRow = {
   isCollapsed: boolean
 }
 
-function classify(value: unknown): JsonRowKind {
+export function classifyJsonValue(value: unknown): JsonRowKind {
   if (value === null) {
     return 'null'
   }
@@ -29,7 +29,7 @@ function classify(value: unknown): JsonRowKind {
       return 'number'
     case 'boolean':
       return 'boolean'
-    // Why: JSON.parse never yields these, but classify() takes unknown — render them as text.
+    // Why: JSON.parse never yields these, but the input is unknown — render them as text.
     case 'string':
     case 'bigint':
     case 'symbol':
@@ -81,7 +81,7 @@ export function buildVisibleJsonRows(value: unknown, expansion: JsonExpansionSta
   ]
 
   for (let node = pending.pop(); node !== undefined; node = pending.pop()) {
-    const kind = classify(node.value)
+    const kind = classifyJsonValue(node.value)
     const children = childEntries(node.value, kind, node.path)
     const isExpandable = children.length > 0
     const isCollapsed = isExpandable && isJsonNodeCollapsed(expansion, node.path)
