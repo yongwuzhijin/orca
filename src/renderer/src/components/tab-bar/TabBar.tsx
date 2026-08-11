@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { SortableContext } from '@dnd-kit/sortable'
 import {
+  Braces,
   ChevronLeft,
   ChevronRight,
   FilePlus,
@@ -10,7 +11,8 @@ import {
   Globe,
   Plus,
   Smartphone,
-  TerminalSquare
+  TerminalSquare,
+  Wrench
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type {
@@ -61,6 +63,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -123,6 +128,7 @@ type TabBarProps = {
   showAgentLaunchItems?: boolean
   onNewFileTab?: () => void
   onOpenFileTab?: () => void
+  onOpenJsonFormatter?: () => void
   newTabMenuOrder?: 'default' | 'markdown-first'
   onSetCustomTitle: (tabId: string, title: string | null) => void
   onSetTabColor: (tabId: string, color: string | null) => void
@@ -249,6 +255,7 @@ function TabBarInner({
   showAgentLaunchItems = true,
   onNewFileTab,
   onOpenFileTab,
+  onOpenJsonFormatter,
   newTabMenuOrder = 'default',
   onSetCustomTitle,
   onSetTabColor,
@@ -543,13 +550,15 @@ function TabBarInner({
         hasNewMarkdown: !terminalOnly && Boolean(onNewFileTab),
         hasOpenMarkdown: !terminalOnly && Boolean(onOpenFileTab),
         hasSimulator: !terminalOnly && mobileEmulatorEnabled && Boolean(onNewSimulatorTab),
-        simulatorIsGoTo: workspaceHasSimulatorTab
+        simulatorIsGoTo: workspaceHasSimulatorTab,
+        hasJsonFormatter: Boolean(onOpenJsonFormatter)
       }),
     [
       mobileEmulatorEnabled,
       onNewFileTab,
       onNewSimulatorTab,
       onOpenFileTab,
+      onOpenJsonFormatter,
       terminalOnly,
       windowsShellEntries,
       workspaceHasSimulatorTab
@@ -586,6 +595,9 @@ function TabBarInner({
       case 'new-simulator':
       case 'go-to-simulator':
         onNewSimulatorTab?.()
+        break
+      case 'new-json-formatter':
+        onOpenJsonFormatter?.()
         break
     }
   }
@@ -749,6 +761,24 @@ function TabBarInner({
         ) : null}
       </DropdownMenuItem>
     ) : null
+  const toolsMenuItem =
+    !terminalOnly && onOpenJsonFormatter ? (
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger className="gap-2 rounded-[7px] px-2 py-1.5 text-[12px] leading-5 font-medium">
+          <Wrench className="size-4 text-muted-foreground" />
+          {translate('auto.components.tab.bar.TabBar.e51b3a7c60', 'Tools')}
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent>
+          <DropdownMenuItem
+            onSelect={onOpenJsonFormatter}
+            className="gap-2 rounded-[7px] px-2 py-1.5 text-[12px] leading-5 font-medium"
+          >
+            <Braces className="size-4 text-muted-foreground" />
+            {translate('auto.components.tab.bar.TabBar.7c9e04b1af', 'JSON Formatter')}
+          </DropdownMenuItem>
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+    ) : null
   const mobileEmulatorIntroMenuBlock =
     showMobileEmulatorIntroCallout &&
     !terminalOnly &&
@@ -765,6 +795,7 @@ function TabBarInner({
         {defaultTerminalMenuItems}
         {newBrowserMenuItem}
         {newSimulatorMenuItem}
+        {toolsMenuItem}
         {mobileEmulatorIntroMenuBlock}
       </>
     ) : (
@@ -774,6 +805,7 @@ function TabBarInner({
         {newMarkdownMenuItem}
         {openMarkdownMenuItem}
         {newSimulatorMenuItem}
+        {toolsMenuItem}
         {mobileEmulatorIntroMenuBlock}
       </>
     )

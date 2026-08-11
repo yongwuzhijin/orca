@@ -1,5 +1,12 @@
 [
   {
+    "filePath": "src/renderer/src/components/tab-bar/tab-create-menu-options.ts",
+    "kind": "object-property:keywords",
+    "text": "json",
+    "dynamic": false,
+    "count": 1
+  },
+  {
     "filePath": "src/renderer/src/lib/agent-background-session-test-state.ts",
     "kind": "object-property:title",
     "text": "Terminal 1",
