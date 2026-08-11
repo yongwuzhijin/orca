@@ -3,6 +3,7 @@ import {
   JSON_ROOT_PATH,
   appendJsonArrayIndex,
   appendJsonObjectKey,
+  listJsonAncestorPaths,
   toCopyablePath
 } from './json-path'
 
@@ -74,5 +75,32 @@ describe('toCopyablePath', () => {
 
   it('returns other paths unchanged', () => {
     expect(toCopyablePath('a.b[0]')).toBe('a.b[0]')
+  })
+})
+
+describe('listJsonAncestorPaths', () => {
+  it('returns nothing for the root', () => {
+    expect(listJsonAncestorPaths('')).toEqual([])
+  })
+
+  it('lists the root for a top-level key', () => {
+    expect(listJsonAncestorPaths('data')).toEqual([''])
+  })
+
+  it('walks dot and bracket boundaries', () => {
+    expect(listJsonAncestorPaths('data[0].code')).toEqual(['', 'data', 'data[0]'])
+  })
+
+  it('handles pure array nesting', () => {
+    expect(listJsonAncestorPaths('a[0][1]')).toEqual(['', 'a', 'a[0]'])
+  })
+
+  it('ignores separators inside quoted keys', () => {
+    expect(listJsonAncestorPaths('["a.b"].c')).toEqual(['', '["a.b"]'])
+    expect(listJsonAncestorPaths('["a[0]"].c')).toEqual(['', '["a[0]"]'])
+  })
+
+  it('ignores escaped quotes inside keys', () => {
+    expect(listJsonAncestorPaths('["a\\"b"].c')).toEqual(['', '["a\\"b"]'])
   })
 })
