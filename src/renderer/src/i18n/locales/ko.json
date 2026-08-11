@@ -2995,7 +2995,9 @@
             "2148f65e04": "PowerShell",
             "ab589350e5": "{{value0}}에 대한 실행 명령을 작성할 수 없습니다.",
             "7a9b4af2af": "탭을 왼쪽으로 스크롤",
-            "232e075b07": "탭을 오른쪽으로 스크롤"
+            "232e075b07": "탭을 오른쪽으로 스크롤",
+            "7c9e04b1af": "JSON 포매터",
+            "e51b3a7c60": "도구"
           },
           "TabBarCreateEntry": {
             "d62d63b807": "파일 생성",
@@ -3066,7 +3068,13 @@
                   "1baeb07c17": "iOS 시뮬레이터",
                   "8a580f88cf": "iPhone",
                   "7ecdc5ef08": "iPad",
-                  "14965cc123": "모바일"
+                  "14965cc123": "모바일",
+                  "3c81d5a0e6": "JSON 서식 지정",
+                  "5d0a8f2b64": "보기 좋게",
+                  "6a2f9b40d7": "포매터",
+                  "9f4b2e7c81": "JSON 포매터",
+                  "b17e3c9a52": "정리",
+                  "e94c6d13af": "도구"
                 }
               }
             }
@@ -12894,7 +12902,8 @@
           "3c6e71df22": "브랜치 비교에서는 이 파일에 대해 텍스트 비교를 사용할 수 없습니다.",
           "d07e4b8553": "브랜치",
           "d16e037f40": "리치",
-          "6c4f1a8d2e": "체크 세부 정보를 사용할 수 없습니다."
+          "6c4f1a8d2e": "체크 세부 정보를 사용할 수 없습니다.",
+          "b27f1cd049": "JSON 포매터를 사용할 수 없습니다."
         },
         "EditorPanelHeader": {
           "fb8331694e": "측면으로 미리보기 열기",
@@ -14773,6 +14782,91 @@
         "TodoPriorityMenu": {
           "setPriority": "Set priority",
           "changePriorityAria": "Change priority"
+        }
+      },
+      "jsonFormatter": {
+        "splitter": {
+          "0b7ac31e59": "창 크기 조정"
+        },
+        "toolbar": {
+          "format": {
+            "1f9d4c8a02": "서식 지정"
+          },
+          "copy": {
+            "20b8ce4f95": "서식이 지정된 JSON 복사"
+          },
+          "expandAll": {
+            "4a70cbe9d8": "모두 펼치기"
+          },
+          "clear": {
+            "6ea5138c70": "입력 지우기"
+          },
+          "collapseAll": {
+            "7be2035dc1": "모두 접기"
+          },
+          "keepEscapes": {
+            "95c2eb70a4": "이스케이프 유지"
+          },
+          "lineNumbers": {
+            "d3016fb2a7": "줄 번호 표시"
+          }
+        },
+        "error": {
+          "invalidNumber": {
+            "2e6f94ba18": "JSON의 숫자 형식이 잘못되었습니다."
+          },
+          "invalidEscape": {
+            "2fc79688b3": "JSON 텍스트의 이스케이프 시퀀스가 잘못되었습니다."
+          },
+          "position": {
+            "44a2c0e8fb": "{{line}}행 {{column}}열"
+          },
+          "invalidSymbol": {
+            "5c8b30de71": "JSON에 예기치 않은 토큰이 있습니다."
+          },
+          "syntax": {
+            "61bd7f4a29": "JSON 구문이 잘못되었습니다."
+          },
+          "commentsNotAllowed": {
+            "6334eeb62b": "JSON에서는 주석을 사용할 수 없습니다."
+          },
+          "unexpectedEnd": {
+            "7d05ea1f66": "JSON 입력이 예기치 않게 끝났습니다."
+          },
+          "trailingContent": {
+            "9014cbe7d3": "JSON이 끝난 뒤에 불필요한 내용이 있습니다."
+          },
+          "tooLarge": {
+            "a3e7b3ed6a": "콘텐츠가 너무 커서 미리 볼 수 없습니다."
+          },
+          "tooDeep": {
+            "a97483a5ec": "JSON 중첩이 너무 깊어 미리 볼 수 없습니다."
+          }
+        },
+        "pane": {
+          "pathCopied": {
+            "5d94b1ea38": "경로가 복사되었습니다"
+          },
+          "copyFailed": {
+            "7b3ce0a915": "복사 실패"
+          },
+          "jsonCopied": {
+            "c0f47b6e12": "JSON이 복사되었습니다"
+          }
+        },
+        "tree": {
+          "collapse": {
+            "5f28a6c1de": "노드 접기"
+          },
+          "empty": {
+            "8c31d70b45": "왼쪽에 JSON을 붙여넣으면 여기에 미리보기가 표시됩니다."
+          },
+          "expand": {
+            "b4d9e10c73": "노드 펼치기"
+          }
+        },
+        "tab": {
+          "9b1c4d7e02": "JSON 포매터"
         }
       }
     },

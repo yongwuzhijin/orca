@@ -3007,7 +3007,9 @@
             "2148f65e04": "PowerShell",
             "ab589350e5": "无法为 {{value0}} 构建启动命令。",
             "7a9b4af2af": "向左滚动标签页",
-            "232e075b07": "向右滚动标签页"
+            "232e075b07": "向右滚动标签页",
+            "7c9e04b1af": "JSON 格式化",
+            "e51b3a7c60": "工具"
           },
           "TabBarCreateEntry": {
             "d62d63b807": "创建文件",
@@ -3078,7 +3080,13 @@
                   "1baeb07c17": "iOS 模拟器",
                   "8a580f88cf": "iPhone",
                   "7ecdc5ef08": "iPad",
-                  "14965cc123": "移动端"
+                  "14965cc123": "移动端",
+                  "3c81d5a0e6": "格式化 JSON",
+                  "5d0a8f2b64": "美观",
+                  "6a2f9b40d7": "格式化工具",
+                  "9f4b2e7c81": "JSON 格式化",
+                  "b17e3c9a52": "美化",
+                  "e94c6d13af": "工具"
                 }
               }
             }
@@ -12914,7 +12922,8 @@
           "3c6e71df22": "分支比较中此文件的文本差异不可用。",
           "d07e4b8553": "分支",
           "d16e037f40": "富有的",
-          "6c4f1a8d2e": "检查详情不可用。"
+          "6c4f1a8d2e": "检查详情不可用。",
+          "b27f1cd049": "JSON 格式化工具不可用。"
         },
         "EditorPanelHeader": {
           "fb8331694e": "打开侧面预览",
@@ -14782,6 +14791,91 @@
             "coverage": "Attributed",
             "unavailable": "n/a"
           }
+        }
+      },
+      "jsonFormatter": {
+        "splitter": {
+          "0b7ac31e59": "调整分栏宽度"
+        },
+        "toolbar": {
+          "format": {
+            "1f9d4c8a02": "格式化"
+          },
+          "copy": {
+            "20b8ce4f95": "复制格式化后的 JSON"
+          },
+          "expandAll": {
+            "4a70cbe9d8": "展开全部"
+          },
+          "clear": {
+            "6ea5138c70": "清空输入"
+          },
+          "collapseAll": {
+            "7be2035dc1": "折叠全部"
+          },
+          "keepEscapes": {
+            "95c2eb70a4": "保留转义"
+          },
+          "lineNumbers": {
+            "d3016fb2a7": "显示行号"
+          }
+        },
+        "error": {
+          "invalidNumber": {
+            "2e6f94ba18": "JSON 中的数字格式无效。"
+          },
+          "invalidEscape": {
+            "2fc79688b3": "JSON 文本中的转义序列无效。"
+          },
+          "position": {
+            "44a2c0e8fb": "第 {{line}} 行第 {{column}} 列"
+          },
+          "invalidSymbol": {
+            "5c8b30de71": "JSON 中存在意外的字符。"
+          },
+          "syntax": {
+            "61bd7f4a29": "JSON 语法无效。"
+          },
+          "commentsNotAllowed": {
+            "6334eeb62b": "JSON 中不允许使用注释。"
+          },
+          "unexpectedEnd": {
+            "7d05ea1f66": "JSON 输入意外结束。"
+          },
+          "trailingContent": {
+            "9014cbe7d3": "JSON 结束后存在多余内容。"
+          },
+          "tooLarge": {
+            "a3e7b3ed6a": "内容过大，无法预览。"
+          },
+          "tooDeep": {
+            "a97483a5ec": "JSON 嵌套层级过深，无法预览。"
+          }
+        },
+        "pane": {
+          "pathCopied": {
+            "5d94b1ea38": "已复制路径"
+          },
+          "copyFailed": {
+            "7b3ce0a915": "复制失败"
+          },
+          "jsonCopied": {
+            "c0f47b6e12": "已复制 JSON"
+          }
+        },
+        "tree": {
+          "collapse": {
+            "5f28a6c1de": "折叠节点"
+          },
+          "empty": {
+            "8c31d70b45": "在左侧粘贴 JSON，这里会显示预览。"
+          },
+          "expand": {
+            "b4d9e10c73": "展开节点"
+          }
+        },
+        "tab": {
+          "9b1c4d7e02": "JSON 格式化"
         }
       }
     },

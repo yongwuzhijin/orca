@@ -2995,7 +2995,9 @@
             "2148f65e04": "PowerShell",
             "ab589350e5": "{{value0}} の起動コマンドを構築できませんでした。",
             "7a9b4af2af": "タブを左にスクロール",
-            "232e075b07": "タブを右にスクロール"
+            "232e075b07": "タブを右にスクロール",
+            "7c9e04b1af": "JSON フォーマッター",
+            "e51b3a7c60": "ツール"
           },
           "TabBarCreateEntry": {
             "d62d63b807": "ファイルの作成",
@@ -3066,7 +3068,13 @@
                   "1baeb07c17": "iOS シミュレータ",
                   "8a580f88cf": "iPhone",
                   "7ecdc5ef08": "iPad",
-                  "14965cc123": "モバイル"
+                  "14965cc123": "モバイル",
+                  "3c81d5a0e6": "JSON を整形",
+                  "5d0a8f2b64": "見やすく",
+                  "6a2f9b40d7": "フォーマッター",
+                  "9f4b2e7c81": "JSON フォーマッター",
+                  "b17e3c9a52": "整形",
+                  "e94c6d13af": "ツール"
                 }
               }
             }
@@ -12894,7 +12902,8 @@
           "3c6e71df22": "ブランチ比較では、このファイルのテキスト差分は使用できません。",
           "d07e4b8553": "ブランチ",
           "d16e037f40": "リッチ",
-          "6c4f1a8d2e": "チェック詳細を利用できません。"
+          "6c4f1a8d2e": "チェック詳細を利用できません。",
+          "b27f1cd049": "JSON フォーマッターを利用できません。"
         },
         "EditorPanelHeader": {
           "fb8331694e": "プレビューを横に開く",
@@ -14762,6 +14771,91 @@
         "TodoPriorityMenu": {
           "setPriority": "Set priority",
           "changePriorityAria": "Change priority"
+        }
+      },
+      "jsonFormatter": {
+        "splitter": {
+          "0b7ac31e59": "ペインのサイズを変更"
+        },
+        "toolbar": {
+          "format": {
+            "1f9d4c8a02": "整形"
+          },
+          "copy": {
+            "20b8ce4f95": "整形した JSON をコピー"
+          },
+          "expandAll": {
+            "4a70cbe9d8": "すべて展開"
+          },
+          "clear": {
+            "6ea5138c70": "入力をクリア"
+          },
+          "collapseAll": {
+            "7be2035dc1": "すべて折りたたむ"
+          },
+          "keepEscapes": {
+            "95c2eb70a4": "エスケープを保持"
+          },
+          "lineNumbers": {
+            "d3016fb2a7": "行番号を表示"
+          }
+        },
+        "error": {
+          "invalidNumber": {
+            "2e6f94ba18": "JSON の数値形式が無効です。"
+          },
+          "invalidEscape": {
+            "2fc79688b3": "JSON テキストのエスケープシーケンスが無効です。"
+          },
+          "position": {
+            "44a2c0e8fb": "{{line}} 行 {{column}} 列"
+          },
+          "invalidSymbol": {
+            "5c8b30de71": "JSON に予期しないトークンがあります。"
+          },
+          "syntax": {
+            "61bd7f4a29": "JSON の構文が無効です。"
+          },
+          "commentsNotAllowed": {
+            "6334eeb62b": "JSON ではコメントを使用できません。"
+          },
+          "unexpectedEnd": {
+            "7d05ea1f66": "JSON の入力が予期せず終了しました。"
+          },
+          "trailingContent": {
+            "9014cbe7d3": "JSON の終端の後に余分な内容があります。"
+          },
+          "tooLarge": {
+            "a3e7b3ed6a": "コンテンツが大きすぎてプレビューできません。"
+          },
+          "tooDeep": {
+            "a97483a5ec": "JSON のネストが深すぎてプレビューできません。"
+          }
+        },
+        "pane": {
+          "pathCopied": {
+            "5d94b1ea38": "パスをコピーしました"
+          },
+          "copyFailed": {
+            "7b3ce0a915": "コピーに失敗しました"
+          },
+          "jsonCopied": {
+            "c0f47b6e12": "JSON をコピーしました"
+          }
+        },
+        "tree": {
+          "collapse": {
+            "5f28a6c1de": "ノードを折りたたむ"
+          },
+          "empty": {
+            "8c31d70b45": "左側に JSON を貼り付けるとここにプレビューが表示されます。"
+          },
+          "expand": {
+            "b4d9e10c73": "ノードを展開"
+          }
+        },
+        "tab": {
+          "9b1c4d7e02": "JSON フォーマッター"
         }
       }
     },

@@ -2995,7 +2995,9 @@
             "2148f65e04": "PowerShell",
             "ab589350e5": "No se pudo generar el comando de inicio para {{value0}}.",
             "7a9b4af2af": "Desplazar pestañas a la izquierda",
-            "232e075b07": "Desplazar pestañas a la derecha"
+            "232e075b07": "Desplazar pestañas a la derecha",
+            "7c9e04b1af": "Formateador JSON",
+            "e51b3a7c60": "Herramientas"
           },
           "TabBarCreateEntry": {
             "d62d63b807": "Crear archivo",
@@ -3066,7 +3068,13 @@
                   "1baeb07c17": "simulador de iOS",
                   "8a580f88cf": "iPhone",
                   "7ecdc5ef08": "iPad",
-                  "14965cc123": "móvil"
+                  "14965cc123": "móvil",
+                  "3c81d5a0e6": "formatear json",
+                  "5d0a8f2b64": "bonito",
+                  "6a2f9b40d7": "formateador",
+                  "9f4b2e7c81": "formateador json",
+                  "b17e3c9a52": "embellecer",
+                  "e94c6d13af": "herramientas"
                 }
               }
             }
@@ -12894,7 +12902,8 @@
           "3c6e71df22": "El diff de texto no está disponible para este archivo en la comparación de ramas.",
           "d07e4b8553": "rama",
           "d16e037f40": "rico",
-          "6c4f1a8d2e": "Los detalles del check no están disponibles."
+          "6c4f1a8d2e": "Los detalles del check no están disponibles.",
+          "b27f1cd049": "El formateador JSON no está disponible."
         },
         "EditorPanelHeader": {
           "fb8331694e": "Abrir vista previa al lado",
@@ -14762,6 +14771,91 @@
         "TodoPriorityMenu": {
           "setPriority": "Set priority",
           "changePriorityAria": "Change priority"
+        }
+      },
+      "jsonFormatter": {
+        "splitter": {
+          "0b7ac31e59": "Redimensionar paneles"
+        },
+        "toolbar": {
+          "format": {
+            "1f9d4c8a02": "Formatear"
+          },
+          "copy": {
+            "20b8ce4f95": "Copiar JSON formateado"
+          },
+          "expandAll": {
+            "4a70cbe9d8": "Expandir todo"
+          },
+          "clear": {
+            "6ea5138c70": "Borrar entrada"
+          },
+          "collapseAll": {
+            "7be2035dc1": "Contraer todo"
+          },
+          "keepEscapes": {
+            "95c2eb70a4": "Mantener escapes"
+          },
+          "lineNumbers": {
+            "d3016fb2a7": "Mostrar números de línea"
+          }
+        },
+        "error": {
+          "invalidNumber": {
+            "2e6f94ba18": "Formato de número no válido en el JSON."
+          },
+          "invalidEscape": {
+            "2fc79688b3": "Secuencia de escape no válida en el texto JSON."
+          },
+          "position": {
+            "44a2c0e8fb": "Línea {{line}}, columna {{column}}"
+          },
+          "invalidSymbol": {
+            "5c8b30de71": "Token inesperado en el JSON."
+          },
+          "syntax": {
+            "61bd7f4a29": "Sintaxis JSON no válida."
+          },
+          "commentsNotAllowed": {
+            "6334eeb62b": "Los comentarios no están permitidos en JSON."
+          },
+          "unexpectedEnd": {
+            "7d05ea1f66": "Fin inesperado de la entrada JSON."
+          },
+          "trailingContent": {
+            "9014cbe7d3": "Contenido inesperado después del final del JSON."
+          },
+          "tooLarge": {
+            "a3e7b3ed6a": "El contenido es demasiado grande para previsualizarlo."
+          },
+          "tooDeep": {
+            "a97483a5ec": "El JSON tiene demasiados niveles de anidamiento para previsualizarlo."
+          }
+        },
+        "pane": {
+          "pathCopied": {
+            "5d94b1ea38": "Ruta copiada"
+          },
+          "copyFailed": {
+            "7b3ce0a915": "No se pudo copiar"
+          },
+          "jsonCopied": {
+            "c0f47b6e12": "JSON copiado"
+          }
+        },
+        "tree": {
+          "collapse": {
+            "5f28a6c1de": "Contraer nodo"
+          },
+          "empty": {
+            "8c31d70b45": "Pega JSON a la izquierda para verlo aquí."
+          },
+          "expand": {
+            "b4d9e10c73": "Expandir nodo"
+          }
+        },
+        "tab": {
+          "9b1c4d7e02": "Formateador JSON"
         }
       }
     },
