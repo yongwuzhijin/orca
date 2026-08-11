@@ -15348,6 +15348,20 @@
           "keepEscapes": {
             "95c2eb70a4": "Keep escapes"
           }
+        },
+        "splitter": {
+          "0b7ac31e59": "Resize panes"
+        },
+        "pane": {
+          "pathCopied": {
+            "5d94b1ea38": "Path copied"
+          },
+          "jsonCopied": {
+            "c0f47b6e12": "JSON copied"
+          },
+          "copyFailed": {
+            "7b3ce0a915": "Copy failed"
+          }
         }
       }
     },
