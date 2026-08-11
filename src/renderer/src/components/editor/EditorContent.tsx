@@ -42,6 +42,13 @@ const ImageDiffViewer = lazy(() => import('./ImageDiffViewer'))
 const MermaidViewer = lazy(() => import('./MermaidViewer'))
 const CsvViewer = lazy(() => import('./CsvViewer'))
 const IpynbViewer = lazy(() => import('./IpynbViewer'))
+// Why: lazy like the other Monaco-backed viewers, so the formatter's editor
+// chunk stays out of the eager path for every other tab mode.
+const JsonFormatterPane = lazy(() =>
+  import('@/components/json-formatter/JsonFormatterPane').then((m) => ({
+    default: m.JsonFormatterPane
+  }))
+)
 
 // Why: module-level for a stable no-op identity so read-only tabs don't rebuild callbacks each render.
 const noopEditorContentChange = (_content: string): void => {}
@@ -639,6 +646,28 @@ export function EditorContent({
         onRefresh={() => {
           void reloadOpenCheckRunDetailsTab(activeFile.id)
         }}
+      />
+    )
+  }
+
+  if (activeFile.mode === 'json-formatter') {
+    const jsonFormatter = activeFile.jsonFormatter
+    if (!jsonFormatter) {
+      return (
+        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+          {translate(
+            'auto.components.editor.EditorContent.b27f1cd049',
+            'The JSON formatter is unavailable.'
+          )}
+        </div>
+      )
+    }
+    return (
+      <JsonFormatterPane
+        fileId={activeFile.id}
+        input={jsonFormatter.input}
+        keepEscapes={jsonFormatter.keepEscapes}
+        showLineNumbers={jsonFormatter.showLineNumbers}
       />
     )
   }
