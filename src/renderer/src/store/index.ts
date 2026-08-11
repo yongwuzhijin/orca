@@ -17,9 +17,11 @@ import { createEditorSlice } from './slices/editor'
 import { createStatsSlice } from './slices/stats'
 import { createMemorySlice } from './slices/memory'
 import { createWorkspaceSpaceSlice } from './slices/workspace-space'
-import { createClaudeUsageSlice } from './slices/claude-usage'
-import { createCodexUsageSlice } from './slices/codex-usage'
-import { createOpenCodeUsageSlice } from './slices/opencode-usage'
+import {
+  createClaudeUsageSlice,
+  createCodexUsageSlice,
+  createOpenCodeUsageSlice
+} from './slices/usage-provider-slices'
 import { createBrowserSlice } from './slices/browser'
 import { createRateLimitSlice } from './slices/rate-limits'
 import { createSshSlice } from './slices/ssh'
@@ -43,6 +45,7 @@ import { createTodosSlice } from './slices/todos'
 import { createAcpSlice } from './slices/acp'
 import { createTaskCreationDraftsSlice } from './slices/task-creation-drafts'
 import { createRemoteServerUpdatesSlice } from './slices/remote-server-updates'
+import { createTerminalQuickCommandHostsSlice } from './slices/terminal-quick-command-hosts'
 import { e2eConfig } from '@/lib/e2e-config'
 import type { createWebRuntimeSessionTerminal } from '@/runtime/web-runtime-session'
 import { registerHttpLinkStoreAccessor } from '@/lib/http-link-routing'
@@ -99,7 +102,8 @@ export const useAppStore = create<AppState>()((...a) => {
     ...createTodosSlice(...a),
     ...createAcpSlice(...a),
     ...createTaskCreationDraftsSlice(...a),
-    ...createRemoteServerUpdatesSlice(...a)
+    ...createRemoteServerUpdatesSlice(...a),
+    ...createTerminalQuickCommandHostsSlice(...a)
   }
 })
 

@@ -18,6 +18,7 @@ import {
   WORKTREE_CARD_PROPERTIES
 } from '../../../../shared/worktree-card-properties'
 import type { TaskProvider } from '../../../../shared/types'
+import { ClientUiWorkspaceFilterFields } from './client-ui-workspace-filter-fields'
 import { RightSidebarTabParam } from './right-sidebar-tab-schema'
 import { TaskResumeState } from './task-resume-state-schema'
 import { omitUndefinedValues, tolerateUnknownValues } from './ui-update-value-tolerance'
@@ -195,15 +196,10 @@ const UiUpdateFields = z
     manualRepoOrder: z
       .array(z.object({ hostId: z.string(), repoId: z.string() }).strict())
       .optional(),
-    hideDefaultBranchWorkspace: z.boolean().optional(),
-    hideAutomationGeneratedWorkspaces: z.boolean().optional(),
+    ...ClientUiWorkspaceFilterFields,
     // Why: rides App.tsx's debounced writer, so omitting it rejected that entire
     // payload (sidebar widths, filters, agent acks) for every paired client.
     showDotfilesByWorktree: z.record(z.string(), z.boolean()).optional(),
-    hideCliCreatedWorkspaces: z.boolean().optional(),
-    hideDetachedHeadWorkspaces: z.boolean().optional(),
-    alwaysShowDefaultBranchWorkspace: z.boolean().optional(),
-    filterRepoIds: StringArray.optional(),
     collapsedGroups: StringArray.optional(),
     uiZoomLevel: z.number().finite().optional(),
     editorFontZoomLevel: z.number().finite().optional(),

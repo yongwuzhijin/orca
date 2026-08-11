@@ -122,9 +122,11 @@ import { createEditorSlice } from './editor'
 import { createStatsSlice } from './stats'
 import { createMemorySlice } from './memory'
 import { createWorkspaceSpaceSlice } from './workspace-space'
-import { createClaudeUsageSlice } from './claude-usage'
-import { createCodexUsageSlice } from './codex-usage'
-import { createOpenCodeUsageSlice } from './opencode-usage'
+import {
+  createClaudeUsageSlice,
+  createCodexUsageSlice,
+  createOpenCodeUsageSlice
+} from './usage-provider-slices'
 import { createBrowserSlice } from './browser'
 import { createRateLimitSlice } from './rate-limits'
 import { createSshSlice } from './ssh'
@@ -148,6 +150,7 @@ import { createTodosSlice } from './todos'
 import { createAcpSlice } from './acp'
 import { createTaskCreationDraftsSlice } from './task-creation-drafts'
 import { createRemoteServerUpdatesSlice } from './remote-server-updates'
+import { createTerminalQuickCommandHostsSlice } from './terminal-quick-command-hosts'
 
 function createTestStore() {
   return create<AppState>()((...a) => ({
@@ -193,7 +196,8 @@ function createTestStore() {
     ...createTodosSlice(...a),
     ...createAcpSlice(...a),
     ...createTaskCreationDraftsSlice(...a),
-    ...createRemoteServerUpdatesSlice(...a)
+    ...createRemoteServerUpdatesSlice(...a),
+    ...createTerminalQuickCommandHostsSlice(...a)
   }))
 }
 
