@@ -1,5 +1,5 @@
 import type React from 'react'
-import type { GlobalSettings } from '../../../../shared/types'
+import type { GlobalSettings } from '../../../../shared/global-settings-types'
 import { DEFAULT_TODO_ORCHESTRATOR_CONFIG } from '../../../../shared/todo/todo-orchestrator-config'
 import { translate } from '@/i18n/i18n'
 import { NumberField, SettingsSwitchRow } from './SettingsFormControls'

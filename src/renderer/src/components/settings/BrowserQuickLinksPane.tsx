@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react'
 import { Folder, FolderPlus, Globe, Pencil, Plus, Trash2 } from 'lucide-react'
 import type {
   BrowserQuickLink,
-  BrowserQuickLinkFolder,
-  GlobalSettings
-} from '../../../../shared/types'
+  BrowserQuickLinkFolder
+} from '../../../../shared/browser-workspace-types'
+import type { GlobalSettings } from '../../../../shared/global-settings-types'
 import { useAppStore } from '../../store'
 import { Button } from '../ui/button'
 import { Label } from '../ui/label'

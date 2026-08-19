@@ -25,7 +25,7 @@ async function localBranchExists(runGit: MergeGitExec, name: string): Promise<bo
 function toBranchName(ref: string): string {
   const stripped = ref.replace(/^refs\/heads\//, '').replace(/^refs\/remotes\/[^/]+\//, '')
   const slash = stripped.lastIndexOf('/')
-  return slash >= 0 ? stripped.slice(slash + 1) : stripped
+  return slash === -1 ? stripped : stripped.slice(slash + 1)
 }
 
 async function resolveTargetBranch(

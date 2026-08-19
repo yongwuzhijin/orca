@@ -12,7 +12,7 @@ import {
 import { useAppStore } from '@/store'
 import { useActiveRepo, useActiveWorktree } from '@/store/selectors'
 import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
-import type { BrowserBookmarkLink, BrowserQuickLink } from '../../../../shared/types'
+import type { BrowserBookmarkLink, BrowserQuickLink } from '../../../../shared/browser-workspace-types'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { buildBrowserBookmarkLink } from '@/lib/browser-bookmark-links'
@@ -137,7 +137,7 @@ export default function BookmarksPanel(): React.JSX.Element {
               </BookmarkIconAction>
             ) : null}
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto py-1">
+          <div className="scrollbar-sleek min-h-0 flex-1 overflow-y-auto py-1">
             {!canEditDocs ? (
               <BookmarkEmptyHint
                 text={translate(
@@ -199,7 +199,7 @@ export default function BookmarksPanel(): React.JSX.Element {
               ) : null}
             </div>
             <CollapsibleContent>
-              <div className="max-h-[26vh] overflow-y-auto pb-1">
+              <div className="scrollbar-sleek max-h-[26vh] overflow-y-auto pb-1">
                 {projectLinks.length === 0 ? (
                   <BookmarkEmptyHint
                     text={translate(
@@ -253,7 +253,7 @@ export default function BookmarksPanel(): React.JSX.Element {
               </BookmarkIconAction>
             </div>
             <CollapsibleContent>
-              <div className="max-h-[26vh] overflow-y-auto pb-1">
+              <div className="scrollbar-sleek max-h-[26vh] overflow-y-auto pb-1">
                 {quickLinks.length === 0 ? (
                   <BookmarkEmptyHint
                     text={translate(

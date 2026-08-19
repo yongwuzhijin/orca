@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { BrowserQuickLink, BrowserQuickLinkFolder } from '../../../../shared/types'
+import type { BrowserQuickLink, BrowserQuickLinkFolder } from '../../../../shared/browser-workspace-types'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'

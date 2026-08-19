@@ -1,5 +1,5 @@
 import { Pencil, Trash2 } from 'lucide-react'
-import type { BrowserBookmarkLink } from '../../../../shared/types'
+import type { BrowserBookmarkLink } from '../../../../shared/browser-workspace-types'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { translate } from '@/i18n/i18n'
 

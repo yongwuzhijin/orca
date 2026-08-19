@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { resolveWorkspaceProjectCwd } from './TodoWorkspaceProjectPicker'
-import type { ProjectHostSetup } from '../../../../shared/types'
+import type { ProjectHostSetup } from '../../../../shared/project-types'
 
 function mkSetup(overrides: Partial<ProjectHostSetup> = {}): ProjectHostSetup {
   return {

@@ -59,7 +59,7 @@ export function JsonTreeView({
       return
     }
     const index = rows.findIndex((row) => row.path === activeMatchPath)
-    if (index < 0) {
+    if (index === -1) {
       return
     }
     const scrollKey = `${activeMatchPath}:${rows.length}:${index}`

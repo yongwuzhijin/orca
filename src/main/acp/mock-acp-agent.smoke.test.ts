@@ -23,7 +23,7 @@ describe('mock-acp-agent smoke', () => {
       child.stdout.on('data', (d) => {
         buf += d.toString()
         const nl = buf.indexOf('\n')
-        if (nl >= 0) {
+        if (nl !== -1) {
           clearTimeout(timer)
           resolve(buf.slice(0, nl))
         }

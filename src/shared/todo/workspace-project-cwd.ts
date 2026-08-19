@@ -1,4 +1,4 @@
-import type { ProjectHostSetup } from '../types'
+import type { ProjectHostSetup } from '../project-types'
 
 // Why: shared between the renderer Start dialog and the main-process orchestrator
 // so both resolve a task's cwd identically (ready host setup path → fallback).

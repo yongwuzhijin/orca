@@ -11,7 +11,7 @@ export const SCHEMA_VERSION = 5
 export class TodoDatabase {
   private db: Database.Database
 
-  constructor(dbPath: string | ':memory:') {
+  constructor(dbPath: (string & {}) | ':memory:') {
     this.db = new Database(dbPath)
     this.db.pragma('journal_mode = WAL')
     this.db.pragma('synchronous = NORMAL')

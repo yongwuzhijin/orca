@@ -1,4 +1,4 @@
-import type { BrowserBookmarkLink } from '../../../shared/types'
+import type { BrowserBookmarkLink } from '../../../shared/browser-workspace-types'
 
 export function createBrowserBookmarkLinkId(): string {
   return (

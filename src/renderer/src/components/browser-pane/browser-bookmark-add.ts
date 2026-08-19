@@ -1,6 +1,6 @@
 import { toast } from 'sonner'
 import { useAppStore } from '@/store'
-import type { BrowserBookmarkLink } from '../../../../shared/types'
+import type { BrowserBookmarkLink } from '../../../../shared/browser-workspace-types'
 import { bookmarkUrlsMatch, buildBrowserBookmarkLink } from '@/lib/browser-bookmark-links'
 import { translate } from '@/i18n/i18n'
 

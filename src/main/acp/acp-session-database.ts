@@ -6,7 +6,7 @@ export const ACP_SCHEMA_VERSION = 1
 export class AcpSessionDatabase {
   private db: Database.Database
 
-  constructor(dbPath: string | ':memory:') {
+  constructor(dbPath: (string & {}) | ':memory:') {
     this.db = new Database(dbPath)
     this.db.pragma('journal_mode = WAL')
     this.db.pragma('synchronous = NORMAL')

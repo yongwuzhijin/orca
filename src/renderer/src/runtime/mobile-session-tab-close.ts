@@ -1,5 +1,5 @@
 import type { AppState } from '../store/types'
-import type { TabContentType } from '../../../shared/types'
+import type { TabContentType } from '../../../shared/tab-types'
 
 const EDITOR_SESSION_CONTENT_TYPES = new Set<TabContentType>([
   'editor',
