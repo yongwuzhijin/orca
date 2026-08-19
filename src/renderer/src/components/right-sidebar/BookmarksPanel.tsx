@@ -12,7 +12,10 @@ import {
 import { useAppStore } from '@/store'
 import { useActiveRepo, useActiveWorktree } from '@/store/selectors'
 import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
-import type { BrowserBookmarkLink, BrowserQuickLink } from '../../../../shared/browser-workspace-types'
+import type {
+  BrowserBookmarkLink,
+  BrowserQuickLink
+} from '../../../../shared/browser-workspace-types'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { buildBrowserBookmarkLink } from '@/lib/browser-bookmark-links'

@@ -4,7 +4,11 @@ import type {
   RenameTodoProjectInput,
   UpdateTodoProjectInput
 } from '../../shared/todo/todo-project'
-import type { TodoItem, CreateTodoItemInput, UpdateTodoItemPatch } from '../../shared/todo/todo-item'
+import type {
+  TodoItem,
+  CreateTodoItemInput,
+  UpdateTodoItemPatch
+} from '../../shared/todo/todo-item'
 import type {
   TodoTemplate,
   CreateTodoTemplateInput,
