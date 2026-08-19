@@ -16894,5 +16894,33 @@
   },
   "quickOpen": {
     "moreMatchesAvailable": "More matches may be available. Refine your search to narrow the results."
+  },
+  "statusBar": {
+    "translate": {
+      "label": "Translate",
+      "ariaLabel": "Translate text",
+      "tooltip": "Translate between Chinese and English",
+      "title": "Translate",
+      "menuItem": "Translate",
+      "submit": "Translate",
+      "placeholder": "Type or paste text, then press Enter",
+      "copy": "Copy",
+      "copied": "Copied",
+      "auto": "Auto",
+      "directionHint": "Click to switch direction; Auto detects it from your text",
+      "fallbackNote": "Translated by the backup service",
+      "language": {
+        "en": "EN",
+        "zh": "中"
+      },
+      "error": {
+        "invalidInput": "Enter some text to translate.",
+        "tooLong": "Text is too long to translate.",
+        "offline": "Could not reach the translation service. Check your connection or proxy.",
+        "rateLimited": "The free translation quota is used up. Try again later.",
+        "timeout": "The translation request timed out.",
+        "providerError": "The translation service returned an unexpected response."
+      }
+    }
   }
 }

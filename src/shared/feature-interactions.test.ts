@@ -81,6 +81,7 @@ describe('feature interactions', () => {
       'terminal-panes',
       'terminal-tabs',
       'tab-splits',
+      'translate',
       'usage-tracking',
       'voice-dictation',
       'workspace-cleanup'

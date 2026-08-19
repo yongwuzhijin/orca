@@ -15169,5 +15169,33 @@
         "unknown": "Restart Orca to try again."
       }
     }
+  },
+  "statusBar": {
+    "translate": {
+      "label": "Traducir",
+      "ariaLabel": "Traducir texto",
+      "tooltip": "Traduce entre chino e inglés",
+      "title": "Traducir",
+      "menuItem": "Traducir",
+      "submit": "Traducir",
+      "placeholder": "Escribe o pega texto y pulsa Enter",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "auto": "Auto",
+      "directionHint": "Haz clic para cambiar la dirección; Auto la detecta según tu texto",
+      "fallbackNote": "Traducido por el servicio de respaldo",
+      "language": {
+        "en": "EN",
+        "zh": "中"
+      },
+      "error": {
+        "invalidInput": "Escribe el texto que quieres traducir.",
+        "tooLong": "El texto es demasiado largo para traducirlo.",
+        "offline": "No se pudo conectar con el servicio de traducción. Revisa tu conexión o proxy.",
+        "rateLimited": "Se agotó la cuota gratuita de traducción. Inténtalo más tarde.",
+        "timeout": "La solicitud de traducción superó el tiempo de espera.",
+        "providerError": "El servicio de traducción devolvió una respuesta inesperada."
+      }
+    }
   }
 }

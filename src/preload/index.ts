@@ -265,6 +265,7 @@ import type {
   SpeechModelState,
   SpeechTranscriptEvent
 } from '../shared/speech-types'
+import type { TranslationRequest, TranslationResponse } from '../shared/text-translation-types'
 import type { TelemetryConsentState } from '../shared/telemetry-consent-types'
 import type {
   PreflightRuntimeContext,
@@ -5191,6 +5192,10 @@ const api = {
       ipcRenderer.on('speech:error', listener)
       return () => ipcRenderer.removeListener('speech:error', listener)
     }
+  },
+  translation: {
+    translate: (request: TranslationRequest): Promise<TranslationResponse> =>
+      ipcRenderer.invoke('translation:translate', request)
   }
 }
 

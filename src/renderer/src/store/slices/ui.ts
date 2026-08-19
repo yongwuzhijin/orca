@@ -35,6 +35,10 @@ import {
   normalizeManualRepoOrder
 } from '../../../../shared/manual-repo-order'
 import { isTopLevelView } from '../../../../shared/top-level-view'
+import {
+  backfillDefaultOnStatusBarItems,
+  type StatusBarDefaultBackfillFlag
+} from '../../../../shared/status-bar-default-backfill'
 import { isReleaseChannel, type ReleaseChannel } from '../../../../shared/release-channel'
 import type { UsagePercentageDisplay } from '../../../../shared/usage-percentage-display'
 import {
@@ -280,12 +284,6 @@ function migrateStatusBarItems(items: readonly string[] | undefined): StatusBarI
   }
   return out as StatusBarItem[]
 }
-
-const DEFAULT_ON_PORTS_STATUS_BAR_ITEM: StatusBarItem = 'ports'
-const DEFAULT_ON_KIMI_STATUS_BAR_ITEM: StatusBarItem = 'kimi'
-const DEFAULT_ON_MINIMAX_STATUS_BAR_ITEM: StatusBarItem = 'minimax'
-const DEFAULT_ON_ANTIGRAVITY_STATUS_BAR_ITEM: StatusBarItem = 'antigravity'
-const DEFAULT_ON_GROK_STATUS_BAR_ITEM: StatusBarItem = 'grok'
 
 function normalizeHydratedVisibleWorkspaceHostIds(ui: PersistedUIState): VisibleWorkspaceHostIds {
   const visibleHostIds = normalizeVisibleExecutionHostIds(ui.visibleWorkspaceHostIds)
@@ -2487,44 +2485,17 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
       const petId = ui.petId ?? ui.sidekickId
       // Migration: one-shot old-'recent'→'smart' runs in main (_sortBySmartMigrated), not here, so a deliberate 'recent' choice survives restart.
       const sortBy = ui.sortBy
-      const migratedStatusBarItems = migrateStatusBarItems(ui.statusBarItems)
-      const statusBarItemsWithPorts =
-        ui._portsStatusBarDefaultAdded || migratedStatusBarItems.includes('ports')
-          ? migratedStatusBarItems
-          : [...migratedStatusBarItems, DEFAULT_ON_PORTS_STATUS_BAR_ITEM]
-      const statusBarItems =
-        ui._kimiStatusBarDefaultAdded || statusBarItemsWithPorts.includes('kimi')
-          ? statusBarItemsWithPorts
-          : [...statusBarItemsWithPorts, DEFAULT_ON_KIMI_STATUS_BAR_ITEM]
-      const statusBarItemsWithMiniMax =
-        ui._minimaxStatusBarDefaultAdded || statusBarItems.includes('minimax')
-          ? statusBarItems
-          : [...statusBarItems, DEFAULT_ON_MINIMAX_STATUS_BAR_ITEM]
-      const statusBarItemsWithAntigravity =
-        ui._antigravityStatusBarDefaultAdded || statusBarItemsWithMiniMax.includes('antigravity')
-          ? statusBarItemsWithMiniMax
-          : [...statusBarItemsWithMiniMax, DEFAULT_ON_ANTIGRAVITY_STATUS_BAR_ITEM]
-      const statusBarItemsWithGrok =
-        ui._grokStatusBarDefaultAdded || statusBarItemsWithAntigravity.includes('grok')
-          ? statusBarItemsWithAntigravity
-          : [...statusBarItemsWithAntigravity, DEFAULT_ON_GROK_STATUS_BAR_ITEM]
-      if (
-        (!ui._portsStatusBarDefaultAdded ||
-          !ui._kimiStatusBarDefaultAdded ||
-          !ui._minimaxStatusBarDefaultAdded ||
-          !ui._antigravityStatusBarDefaultAdded ||
-          !ui._grokStatusBarDefaultAdded) &&
-        typeof window !== 'undefined'
-      ) {
+      const statusBarBackfill = backfillDefaultOnStatusBarItems(
+        migrateStatusBarItems(ui.statusBarItems),
+        ui
+      )
+      if (statusBarBackfill.pendingFlags.length > 0 && typeof window !== 'undefined') {
+        const flagUpdates: Partial<Record<StatusBarDefaultBackfillFlag, true>> = {}
+        for (const flag of statusBarBackfill.pendingFlags) {
+          flagUpdates[flag] = true
+        }
         window.api.ui
-          .set({
-            statusBarItems: statusBarItemsWithGrok,
-            _portsStatusBarDefaultAdded: true,
-            _kimiStatusBarDefaultAdded: true,
-            _minimaxStatusBarDefaultAdded: true,
-            _antigravityStatusBarDefaultAdded: true,
-            _grokStatusBarDefaultAdded: true
-          })
+          .set({ statusBarItems: statusBarBackfill.items, ...flagUpdates })
           .catch(console.error)
       }
       const rightSidebarRoute = normalizeRightSidebarRoute(
@@ -2594,7 +2565,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
         workspaceBoardOpacity: clampWorkspaceBoardOpacity(ui.workspaceBoardOpacity),
         workspaceBoardColumnWidth: clampWorkspaceBoardColumnWidth(ui.workspaceBoardColumnWidth),
         syncTaskStatusFromWorkspaceBoard: ui.syncTaskStatusFromWorkspaceBoard === true,
-        statusBarItems: statusBarItemsWithGrok,
+        statusBarItems: statusBarBackfill.items,
         statusBarVisible: ui.statusBarVisible ?? true,
         usagePercentageDisplay: normalizeUsagePercentageDisplay(ui.usagePercentageDisplay),
         statusBarUsageMode: normalizeStatusBarUsageMode(ui.statusBarUsageMode),

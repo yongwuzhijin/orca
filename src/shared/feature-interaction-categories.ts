@@ -70,6 +70,7 @@ export const FEATURE_INTERACTION_CATEGORY_BY_ID = {
   'terminal-panes': 'terminal',
   'terminal-tabs': 'terminal',
   'tab-splits': 'terminal',
+  translate: 'notes',
   'usage-tracking': 'settings',
   'voice-dictation': 'voice',
   'workspace-cleanup': 'workspace'

@@ -49,6 +49,7 @@ export type FeatureInteractionId =
   | 'terminal-panes'
   | 'terminal-tabs'
   | 'tab-splits'
+  | 'translate'
   | 'usage-tracking'
   | 'voice-dictation'
   | 'workspace-cleanup'
@@ -154,6 +155,7 @@ export const FEATURE_INTERACTIONS = [
     interaction: 'workspace tab created, moved, reordered, pinned, renamed, recolored, or closed'
   },
   { id: 'tab-splits', interaction: 'workspace tab split into another pane' },
+  { id: 'translate', interaction: 'status bar translation popover opened' },
   {
     id: 'usage-tracking',
     interaction: 'Stats & Usage or provider usage details opened or configured'

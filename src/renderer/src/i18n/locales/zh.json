@@ -15189,5 +15189,33 @@
         "unknown": "请重启 Orca 以重试。"
       }
     }
+  },
+  "statusBar": {
+    "translate": {
+      "label": "翻译",
+      "ariaLabel": "翻译文本",
+      "tooltip": "中英文互译",
+      "title": "翻译",
+      "menuItem": "翻译",
+      "submit": "翻译",
+      "placeholder": "输入或粘贴文本，然后按 Enter",
+      "copy": "复制",
+      "copied": "已复制",
+      "auto": "自动",
+      "directionHint": "点击切换翻译方向；自动模式会根据文本判断",
+      "fallbackNote": "由备用翻译服务完成",
+      "language": {
+        "en": "EN",
+        "zh": "中"
+      },
+      "error": {
+        "invalidInput": "请输入要翻译的文本。",
+        "tooLong": "文本过长，无法翻译。",
+        "offline": "无法连接翻译服务，请检查网络或代理。",
+        "rateLimited": "免费翻译额度已用完，请稍后再试。",
+        "timeout": "翻译请求超时。",
+        "providerError": "翻译服务返回了异常结果。"
+      }
+    }
   }
 }

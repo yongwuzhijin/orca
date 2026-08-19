@@ -6,6 +6,7 @@ import {
   Plug,
   ChevronDown,
   ChevronRight,
+  Languages,
   Loader2,
   PanelsTopLeft,
   RefreshCw,
@@ -120,6 +121,9 @@ const ResourceUsageStatusSegment = lazyWithRetry(() =>
   import('./ResourceUsageStatusSegment').then((module) => ({
     default: module.ResourceUsageStatusSegment
   }))
+)
+const TranslateStatusSegment = lazyWithRetry(() =>
+  import('./TranslateStatusSegment').then((module) => ({ default: module.TranslateStatusSegment }))
 )
 const PortsStatusSegment = lazyWithRetry(() =>
   import('./PortsStatusSegment').then((module) => ({ default: module.PortsStatusSegment }))
@@ -2160,6 +2164,7 @@ function StatusBarInner({ floatingTerminalOpen }: StatusBarProps): React.JSX.Ele
   const showSsh = statusBarItems.includes('ssh')
   const showResourceUsage = statusBarItems.includes('resource-usage')
   const showPorts = statusBarItems.includes('ports')
+  const showTranslate = statusBarItems.includes('translate')
   const showFloatingTerminalToggle =
     floatingTerminalEnabled && floatingTerminalTriggerLocation === 'status-bar'
   // Why: meter-only children (excludes resource-usage) so the % display callout anchors to a real meter cluster.
@@ -2254,6 +2259,7 @@ function StatusBarInner({ floatingTerminalOpen }: StatusBarProps): React.JSX.Ele
       }}
     >
       <div className="flex items-center gap-3">
+        {showTranslate && <TranslateStatusSegment iconOnly={iconOnly} />}
         {isEmptyUsageState ? (
           showEmptyUsageCta ? (
             <StatusBarUsageEmptyCta />
@@ -2575,6 +2581,16 @@ function StatusBarInner({ floatingTerminalOpen }: StatusBarProps): React.JSX.Ele
           >
             <Plug className="size-3.5" />
             {translate('auto.components.status.bar.StatusBar.9659e38343', 'Ports')}
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem
+            checked={statusBarItems.includes('translate')}
+            onCheckedChange={() => {
+              recordFeatureInteraction('translate')
+              toggleStatusBarItem('translate')
+            }}
+          >
+            <Languages className="size-3.5" />
+            {translate('statusBar.translate.menuItem', 'Translate')}
           </DropdownMenuCheckboxItem>
         </DropdownMenuContent>
       </DropdownMenu>
