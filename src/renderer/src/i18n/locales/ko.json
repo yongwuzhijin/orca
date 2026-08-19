@@ -818,7 +818,11 @@
         "pluginsDescription": "실험적인 Orca 플러그인을 설치하고 관리합니다.",
         "tasksDescription": "제공업체를 연결하고 Linear 스킬을 설치한 다음 작업에 표시할 항목을 선택하세요.",
         "browserQuickLinks": "브라우저 바로가기 링크",
-        "browserQuickLinksDescription": "북마크 사이드바에 표시되는 전역 브라우저 바로가기이며 폴더로 정리할 수 있습니다."
+        "browserQuickLinksDescription": "북마크 사이드바에 표시되는 전역 브라우저 바로가기이며 폴더로 정리할 수 있습니다.",
+        "artifactsTitle": "Artifacts",
+        "artifactsDescription": "HTML 및 Markdown 파일을 팀과 공유하고 공개 링크를 관리합니다.",
+        "automationsTitle": "자동화",
+        "automationsDescription": "에이전트 작업을 예약하고 사이드바에 자동화를 표시할지 선택합니다."
       },
       "useAppMenuPaste": {
         "pasteTooLarge": "붙여넣기 내용이 너무 큽니다."
@@ -5908,22 +5912,6 @@
           "projectRuntime": "프로젝트 런타임",
           "projectRuntimeDescription": "별도로 재정의하지 않은 로컬 Windows 프로젝트의 기본 런타임입니다."
         },
-        "GeneralSupportSection": {
-          "af7d9f4396": "지원해 주셔서 감사합니다!",
-          "6922c1fa2b": "GitHub에서 Orca 스타 누르기",
-          "511782265b": "gh CLI를 통해 GitHub 스타로 프로젝트를 지원하세요.",
-          "55a87e5fd1": "Orca 지원",
-          "964acc6bb4": "스타",
-          "73b327e793": "다시 시도",
-          "c9f96d4234": "오류",
-          "397719bee5": "스타 표시 중...",
-          "1e29570462": "스타 표시",
-          "9d181300e3": "별표가 붙은",
-          "5c49f02662": "숨겨진",
-          "b3f0584f5d": "로드 중",
-          "cb65c75b11": "여는 중...",
-          "f2d4f877b2": "GitHub 열기"
-        },
         "GeneralUpdateSettingsSection": {
           "8a52ca1d02": "릴리스 노트",
           "d89806cc89": "설치할 준비가 되었습니다.",
@@ -8141,13 +8129,6 @@
         },
         "general": {
           "search": {
-            "bdfb6dc21b": "좋아요",
-            "e6b01c8e30": "피드백",
-            "b65665703a": "지원",
-            "06ea5a69a6": "GitHub",
-            "e4fb4516d0": "스타",
-            "e0b8c8bc25": "gh CLI를 통해 GitHub 스타로 프로젝트를 지원하세요.",
-            "36a72f0d9e": "GitHub에서 Orca에 스타 주기",
             "c61b14be7c": "그로크",
             "5d9ba08673": "Copilot",
             "f472e97440": "aider",
@@ -10206,6 +10187,57 @@
           "newFolderTitle": "새 폴더",
           "folderNameLabel": "이름",
           "urlPlaceholder": "https://example.com"
+        },
+        "automations": {
+          "showButton": "자동화 버튼 표시",
+          "showButtonDescription": "사이드바에 자동화 바로가기를 표시합니다.",
+          "howItWorksTitle": "자동화 작동 방식",
+          "howItWorksDescription": "에이전트 작업을 한 번만 예약하면 Orca가 각 실행을 생성하고 결과를 함께 보관합니다.",
+          "defineStepTitle": "작업 설명하기",
+          "defineStepDescription": "프로젝트, 에이전트, 프롬프트, 일정을 선택합니다.",
+          "runStepTitle": "Orca가 각 실행을 시작합니다",
+          "runStepDescription": "예약 시간이 되면 선택한 에이전트에 새 워크스페이스가 제공됩니다.",
+          "reviewStepTitle": "결과 검토하기",
+          "reviewStepDescription": "최근 실행을 확인하고 필요할 때 언제든 작업을 이어갈 수 있습니다.",
+          "openAutomations": "자동화 열기",
+          "openAutomationsDescription": "일정을 만들고 최근 실행을 확인합니다.",
+          "title": "자동화",
+          "description": "에이전트 작업을 예약하고 사이드바에 자동화를 표시할지 선택합니다."
+        },
+        "artifacts": {
+          "enable": "Artifacts 사용",
+          "enableDescription": "공유된 파일을 열고 삭제할 수 있도록 사이드바에 Artifacts를 추가합니다.",
+          "account": "Orca 계정",
+          "connected": "연결됨",
+          "signInRequired": "Artifacts를 업로드하고 관리하려면 로그인이 필요합니다.",
+          "signingIn": "로그인 중…",
+          "signIn": "Orca에 로그인",
+          "title": "Artifacts",
+          "description": "HTML 및 Markdown 파일을 팀과 공유하고 공개 링크를 관리합니다.",
+          "howToTitle": "Artifacts 사용 방법",
+          "howToDescription": "HTML 또는 Markdown 파일을 공개 링크로 게시한 뒤 팀과 공유합니다.",
+          "shareStepTitle": "공유할 파일 선택",
+          "shareStepDescription": "HTML 또는 Markdown 파일을 열고 아티팩트로 공유를 선택하거나, 에이전트에게 공유를 요청합니다.",
+          "linkStepTitle": "공개 링크 복사",
+          "linkStepDescription": "게시한 후 링크를 복사해 팀에 보냅니다.",
+          "manageStepTitle": "Orca에서 관리",
+          "manageStepDescription": "사이드바에서 Artifacts를 열어 링크를 미리 보거나 삭제합니다.",
+          "openArtifacts": "Artifacts 열기",
+          "openArtifactsDescription": "계정을 통해 공유한 링크를 보고 삭제합니다.",
+          "showButton": "Artifacts 버튼 표시",
+          "showButtonDescription": "사이드바에 Artifacts 바로가기를 표시합니다.",
+          "openArtifactsDescriptionV2": "계정을 통해 공유한 링크를 미리 보고, 복사하고, 관리합니다.",
+          "signInTitle": "로그인하여 Artifacts 공유",
+          "signInDescription": "Orca 계정으로 Artifacts를 업로드하고 공개 링크를 관리합니다.",
+          "signInAgain": "다시 로그인",
+          "enableStepTitle": "아티팩트 공유 사용",
+          "enableStepWebDescription": "호스트 기기의 Orca 데스크톱 앱에서 설정 → Artifacts를 열고 게시를 사용하도록 설정합니다.",
+          "enableStepDescription": "위의 \"공개 아티팩트 링크 게시 허용\"을 켭니다.",
+          "allowPublishing": "공개 아티팩트 링크 게시 허용",
+          "allowPublishingWebDescription": "데스크톱 전용입니다. 이 설정을 변경하려면 호스트 기기에서 설정 → Artifacts를 여세요.",
+          "allowPublishingDescription": "HTML 및 Markdown 파일을 URL이 있는 누구나 열 수 있는 링크로 게시합니다. 기존 링크는 Artifacts에서 삭제할 때까지 유지됩니다.",
+          "howToDescriptionDisabled": "HTML 또는 Markdown 파일을 공개 링크로 게시하려면 위에서 아티팩트 공유를 사용하도록 설정하세요.",
+          "allowPublishingSearchDescription": "Orca가 HTML 및 Markdown 파일을 공개 링크로 게시할 수 있도록 허용합니다."
         }
       },
       "right": {

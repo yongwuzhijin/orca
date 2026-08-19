@@ -818,7 +818,11 @@
         "pluginsDescription": "Instala y administra plugins experimentales de Orca.",
         "tasksDescription": "Conecta proveedores, instala la habilidad de Linear y elige qué aparece en Tareas.",
         "browserQuickLinks": "Enlaces rápidos del navegador",
-        "browserQuickLinksDescription": "Accesos directos globales del navegador que se muestran en la barra lateral de marcadores, organizados en carpetas."
+        "browserQuickLinksDescription": "Accesos directos globales del navegador que se muestran en la barra lateral de marcadores, organizados en carpetas.",
+        "artifactsTitle": "Artifacts",
+        "artifactsDescription": "Comparte archivos HTML y Markdown con tu equipo y gestiona sus enlaces públicos.",
+        "automationsTitle": "Automatizaciones",
+        "automationsDescription": "Programa el trabajo del agente y elige si Automatizaciones aparece en la barra lateral."
       },
       "useAppMenuPaste": {
         "pasteTooLarge": "El contenido pegado es demasiado grande."
@@ -5923,22 +5927,6 @@
           "projectRuntime": "Runtime del proyecto",
           "projectRuntimeDescription": "Runtime predeterminado para proyectos locales de Windows que no lo sobrescriben."
         },
-        "GeneralSupportSection": {
-          "af7d9f4396": "¡Gracias por el apoyo!",
-          "6922c1fa2b": "Dale una estrella a Orca en GitHub",
-          "511782265b": "Apoya el proyecto con una estrella de GitHub mediante la CLI gh.",
-          "55a87e5fd1": "Apoya a Orca",
-          "964acc6bb4": "Dar una estrella",
-          "73b327e793": "Intentar otra vez",
-          "c9f96d4234": "error",
-          "397719bee5": "Dando una estrella...",
-          "1e29570462": "dando estrella",
-          "9d181300e3": "con estrella",
-          "5c49f02662": "oculto",
-          "b3f0584f5d": "cargando",
-          "cb65c75b11": "Abriendo...",
-          "f2d4f877b2": "Abrir GitHub"
-        },
         "GeneralUpdateSettingsSection": {
           "8a52ca1d02": "Notas de la versión",
           "d89806cc89": "está listo para instalar.",
@@ -8156,13 +8144,6 @@
         },
         "general": {
           "search": {
-            "bdfb6dc21b": "me gusta",
-            "e6b01c8e30": "comentarios",
-            "b65665703a": "soporte",
-            "06ea5a69a6": "github",
-            "e4fb4516d0": "estrella",
-            "e0b8c8bc25": "Apoya el proyecto con una estrella de GitHub mediante la CLI gh.",
-            "36a72f0d9e": "Dar una estrella a Orca en GitHub",
             "c61b14be7c": "grok",
             "5d9ba08673": "copiloto",
             "f472e97440": "aider",
@@ -10206,6 +10187,57 @@
           "newFolderTitle": "Nueva carpeta",
           "folderNameLabel": "Nombre",
           "urlPlaceholder": "https://example.com"
+        },
+        "automations": {
+          "showButton": "Mostrar botón de Automatizaciones",
+          "showButtonDescription": "Muestra el acceso directo a Automatizaciones en la barra lateral.",
+          "howItWorksTitle": "Cómo funcionan las Automatizaciones",
+          "howItWorksDescription": "Programa el trabajo del agente una vez y deja que Orca cree cada ejecución y mantenga juntos sus resultados.",
+          "defineStepTitle": "Describe el trabajo",
+          "defineStepDescription": "Elige un proyecto, un agente, un prompt y una programación.",
+          "runStepTitle": "Orca inicia cada ejecución",
+          "runStepDescription": "El agente seleccionado recibe un espacio de trabajo nuevo cuando llega el momento programado.",
+          "reviewStepTitle": "Revisa los resultados",
+          "reviewStepDescription": "Inspecciona las ejecuciones recientes y continúa el trabajo cuando lo necesites.",
+          "openAutomations": "Abrir Automatizaciones",
+          "openAutomationsDescription": "Crea programaciones e inspecciona las ejecuciones recientes.",
+          "title": "Automatizaciones",
+          "description": "Programa el trabajo del agente y elige si Automatizaciones aparece en la barra lateral."
+        },
+        "artifacts": {
+          "enable": "Habilitar Artifacts",
+          "enableDescription": "Añade Artifacts a la barra lateral para poder abrir y eliminar archivos compartidos.",
+          "account": "Cuenta de Orca",
+          "connected": "Conectado",
+          "signInRequired": "Debes iniciar sesión para subir y gestionar Artifacts.",
+          "signingIn": "Iniciando sesión…",
+          "signIn": "Iniciar sesión en Orca",
+          "title": "Artifacts",
+          "description": "Comparte archivos HTML y Markdown con tu equipo y gestiona sus enlaces públicos.",
+          "howToTitle": "Cómo usar Artifacts",
+          "howToDescription": "Publica archivos HTML o Markdown como enlaces públicos y compártelos con tu equipo.",
+          "shareStepTitle": "Elige un archivo para compartir",
+          "shareStepDescription": "Abre un archivo HTML o Markdown y selecciona Compartir como artefacto, o pide a un agente que lo comparta.",
+          "linkStepTitle": "Copia el enlace público",
+          "linkStepDescription": "Después de publicar, copia el enlace y envíalo a tu equipo.",
+          "manageStepTitle": "Gestiónalo en Orca",
+          "manageStepDescription": "Abre Artifacts desde la barra lateral para previsualizar o eliminar enlaces.",
+          "openArtifacts": "Abrir Artifacts",
+          "openArtifactsDescription": "Consulta y elimina los enlaces compartidos desde tu cuenta.",
+          "showButton": "Mostrar botón de Artifacts",
+          "showButtonDescription": "Muestra el acceso directo a Artifacts en la barra lateral.",
+          "openArtifactsDescriptionV2": "Previsualiza, copia y gestiona los enlaces compartidos desde tu cuenta.",
+          "signInTitle": "Inicia sesión para compartir artefactos",
+          "signInDescription": "Usa tu cuenta de Orca para subir artefactos y gestionar sus enlaces públicos.",
+          "signInAgain": "Iniciar sesión de nuevo",
+          "enableStepTitle": "Habilita el uso compartido de artefactos",
+          "enableStepWebDescription": "Abre Ajustes → Artifacts en la app de escritorio de Orca del dispositivo anfitrión y habilita la publicación.",
+          "enableStepDescription": "Activa «Permitir publicar enlaces públicos de artefactos» más arriba.",
+          "allowPublishing": "Permitir publicar enlaces públicos de artefactos",
+          "allowPublishingWebDescription": "Solo escritorio. Abre Ajustes → Artifacts en el dispositivo anfitrión para cambiar este ajuste.",
+          "allowPublishingDescription": "Publica archivos HTML y Markdown como enlaces que cualquier persona con la URL puede abrir. Los enlaces existentes se mantienen hasta que los elimines desde Artifacts.",
+          "howToDescriptionDisabled": "Habilita el uso compartido de artefactos más arriba para publicar archivos HTML o Markdown como enlaces públicos.",
+          "allowPublishingSearchDescription": "Permite que Orca publique archivos HTML y Markdown como enlaces públicos."
         }
       },
       "right": {

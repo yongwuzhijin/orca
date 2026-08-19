@@ -818,7 +818,11 @@
         "pluginsDescription": "安装和管理实验性 Orca 插件。",
         "tasksDescription": "连接提供商、安装 Linear 技能并选择要在任务中显示的内容。",
         "browserQuickLinks": "浏览器快捷方式",
-        "browserQuickLinksDescription": "显示在书签侧边栏中的全局浏览器快捷方式，可按文件夹整理。"
+        "browserQuickLinksDescription": "显示在书签侧边栏中的全局浏览器快捷方式，可按文件夹整理。",
+        "artifactsTitle": "Artifacts",
+        "artifactsDescription": "与团队共享 HTML 和 Markdown 文件，并管理它们的公开链接。",
+        "automationsTitle": "自动化",
+        "automationsDescription": "排定 Agent 任务，并选择是否在侧边栏中显示自动化。"
       },
       "useAppMenuPaste": {
         "pasteTooLarge": "粘贴内容过大。"
@@ -5920,22 +5924,6 @@
           "projectRuntime": "项目运行时",
           "projectRuntimeDescription": "不覆盖此项的本地 Windows 项目的默认运行时。"
         },
-        "GeneralSupportSection": {
-          "af7d9f4396": "感谢您的支持！",
-          "6922c1fa2b": "GitHub 上的 Star Orca",
-          "511782265b": "通过 gh CLI 通过 GitHub star 支持该项目。",
-          "55a87e5fd1": "支持 Orca",
-          "964acc6bb4": "加星标",
-          "73b327e793": "重试",
-          "c9f96d4234": "错误",
-          "397719bee5": "正在加星标...",
-          "1e29570462": "正在加星标",
-          "9d181300e3": "已加星标",
-          "5c49f02662": "隐",
-          "b3f0584f5d": "加载中",
-          "cb65c75b11": "正在打开...",
-          "f2d4f877b2": "打开 GitHub"
-        },
         "GeneralUpdateSettingsSection": {
           "8a52ca1d02": "发行说明",
           "d89806cc89": "已准备好安装。",
@@ -8153,13 +8141,6 @@
         },
         "general": {
           "search": {
-            "bdfb6dc21b": "喜欢",
-            "e6b01c8e30": "反馈",
-            "b65665703a": "支持",
-            "06ea5a69a6": "GitHub",
-            "e4fb4516d0": "星星",
-            "e0b8c8bc25": "点赞 GitHub star 支持该项目（通过 gh CLI ",
-            "36a72f0d9e": "GitHub 上的 Star Orca",
             "c61b14be7c": "grok",
             "5d9ba08673": "copilot",
             "f472e97440": "助手",
@@ -10226,6 +10207,57 @@
           "newFolderTitle": "新建文件夹",
           "folderNameLabel": "名称",
           "urlPlaceholder": "https://example.com"
+        },
+        "automations": {
+          "showButton": "显示自动化按钮",
+          "showButtonDescription": "在侧边栏中显示自动化快捷入口。",
+          "howItWorksTitle": "自动化的工作方式",
+          "howItWorksDescription": "只需排定一次 Agent 任务，之后由 Orca 创建每次运行并集中保存结果。",
+          "defineStepTitle": "描述任务",
+          "defineStepDescription": "选择项目、Agent、提示词和调度计划。",
+          "runStepTitle": "Orca 启动每次运行",
+          "runStepDescription": "到达计划时间时，所选 Agent 会获得一个全新的工作区。",
+          "reviewStepTitle": "查看结果",
+          "reviewStepDescription": "检查最近的运行记录，并随时继续未完成的工作。",
+          "openAutomations": "打开自动化",
+          "openAutomationsDescription": "创建调度计划并查看最近的运行记录。",
+          "title": "自动化",
+          "description": "排定 Agent 任务，并选择是否在侧边栏中显示自动化。"
+        },
+        "artifacts": {
+          "enable": "启用 Artifacts",
+          "enableDescription": "将 Artifacts 添加到侧边栏，以便打开和删除已共享的文件。",
+          "account": "Orca 账号",
+          "connected": "已连接",
+          "signInRequired": "需要登录后才能上传和管理 Artifacts。",
+          "signingIn": "正在登录…",
+          "signIn": "登录 Orca",
+          "title": "Artifacts",
+          "description": "与团队共享 HTML 和 Markdown 文件，并管理它们的公开链接。",
+          "howToTitle": "如何使用 Artifacts",
+          "howToDescription": "将 HTML 或 Markdown 文件发布为公开链接，然后分享给团队。",
+          "shareStepTitle": "选择要共享的文件",
+          "shareStepDescription": "打开 HTML 或 Markdown 文件并选择“共享为 Artifact”，也可以让 Agent 帮你共享。",
+          "linkStepTitle": "复制公开链接",
+          "linkStepDescription": "发布后复制链接并发送给团队。",
+          "manageStepTitle": "在 Orca 中管理",
+          "manageStepDescription": "从侧边栏打开 Artifacts，即可预览或移除链接。",
+          "openArtifacts": "打开 Artifacts",
+          "openArtifactsDescription": "查看并删除通过你的账号共享的链接。",
+          "showButton": "显示 Artifacts 按钮",
+          "showButtonDescription": "在侧边栏中显示 Artifacts 快捷入口。",
+          "openArtifactsDescriptionV2": "预览、复制并管理通过你的账号共享的链接。",
+          "signInTitle": "登录后共享 Artifacts",
+          "signInDescription": "使用你的 Orca 账号上传 Artifacts 并管理它们的公开链接。",
+          "signInAgain": "重新登录",
+          "enableStepTitle": "启用 Artifacts 共享",
+          "enableStepWebDescription": "在宿主设备的 Orca 桌面端打开“设置 → Artifacts”并启用发布。",
+          "enableStepDescription": "打开上方的“允许发布公开 Artifact 链接”。",
+          "allowPublishing": "允许发布公开 Artifact 链接",
+          "allowPublishingWebDescription": "仅桌面端可用。请在宿主设备上打开“设置 → Artifacts”修改此设置。",
+          "allowPublishingDescription": "将 HTML 和 Markdown 文件发布为任何拿到链接的人都能打开的链接。已有链接会一直保留，直到你在 Artifacts 中删除它们。",
+          "howToDescriptionDisabled": "请先在上方启用 Artifacts 共享，才能将 HTML 或 Markdown 文件发布为公开链接。",
+          "allowPublishingSearchDescription": "允许 Orca 将 HTML 和 Markdown 文件发布为公开链接。"
         }
       },
       "right": {
