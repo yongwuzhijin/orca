@@ -1,15 +1,26 @@
 import {
   TRANSLATION_INPUT_MAX_LENGTH,
+  type TranslationDictionaryEntry,
   type TranslationDirectionPreference,
   type TranslationFailureKind,
-  type TranslationLanguage
+  type TranslationLanguage,
+  type TranslationProviderId
 } from '../../../../shared/text-translation-types'
+
+export type TranslateResult = {
+  translatedText: string
+  dictionaryEntries: TranslationDictionaryEntry[]
+  /** Differs from the typed text only when case normalization kicked in. */
+  queriedText: string
+  providerId: TranslationProviderId
+  agentLabel?: string
+}
 
 export type TranslatePopoverStatus =
   | { phase: 'idle' }
-  | { phase: 'translating' }
-  | { phase: 'success'; translatedText: string; usedFallbackProvider: boolean }
-  | { phase: 'error'; kind: TranslationFailureKind }
+  | { phase: 'translating'; usedAi: boolean }
+  | { phase: 'success'; result: TranslateResult }
+  | { phase: 'error'; kind: TranslationFailureKind; detail?: string }
 
 const PREFERENCE_CYCLE: TranslationDirectionPreference[] = ['auto', 'zh-CN', 'en']
 

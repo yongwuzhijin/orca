@@ -24,5 +24,10 @@ export function describeTranslationFailure(kind: TranslationFailureKind): string
         'statusBar.translate.error.providerError',
         'The translation service returned an unexpected response.'
       )
+    case 'ai-unavailable':
+      return translate(
+        'statusBar.translate.error.aiUnavailable',
+        'The AI agent could not translate this.'
+      )
   }
 }

@@ -16909,6 +16909,25 @@
       "auto": "Auto",
       "directionHint": "Click to switch direction; Auto detects it from your text",
       "fallbackNote": "Translated by the backup service",
+      "agentNote": "Translated by {agent}",
+      "agentFallbackName": "the AI agent",
+      "normalizedNote": "Looked up as “{query}”",
+      "ai": "AI",
+      "aiHint": "Use your configured AI agent instead of the free service",
+      "cancel": "Cancel",
+      "useFreeInstead": "Use the quick translation",
+      "partOfSpeech": {
+        "noun": "n.",
+        "verb": "v.",
+        "adjective": "adj.",
+        "adverb": "adv.",
+        "preposition": "prep.",
+        "conjunction": "conj.",
+        "pronoun": "pron.",
+        "interjection": "interj.",
+        "abbreviation": "abbr.",
+        "numeral": "num."
+      },
       "language": {
         "en": "EN",
         "zh": "中"
@@ -16919,7 +16938,8 @@
         "offline": "Could not reach the translation service. Check your connection or proxy.",
         "rateLimited": "The free translation quota is used up. Try again later.",
         "timeout": "The translation request timed out.",
-        "providerError": "The translation service returned an unexpected response."
+        "providerError": "The translation service returned an unexpected response.",
+        "aiUnavailable": "The AI agent could not translate this."
       }
     }
   }

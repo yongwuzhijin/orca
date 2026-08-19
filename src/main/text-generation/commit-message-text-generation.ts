@@ -104,7 +104,11 @@ export type RemoteCommitMessageExecResult = {
   spawnError?: string
 }
 
-export type TextGenerationOperation = 'commit-message' | 'pull-request-fields' | 'branch-name'
+export type TextGenerationOperation =
+  | 'commit-message'
+  | 'pull-request-fields'
+  | 'branch-name'
+  | 'translation'
 
 export type CommitMessageGenerationTarget =
   | { kind: 'local'; cwd: string; env?: NodeJS.ProcessEnv; wslDistro?: string }
@@ -124,7 +128,7 @@ type ResolveCommitMessageSettingsResult =
   | { ok: true; params: GenerateCommitMessageParams }
   | { ok: false; error: string }
 
-type InternalTextGenerationResult =
+export type InternalTextGenerationResult =
   | { success: true; rawOutput: string; agentLabel?: string }
   | {
       success: false
@@ -848,9 +852,9 @@ export function commandBackslashMode(
   return platform === 'win32' && target.kind === 'local' && !target.wslDistro ? 'literal' : 'escape'
 }
 
-type LocalGenerationTarget = Extract<CommitMessageGenerationTarget, { kind: 'local' }>
+export type LocalGenerationTarget = Extract<CommitMessageGenerationTarget, { kind: 'local' }>
 
-function runLocalPlanForAgent(
+export function runLocalPlanForAgent(
   agentId: string,
   plan: CommitMessagePlan,
   target: LocalGenerationTarget,
@@ -1149,6 +1153,10 @@ export async function generateCommitMessageFromContext(
 
 export function cancelGeneratePullRequestFieldsLocal(cwd: string): void {
   cancelTokensByLane.get(localLaneKey('pull-request-fields', cwd))?.()
+}
+
+export function cancelGenerateTranslationLocal(cwd: string): void {
+  cancelTokensByLane.get(localLaneKey('translation', cwd))?.()
 }
 
 function formatPullRequestFieldsGenerationResult(

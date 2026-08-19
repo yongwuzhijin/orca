@@ -13,7 +13,8 @@ function stubProvider(
 const SUCCESS: TranslationProviderResult = {
   ok: true,
   translatedText: '缓存很冷。',
-  detectedSourceLanguage: 'en'
+  detectedSourceLanguage: 'en',
+  dictionaryEntries: []
 }
 
 const noFetch = (() => {
@@ -34,7 +35,9 @@ describe('translateText', () => {
       translatedText: '缓存很冷。',
       targetLanguage: 'zh-CN',
       detectedSourceLanguage: 'en',
-      providerId: 'google-gtx'
+      providerId: 'google-gtx',
+      dictionaryEntries: [],
+      queriedText: 'The cache was cold.'
     })
     expect(fallback.translate).not.toHaveBeenCalled()
   })
@@ -52,8 +55,35 @@ describe('translateText', () => {
       translatedText: '缓存很冷。',
       targetLanguage: 'zh-CN',
       detectedSourceLanguage: null,
-      providerId: 'mymemory'
+      providerId: 'mymemory',
+      dictionaryEntries: [],
+      queriedText: 'The cache was cold.'
     })
+  })
+
+  it('passes the dictionary senses through untouched', async () => {
+    const entries = [{ partOfSpeech: 'noun', terms: ['依赖他人者'] }]
+    const primary = stubProvider('google-gtx', { ...SUCCESS, dictionaryEntries: entries })
+    await expect(
+      translateText(
+        { text: 'dependent', preference: 'auto' },
+        { providers: [primary], fetchImpl: noFetch }
+      )
+    ).resolves.toMatchObject({ ok: true, dictionaryEntries: entries })
+  })
+
+  it('lowercases a shouted word and reports what it actually queried', async () => {
+    const primary = stubProvider('google-gtx', SUCCESS)
+    await expect(
+      translateText(
+        { text: 'DEPENDENT', preference: 'auto' },
+        { providers: [primary], fetchImpl: noFetch }
+      )
+    ).resolves.toMatchObject({ ok: true, queriedText: 'dependent' })
+    expect(primary.translate).toHaveBeenCalledWith(
+      { text: 'dependent', target: 'zh-CN', source: 'en' },
+      noFetch
+    )
   })
 
   it('surfaces the primary failure when every provider fails', async () => {

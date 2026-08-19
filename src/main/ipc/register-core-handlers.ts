@@ -241,7 +241,7 @@ export function registerCoreHandlers(
   registerClipboardHandlers(store)
   registerUpdaterHandlers(store)
   registerSpeechHandlers(store)
-  registerTextTranslationHandlers()
+  registerTextTranslationHandlers({ getSettings: () => store.getSettings() })
   registerTodoHandlers(runtime.getTodoRepository())
   const acpKernel = runtime.getAcpKernel()
   registerAcpHandlers({

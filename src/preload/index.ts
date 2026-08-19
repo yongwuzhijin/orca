@@ -5195,7 +5195,10 @@ const api = {
   },
   translation: {
     translate: (request: TranslationRequest): Promise<TranslationResponse> =>
-      ipcRenderer.invoke('translation:translate', request)
+      ipcRenderer.invoke('translation:translate', request),
+    translateWithAi: (request: TranslationRequest): Promise<TranslationResponse> =>
+      ipcRenderer.invoke('translation:translateWithAi', request),
+    cancelAi: (): Promise<void> => ipcRenderer.invoke('translation:cancelAi')
   }
 }
 

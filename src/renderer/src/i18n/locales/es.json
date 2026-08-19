@@ -15184,6 +15184,25 @@
       "auto": "Auto",
       "directionHint": "Haz clic para cambiar la dirección; Auto la detecta según tu texto",
       "fallbackNote": "Traducido por el servicio de respaldo",
+      "agentNote": "Traducido por {agent}",
+      "agentFallbackName": "el agente de IA",
+      "normalizedNote": "Consultado como «{query}»",
+      "ai": "AI",
+      "aiHint": "Usa tu agente de IA configurado en lugar del servicio gratuito",
+      "cancel": "Cancelar",
+      "useFreeInstead": "Usar la traducción rápida",
+      "partOfSpeech": {
+        "noun": "s.",
+        "verb": "v.",
+        "adjective": "adj.",
+        "adverb": "adv.",
+        "preposition": "prep.",
+        "conjunction": "conj.",
+        "pronoun": "pron.",
+        "interjection": "interj.",
+        "abbreviation": "abrev.",
+        "numeral": "num."
+      },
       "language": {
         "en": "EN",
         "zh": "中"
@@ -15194,7 +15213,8 @@
         "offline": "No se pudo conectar con el servicio de traducción. Revisa tu conexión o proxy.",
         "rateLimited": "Se agotó la cuota gratuita de traducción. Inténtalo más tarde.",
         "timeout": "La solicitud de traducción superó el tiempo de espera.",
-        "providerError": "El servicio de traducción devolvió una respuesta inesperada."
+        "providerError": "El servicio de traducción devolvió una respuesta inesperada.",
+        "aiUnavailable": "El agente de IA no pudo traducir esto."
       }
     }
   }

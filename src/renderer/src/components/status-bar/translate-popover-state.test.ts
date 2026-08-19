@@ -26,15 +26,20 @@ describe('canSubmitTranslation', () => {
   })
 
   it('blocks a second submit while one is in flight', () => {
-    expect(canSubmitTranslation('hello', { phase: 'translating' })).toBe(false)
+    expect(canSubmitTranslation('hello', { phase: 'translating', usedAi: false })).toBe(false)
+    expect(canSubmitTranslation('hello', { phase: 'translating', usedAi: true })).toBe(false)
   })
 
   it('allows resubmitting after success or failure', () => {
     expect(
       canSubmitTranslation('hello', {
         phase: 'success',
-        translatedText: '你好',
-        usedFallbackProvider: false
+        result: {
+          translatedText: '你好',
+          dictionaryEntries: [],
+          queriedText: 'hello',
+          providerId: 'google-gtx'
+        }
       })
     ).toBe(true)
     expect(canSubmitTranslation('hello', { phase: 'error', kind: 'offline' })).toBe(true)

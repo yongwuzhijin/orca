@@ -40,6 +40,12 @@ export const myMemoryProvider: TranslationProvider = {
     if (!parsed.ok) {
       return { ok: false, kind: parsed.kind }
     }
-    return { ok: true, translatedText: parsed.translatedText, detectedSourceLanguage: source }
+    // MyMemory has no dictionary concept, so a fallback shows a plain gloss.
+    return {
+      ok: true,
+      translatedText: parsed.translatedText,
+      detectedSourceLanguage: source,
+      dictionaryEntries: []
+    }
   }
 }

@@ -15184,6 +15184,25 @@
       "auto": "自動",
       "directionHint": "クリックで翻訳方向を切り替えます。自動ではテキストから判定します",
       "fallbackNote": "バックアップの翻訳サービスで翻訳しました",
+      "agentNote": "{agent} が翻訳しました",
+      "agentFallbackName": "AI Agent",
+      "normalizedNote": "「{query}」として検索しました",
+      "ai": "AI",
+      "aiHint": "無料サービスの代わりに設定済みの AI Agent を使います",
+      "cancel": "キャンセル",
+      "useFreeInstead": "クイック翻訳に切り替える",
+      "partOfSpeech": {
+        "noun": "名",
+        "verb": "動",
+        "adjective": "形",
+        "adverb": "副",
+        "preposition": "前",
+        "conjunction": "接",
+        "pronoun": "代",
+        "interjection": "間",
+        "abbreviation": "略",
+        "numeral": "数"
+      },
       "language": {
         "en": "EN",
         "zh": "中"
@@ -15194,7 +15213,8 @@
         "offline": "翻訳サービスに接続できません。ネットワークまたはプロキシを確認してください。",
         "rateLimited": "無料の翻訳枠を使い切りました。しばらくしてからお試しください。",
         "timeout": "翻訳リクエストがタイムアウトしました。",
-        "providerError": "翻訳サービスが予期しない応答を返しました。"
+        "providerError": "翻訳サービスが予期しない応答を返しました。",
+        "aiUnavailable": "AI Agent は翻訳できませんでした。"
       }
     }
   }

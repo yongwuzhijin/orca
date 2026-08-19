@@ -1,4 +1,5 @@
 import type {
+  TranslationDictionaryEntry,
   TranslationFailureKind,
   TranslationLanguage,
   TranslationProviderId
@@ -24,7 +25,12 @@ export type TranslationProviderInput = {
 }
 
 export type TranslationProviderResult =
-  | { ok: true; translatedText: string; detectedSourceLanguage: string | null }
+  | {
+      ok: true
+      translatedText: string
+      detectedSourceLanguage: string | null
+      dictionaryEntries: TranslationDictionaryEntry[]
+    }
   | { ok: false; kind: TranslationFailureKind }
 
 export type TranslationProvider = {

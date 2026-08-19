@@ -15195,6 +15195,25 @@
       "auto": "자동",
       "directionHint": "클릭하여 번역 방향을 바꿉니다. 자동은 텍스트로 판별합니다",
       "fallbackNote": "예비 번역 서비스로 번역했습니다",
+      "agentNote": "{agent}이(가) 번역했습니다",
+      "agentFallbackName": "AI 에이전트",
+      "normalizedNote": "“{query}”(으)로 조회했습니다",
+      "ai": "AI",
+      "aiHint": "무료 서비스 대신 설정된 AI 에이전트를 사용합니다",
+      "cancel": "취소",
+      "useFreeInstead": "빠른 번역으로 전환",
+      "partOfSpeech": {
+        "noun": "명.",
+        "verb": "동.",
+        "adjective": "형.",
+        "adverb": "부.",
+        "preposition": "전.",
+        "conjunction": "접.",
+        "pronoun": "대.",
+        "interjection": "감.",
+        "abbreviation": "약.",
+        "numeral": "수."
+      },
       "language": {
         "en": "EN",
         "zh": "中"
@@ -15205,7 +15224,8 @@
         "offline": "번역 서비스에 연결할 수 없습니다. 네트워크 또는 프록시를 확인하세요.",
         "rateLimited": "무료 번역 할당량을 모두 사용했습니다. 잠시 후 다시 시도하세요.",
         "timeout": "번역 요청이 시간을 초과했습니다.",
-        "providerError": "번역 서비스가 예기치 않은 응답을 반환했습니다."
+        "providerError": "번역 서비스가 예기치 않은 응답을 반환했습니다.",
+        "aiUnavailable": "AI 에이전트가 번역하지 못했습니다."
       }
     }
   }

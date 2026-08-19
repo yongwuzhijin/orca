@@ -12,7 +12,8 @@ export const googleGtxProvider: TranslationProvider = {
   id: 'google-gtx',
   translate: async ({ text, target }, fetchImpl) => {
     // sl=auto so the provider reports the source instead of trusting our CJK guess.
-    const url = `${ENDPOINT}?client=gtx&sl=auto&tl=${encodeURIComponent(target)}&dt=t&q=${encodeURIComponent(text)}`
+    // dt=bd adds the dictionary block; it costs nothing and is null for sentences.
+    const url = `${ENDPOINT}?client=gtx&sl=auto&tl=${encodeURIComponent(target)}&dt=t&dt=bd&q=${encodeURIComponent(text)}`
     let body: string
     let status: number
     let ok: boolean

@@ -5,6 +5,7 @@ import {
 } from '../../shared/text-translation-types'
 import { googleGtxProvider } from './google-gtx-provider'
 import { myMemoryProvider } from './mymemory-provider'
+import { normalizeTranslationQuery } from '../../shared/translation-query-normalization'
 import {
   resolveTranslationSourceLanguage,
   resolveTranslationTargetLanguage
@@ -17,13 +18,14 @@ export async function translateText(
   request: TranslationRequest,
   deps: { fetchImpl: TranslationFetch; providers?: TranslationProvider[] }
 ): Promise<TranslationResponse> {
-  const text = request.text.trim()
-  if (text === '') {
+  const trimmed = request.text.trim()
+  if (trimmed === '') {
     return { ok: false, kind: 'invalid-input' }
   }
-  if (text.length > TRANSLATION_INPUT_MAX_LENGTH) {
+  if (trimmed.length > TRANSLATION_INPUT_MAX_LENGTH) {
     return { ok: false, kind: 'too-long' }
   }
+  const text = normalizeTranslationQuery(trimmed)
   const target = resolveTranslationTargetLanguage(text, request.preference)
   const source = resolveTranslationSourceLanguage(target)
   const providers = deps.providers ?? DEFAULT_PROVIDERS
@@ -39,7 +41,9 @@ export async function translateText(
         translatedText: result.translatedText,
         targetLanguage: target,
         detectedSourceLanguage: result.detectedSourceLanguage,
-        providerId: provider.id
+        providerId: provider.id,
+        dictionaryEntries: result.dictionaryEntries,
+        queriedText: text
       }
     }
     // Report the primary's reason: the fallback's error is noise to the user.

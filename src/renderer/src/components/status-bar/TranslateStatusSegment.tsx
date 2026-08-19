@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react'
-import { Check, Copy, Languages, LoaderCircle } from 'lucide-react'
+import { Languages, LoaderCircle, Sparkles, X } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Textarea } from '@/components/ui/textarea'
@@ -18,6 +18,7 @@ import {
   nextTranslationPreference,
   type TranslatePopoverStatus
 } from './translate-popover-state'
+import { TranslateResultPanel } from './TranslateResultPanel'
 import { describeTranslationFailure } from './translation-failure-message'
 
 type TranslateStatusSegmentProps = {
@@ -37,8 +38,8 @@ export function TranslateStatusSegment({
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
   const [preference, setPreference] = useState<TranslationDirectionPreference>('auto')
+  const [useAi, setUseAi] = useState(false)
   const [status, setStatus] = useState<TranslatePopoverStatus>({ phase: 'idle' })
-  const [copied, setCopied] = useState(false)
   // Late responses from a superseded submit must not overwrite a newer result.
   const submitSeqRef = useRef(0)
 
@@ -59,45 +60,63 @@ export function TranslateStatusSegment({
     [recordFeatureInteraction]
   )
 
-  const handleSubmit = useCallback(() => {
-    if (!canSubmit) {
-      return
-    }
-    const seq = submitSeqRef.current + 1
-    submitSeqRef.current = seq
-    setStatus({ phase: 'translating' })
-    setCopied(false)
-    void window.api.translation
-      .translate({ text, preference })
-      .then((response) => {
-        if (submitSeqRef.current !== seq) {
-          return
-        }
-        setStatus(
-          response.ok
-            ? {
-                phase: 'success',
-                translatedText: response.translatedText,
-                usedFallbackProvider: response.providerId !== 'google-gtx'
-              }
-            : { phase: 'error', kind: response.kind }
-        )
-      })
-      .catch(() => {
-        if (submitSeqRef.current === seq) {
-          setStatus({ phase: 'error', kind: 'provider-error' })
-        }
-      })
-  }, [canSubmit, preference, text])
+  const submit = useCallback(
+    (withAi: boolean) => {
+      const trimmed = text.trim()
+      if (trimmed === '' || isTranslationInputTooLong(text)) {
+        return
+      }
+      const seq = submitSeqRef.current + 1
+      submitSeqRef.current = seq
+      setStatus({ phase: 'translating', usedAi: withAi })
+      const api = window.api.translation
+      const pending = withAi
+        ? api.translateWithAi({ text, preference })
+        : api.translate({ text, preference })
+      void pending
+        .then((response) => {
+          if (submitSeqRef.current !== seq) {
+            return
+          }
+          setStatus(
+            response.ok
+              ? {
+                  phase: 'success',
+                  result: {
+                    translatedText: response.translatedText,
+                    dictionaryEntries: response.dictionaryEntries,
+                    queriedText: response.queriedText,
+                    providerId: response.providerId,
+                    agentLabel: response.agentLabel
+                  }
+                }
+              : { phase: 'error', kind: response.kind, detail: response.detail }
+          )
+        })
+        .catch(() => {
+          if (submitSeqRef.current === seq) {
+            setStatus({ phase: 'error', kind: withAi ? 'ai-unavailable' : 'provider-error' })
+          }
+        })
+    },
+    [preference, text]
+  )
 
-  const handleCopy = useCallback(() => {
-    if (status.phase !== 'success') {
-      return
+  const handleSubmit = useCallback(() => {
+    if (canSubmit) {
+      submit(useAi)
     }
-    void window.api.ui.writeClipboardText(status.translatedText).then(() => setCopied(true))
-  }, [status])
+  }, [canSubmit, submit, useAi])
+
+  // Abandons the in-flight sequence too, so a racing late reply cannot revive it.
+  const handleCancelAi = useCallback(() => {
+    submitSeqRef.current += 1
+    setStatus({ phase: 'idle' })
+    void window.api.translation.cancelAi()
+  }, [])
 
   const tooLong = isTranslationInputTooLong(text)
+  const cancellable = status.phase === 'translating' && status.usedAi
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -136,22 +155,41 @@ export function TranslateStatusSegment({
             <Languages className="size-3 shrink-0 text-muted-foreground" />
             <span className="truncate">{translate('statusBar.translate.title', 'Translate')}</span>
           </div>
-          <button
-            type="button"
-            onClick={() => setPreference(nextTranslationPreference(preference))}
-            className={
-              direction.forced
-                ? 'rounded border border-primary/60 bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-foreground'
-                : 'rounded border border-transparent px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-accent/70'
-            }
-            title={translate(
-              'statusBar.translate.directionHint',
-              'Click to switch direction; Auto detects it from your text'
-            )}
-          >
-            {`${languageLabel(direction.source)} → ${languageLabel(direction.target)}`}
-            {!direction.forced && ` · ${translate('statusBar.translate.auto', 'Auto')}`}
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setUseAi(!useAi)}
+              aria-pressed={useAi}
+              className={
+                useAi
+                  ? 'inline-flex items-center gap-1 rounded border border-primary/60 bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-foreground'
+                  : 'inline-flex items-center gap-1 rounded border border-transparent px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-accent/70'
+              }
+              title={translate(
+                'statusBar.translate.aiHint',
+                'Use your configured AI agent instead of the free service'
+              )}
+            >
+              <Sparkles className="size-3" />
+              {translate('statusBar.translate.ai', 'AI')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreference(nextTranslationPreference(preference))}
+              className={
+                direction.forced
+                  ? 'rounded border border-primary/60 bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-foreground'
+                  : 'rounded border border-transparent px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-accent/70'
+              }
+              title={translate(
+                'statusBar.translate.directionHint',
+                'Click to switch direction; Auto detects it from your text'
+              )}
+            >
+              {`${languageLabel(direction.source)} → ${languageLabel(direction.target)}`}
+              {!direction.forced && ` · ${translate('statusBar.translate.auto', 'Auto')}`}
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-2 p-3">
@@ -181,51 +219,58 @@ export function TranslateStatusSegment({
             >
               {`${text.trim().length} / ${TRANSLATION_INPUT_MAX_LENGTH}`}
             </span>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              className="inline-flex items-center gap-1.5 rounded bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
-            >
-              {status.phase === 'translating' && <LoaderCircle className="size-3 animate-spin" />}
-              {translate('statusBar.translate.submit', 'Translate')}
-            </button>
+            <div className="flex items-center gap-1.5">
+              {cancellable && (
+                <button
+                  type="button"
+                  onClick={handleCancelAi}
+                  className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-[11px] text-muted-foreground hover:bg-accent/70"
+                >
+                  <X className="size-3" />
+                  {translate('statusBar.translate.cancel', 'Cancel')}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!canSubmit}
+                className="inline-flex items-center gap-1.5 rounded bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+              >
+                {status.phase === 'translating' && <LoaderCircle className="size-3 animate-spin" />}
+                {translate('statusBar.translate.submit', 'Translate')}
+              </button>
+            </div>
           </div>
 
           {status.phase === 'error' && (
-            <p className="text-[11px] text-destructive">
-              {describeTranslationFailure(status.kind)}
-            </p>
+            <div className="flex flex-col items-start gap-1">
+              <p className="text-[11px] text-destructive">
+                {describeTranslationFailure(status.kind)}
+              </p>
+              {status.detail !== undefined && (
+                <p className="scrollbar-sleek max-h-20 overflow-y-auto text-[11px] whitespace-pre-wrap text-muted-foreground select-text">
+                  {status.detail}
+                </p>
+              )}
+              {status.kind === 'ai-unavailable' && (
+                <button
+                  type="button"
+                  onClick={() => submit(false)}
+                  className="rounded border border-border px-1.5 py-0.5 text-[11px] text-foreground hover:bg-accent/70"
+                >
+                  {translate('statusBar.translate.useFreeInstead', 'Use the quick translation')}
+                </button>
+              )}
+            </div>
           )}
 
           {status.phase === 'success' && (
-            <div className="flex flex-col gap-1.5 rounded border border-border bg-muted/40 p-2">
-              <p className="scrollbar-sleek max-h-40 overflow-y-auto whitespace-pre-wrap text-[13px] text-foreground select-text">
-                {status.translatedText}
-              </p>
-              <div className="flex items-center justify-between gap-2">
-                {status.usedFallbackProvider ? (
-                  <span className="text-[11px] text-muted-foreground">
-                    {translate(
-                      'statusBar.translate.fallbackNote',
-                      'Translated by the backup service'
-                    )}
-                  </span>
-                ) : (
-                  <span />
-                )}
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-accent/70"
-                >
-                  {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-                  {copied
-                    ? translate('statusBar.translate.copied', 'Copied')
-                    : translate('statusBar.translate.copy', 'Copy')}
-                </button>
-              </div>
-            </div>
+            // Remounting on a new result clears the panel's copied state.
+            <TranslateResultPanel
+              key={status.result.translatedText}
+              result={status.result}
+              typedText={text}
+            />
           )}
         </div>
       </PopoverContent>

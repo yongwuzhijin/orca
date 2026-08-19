@@ -15204,6 +15204,25 @@
       "auto": "自动",
       "directionHint": "点击切换翻译方向；自动模式会根据文本判断",
       "fallbackNote": "由备用翻译服务完成",
+      "agentNote": "由 {agent} 翻译",
+      "agentFallbackName": "AI Agent",
+      "normalizedNote": "以“{query}”查询",
+      "ai": "AI",
+      "aiHint": "使用已配置的 AI Agent 翻译，而不是免费服务",
+      "cancel": "取消",
+      "useFreeInstead": "改用快速翻译",
+      "partOfSpeech": {
+        "noun": "名.",
+        "verb": "动.",
+        "adjective": "形.",
+        "adverb": "副.",
+        "preposition": "介.",
+        "conjunction": "连.",
+        "pronoun": "代.",
+        "interjection": "叹.",
+        "abbreviation": "缩.",
+        "numeral": "数."
+      },
       "language": {
         "en": "EN",
         "zh": "中"
@@ -15214,7 +15233,8 @@
         "offline": "无法连接翻译服务，请检查网络或代理。",
         "rateLimited": "免费翻译额度已用完，请稍后再试。",
         "timeout": "翻译请求超时。",
-        "providerError": "翻译服务返回了异常结果。"
+        "providerError": "翻译服务返回了异常结果。",
+        "aiUnavailable": "AI Agent 未能完成翻译。"
       }
     }
   }

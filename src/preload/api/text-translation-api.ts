@@ -2,4 +2,6 @@ import type { TranslationRequest, TranslationResponse } from '../../shared/text-
 
 export type TextTranslationApi = {
   translate: (request: TranslationRequest) => Promise<TranslationResponse>
+  translateWithAi: (request: TranslationRequest) => Promise<TranslationResponse>
+  cancelAi: () => Promise<void>
 }

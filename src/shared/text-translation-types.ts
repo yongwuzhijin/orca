@@ -11,7 +11,14 @@ export type TranslationRequest = {
   preference: TranslationDirectionPreference
 }
 
-export type TranslationProviderId = 'google-gtx' | 'mymemory'
+export type TranslationProviderId = 'google-gtx' | 'mymemory' | 'ai'
+
+/** One part of speech and its senses; only dictionary words have any. */
+export type TranslationDictionaryEntry = {
+  /** Raw provider category ('adjective', 'noun'); the renderer localizes it. */
+  partOfSpeech: string
+  terms: string[]
+}
 
 export type TranslationSuccess = {
   ok: true
@@ -20,6 +27,11 @@ export type TranslationSuccess = {
   /** What the provider reported, not what we guessed; absent when it does not say. */
   detectedSourceLanguage: string | null
   providerId: TranslationProviderId
+  dictionaryEntries: TranslationDictionaryEntry[]
+  /** What was actually sent, after case normalization. */
+  queriedText: string
+  /** Present only for providerId 'ai'. */
+  agentLabel?: string
 }
 
 export type TranslationFailureKind =
@@ -29,10 +41,13 @@ export type TranslationFailureKind =
   | 'rate-limited'
   | 'provider-error'
   | 'timeout'
+  | 'ai-unavailable'
 
 export type TranslationFailure = {
   ok: false
   kind: TranslationFailureKind
+  /** The agent CLI's own message for 'ai-unavailable'; nothing else sets it. */
+  detail?: string
 }
 
 export type TranslationResponse = TranslationSuccess | TranslationFailure

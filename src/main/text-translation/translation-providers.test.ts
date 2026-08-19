@@ -21,6 +21,8 @@ describe('googleGtxProvider', () => {
     expect(url).toContain('client=gtx')
     expect(url).toContain('sl=auto')
     expect(url).toContain('tl=zh-CN')
+    expect(url).toContain('dt=t')
+    expect(url).toContain('dt=bd')
     expect(url).toContain('q=The%20cache%20was%20cold.')
   })
 
@@ -29,7 +31,20 @@ describe('googleGtxProvider', () => {
     await expect(googleGtxProvider.translate(EN_TO_ZH, fetchImpl)).resolves.toEqual({
       ok: true,
       translatedText: '缓存很冷。',
-      detectedSourceLanguage: 'en'
+      detectedSourceLanguage: 'en',
+      dictionaryEntries: []
+    })
+  })
+
+  it('returns the dictionary senses when the payload carries them', async () => {
+    const fetchImpl = fetchReturning(
+      '[[["家属","dependent"]],[["noun",["依赖他人者"],[],"dependent",1]],"en"]'
+    )
+    await expect(
+      googleGtxProvider.translate({ ...EN_TO_ZH, text: 'dependent' }, fetchImpl)
+    ).resolves.toMatchObject({
+      ok: true,
+      dictionaryEntries: [{ partOfSpeech: 'noun', terms: ['依赖他人者'] }]
     })
   })
 
@@ -74,7 +89,8 @@ describe('myMemoryProvider', () => {
     await expect(myMemoryProvider.translate(EN_TO_ZH, fetchImpl)).resolves.toEqual({
       ok: true,
       translatedText: '缓存很冷。',
-      detectedSourceLanguage: 'en'
+      detectedSourceLanguage: 'en',
+      dictionaryEntries: []
     })
     expect(vi.mocked(fetchImpl).mock.calls[0][0]).toContain('langpair=en%7Czh-CN')
   })
