@@ -41,7 +41,7 @@ export function TranslateResultPanel({
   if (provider !== '') {
     notes.push(provider)
   }
-  // Second line of defense: an IPC payload without the array must not crash the status bar.
+  // Youdao wins over the gtx block; `?? []` guards an IPC payload from a main bundle that predates the field.
   const posEntries = headwordEntries.length > 0 ? [] : (result.dictionaryEntries ?? [])
 
   return (

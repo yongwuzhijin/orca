@@ -89,6 +89,7 @@ const HEADWORDS = [
 describe('TranslateResultPanel dictionary block', () => {
   it('lists each Youdao headword with its gloss', () => {
     render(<TranslateResultPanel result={GTX} typedText="dependent" headwordEntries={HEADWORDS} />)
+    expect(screen.getByLabelText('Dictionary entries')).toBeTruthy()
     expect(screen.getByText('dependent')).toBeTruthy()
     expect(screen.getByText('adj. 依赖的，依靠的；取决于 n. 受供养者')).toBeTruthy()
     expect(screen.getByText('dependent variable')).toBeTruthy()
@@ -108,11 +109,23 @@ describe('TranslateResultPanel dictionary block', () => {
     expect(screen.getByText('属，依赖的')).toBeTruthy()
   })
 
-  it('renders no normalized note when the payload omitted queriedText', () => {
-    // Regression: the note used to interpolate undefined and print “Looked up as “undefined””.
+  it('renders no normalized note when queriedText was normalized away to empty', () => {
     const { container } = render(
       <TranslateResultPanel
         result={{ ...GTX, queriedText: '' }}
+        typedText="dependent"
+        headwordEntries={[]}
+      />
+    )
+    expect(container.textContent).not.toContain('undefined')
+    expect(container.textContent).not.toContain('Looked up as')
+  })
+
+  it('renders no normalized note when the payload omitted queriedText entirely', () => {
+    // Regression: the note used to interpolate undefined and print “Looked up as “undefined””.
+    const { container } = render(
+      <TranslateResultPanel
+        result={{ ...GTX, queriedText: undefined as unknown as string }}
         typedText="dependent"
         headwordEntries={[]}
       />

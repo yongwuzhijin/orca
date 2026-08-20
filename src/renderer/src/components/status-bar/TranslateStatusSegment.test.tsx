@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import type { DictionaryHeadwordEntry } from '../../../../shared/text-translation-types'
 import { TranslateStatusSegment } from './TranslateStatusSegment'
 
 vi.mock('@/store', () => ({
@@ -104,13 +105,30 @@ describe('TranslateStatusSegment', () => {
   })
 
   it('drops a stale lookup so an earlier word cannot label a newer result', async () => {
+    // The first lookup stays in flight until after the second submit has already landed.
+    let resolveStale: (response: { entries: DictionaryHeadwordEntry[] }) => void = () => {}
+    lookupDictionaryMock.mockImplementationOnce(
+      () =>
+        new Promise<{ entries: DictionaryHeadwordEntry[] }>((resolve) => {
+          resolveStale = resolve
+        })
+    )
+    lookupDictionaryMock.mockResolvedValue({
+      entries: [{ headword: 'cold', explain: 'adj. 冷的' }]
+    })
+
     openAndSubmit('dependent')
-    await waitFor(() => expect(screen.getByText('adj. 依赖的')).toBeTruthy())
-    lookupDictionaryMock.mockResolvedValue({ entries: [] })
+    await waitFor(() => expect(lookupDictionaryMock).toHaveBeenCalledWith({ text: 'dependent' }))
     fireEvent.change(screen.getByPlaceholderText(/Type or paste text/), {
       target: { value: 'cold' }
     })
     fireEvent.click(screen.getByRole('button', { name: 'Translate' }))
-    await waitFor(() => expect(screen.queryByText('adj. 依赖的')).toBeNull())
+    await waitFor(() => expect(screen.getByText('adj. 冷的')).toBeTruthy())
+
+    resolveStale({ entries: [{ headword: 'dependent', explain: 'adj. 依赖的' }] })
+    // A macrotask turn settles the superseded promise; the sequence guard must still reject it.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(screen.queryByText('adj. 依赖的')).toBeNull()
+    expect(screen.getByText('adj. 冷的')).toBeTruthy()
   })
 })

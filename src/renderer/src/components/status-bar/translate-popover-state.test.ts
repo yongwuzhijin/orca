@@ -133,6 +133,10 @@ describe('shouldLookUpDictionary', () => {
     expect(shouldLookUpDictionary('one\r\ntwo', false)).toBe(false)
   })
 
+  it('still looks up a word whose only newline is trailing, since the gate reads trimmed text', () => {
+    expect(shouldLookUpDictionary('dependent\n', false)).toBe(true)
+  })
+
   it('skips empty input', () => {
     expect(shouldLookUpDictionary('', false)).toBe(false)
     expect(shouldLookUpDictionary('   ', false)).toBe(false)
