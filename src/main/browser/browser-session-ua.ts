@@ -40,13 +40,14 @@ export function createClientHintsStage(
   // optional rather than bailing out of the whole handler.
   const chromeHints = buildChromeClientHints(ua)
   const firefoxUa = googleAuthUserAgent()
+  const googleAuthOverride = options.googleAuthOverride !== false
 
   return (details, headers) => {
     // Why: the old listener carried an { urls: ['https://*/*'] } filter; the pipeline has none.
     if (!details.url.startsWith('https://')) {
       return
     }
-    if (options.googleAuthOverride !== false && isGoogleAuthUrl(details.url)) {
+    if (googleAuthOverride && isGoogleAuthUrl(details.url)) {
       // Why: present a Firefox identity on Google's sign-in hosts so the user logs
       // in inside the app and Google issues self-refreshing bound cookies. Strip
       // sec-ch-ua* because real Firefox sends none.
@@ -54,7 +55,7 @@ export function createClientHintsStage(
       stripClientHints(headers)
       return
     }
-    if (options.googleAuthOverride !== false && currentUserAgent(headers) === firefoxUa) {
+    if (googleAuthOverride && currentUserAgent(headers) === firefoxUa) {
       // Why: while the auth document is on screen the WebContents UA is Firefox,
       // so its cross-host subresource/XHR requests (gstatic, play.google.com, the
       // sign-in challenge endpoints) reach here carrying the Firefox UA yet still

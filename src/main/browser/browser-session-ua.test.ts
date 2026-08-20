@@ -2,6 +2,7 @@ import type { Session } from 'electron'
 import { describe, expect, it, vi } from 'vitest'
 
 import { googleAuthUserAgent } from './browser-google-auth-ua'
+import { setBrowserRequestHeadersStage } from './browser-session-request-pipeline'
 import {
   cleanElectronUserAgent,
   createClientHintsStage,
@@ -15,7 +16,10 @@ const EDGE_UA = `${CHROME_UA} Edg/147.0.3210.5`
 const ELECTRON_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Orca/1.0.0 Chrome/147.0.6890.3 Electron/32.0.0 Safari/537.36'
 
-function details(url: string): Electron.OnBeforeSendHeadersListenerDetails {
+function details(
+  url: string,
+  requestHeaders: Record<string, string> = {}
+): Electron.OnBeforeSendHeadersListenerDetails {
   return {
     id: 1,
     url,
@@ -23,17 +27,20 @@ function details(url: string): Electron.OnBeforeSendHeadersListenerDetails {
     resourceType: 'xhr',
     webContentsId: 7,
     timestamp: 0,
-    requestHeaders: {}
+    requestHeaders
   } as unknown as Electron.OnBeforeSendHeadersListenerDetails
 }
 
-// Why: the stage mutates the headers object in place, so the caller reads the result back out of it.
+// Why: the stage mutates the headers object in place, so the caller reads the result out of it.
 function run(
   stage: ReturnType<typeof createClientHintsStage>,
   url: string,
   headers: Record<string, string>
 ): Record<string, string> {
-  stage(details(url), headers)
+  const detail = details(url, headers)
+  // Why: the pipeline passes details.requestHeaders itself as the headers argument.
+  expect(detail.requestHeaders).toBe(headers)
+  stage(detail, detail.requestHeaders)
   return headers
 }
 
@@ -76,18 +83,7 @@ describe('createClientHintsStage', () => {
     expect(headers['Sec-CH-UA']).toContain('Chromium')
   })
 
-  it('presents the Google auth Firefox UA on auth hosts', () => {
-    const headers = run(
-      createClientHintsStage(CHROME_UA),
-      'https://accounts.google.com/v3/signin/identifier',
-      { 'User-Agent': CHROME_UA }
-    )
-
-    expect(headers['User-Agent']).toBe(googleAuthUserAgent())
-  })
-
   it('overrides sec-ch-ua headers for Edge UA', () => {
-    // Why: the url is load-bearing now that the stage re-creates the https-only filter.
     const headers = run(createClientHintsStage(EDGE_UA), 'https://example.com/', {
       'sec-ch-ua': 'old',
       'sec-ch-ua-full-version-list': 'old'
@@ -130,8 +126,7 @@ describe('createClientHintsStage', () => {
       }
     )
 
-    expect(headers['User-Agent']).toMatch(/Firefox\/\d/)
-    expect(headers['User-Agent']).not.toContain('Chrome')
+    expect(headers['User-Agent']).toBe(googleAuthUserAgent())
     expect(headers['sec-ch-ua']).toBeUndefined()
     expect(headers['sec-ch-ua-full-version-list']).toBeUndefined()
     expect(headers['sec-ch-ua-platform']).toBeUndefined()
@@ -198,7 +193,6 @@ describe('createClientHintsStage', () => {
   })
 
   it('leaves non-Client-Hints headers unchanged', () => {
-    // Why: the url is load-bearing now that the stage re-creates the https-only filter.
     const headers = run(
       createClientHintsStage('Mozilla/5.0 Chrome/147.0.0.0 Safari/537.36'),
       'https://example.com/',
@@ -210,29 +204,53 @@ describe('createClientHintsStage', () => {
   })
 })
 
+// Why: the pipeline is keyed by session object, so a fresh fake avoids other tests' state.
+function fakeSession(onBeforeSendHeaders: ReturnType<typeof vi.fn>): Session {
+  return {
+    webRequest: {
+      onBeforeRequest: vi.fn(),
+      onBeforeSendHeaders,
+      onHeadersReceived: vi.fn(),
+      onCompleted: vi.fn(),
+      onErrorOccurred: vi.fn()
+    }
+  } as unknown as Session
+}
+
 describe('setupClientHintsOverride', () => {
   it('registers the client-hints stage on the session request pipeline', () => {
     const onBeforeSendHeaders = vi.fn()
-    // Why: the pipeline is keyed by session object, so a fresh fake avoids other tests' state.
-    const sess = {
-      webRequest: {
-        onBeforeRequest: vi.fn(),
-        onBeforeSendHeaders,
-        onHeadersReceived: vi.fn(),
-        onCompleted: vi.fn(),
-        onErrorOccurred: vi.fn()
-      }
-    } as unknown as Session
+    const sess = fakeSession(onBeforeSendHeaders)
 
     setupClientHintsOverride(sess, CHROME_UA)
 
     const listener = onBeforeSendHeaders.mock.calls[0][0]
     const callback = vi.fn()
-    listener(
-      { ...details('https://example.com/'), requestHeaders: { 'sec-ch-ua': 'old' } },
-      callback
-    )
+    listener(details('https://example.com/', { 'sec-ch-ua': 'old' }), callback)
 
     expect(callback.mock.calls[0][0].requestHeaders['sec-ch-ua']).toContain('Google Chrome')
+  })
+
+  it('keeps rewriting hints when every other pipeline stage is registered too', () => {
+    const onBeforeSendHeaders = vi.fn()
+    const sess = fakeSession(onBeforeSendHeaders)
+
+    setupClientHintsOverride(sess, CHROME_UA)
+    // Why: a stage key collision evicts silently, so the other three keys must all be occupied.
+    for (const key of ['certificate-guard', 'network-rules', 'request-log'] as const) {
+      setBrowserRequestHeadersStage(sess, key, (_details, headers) => {
+        headers[`x-${key}`] = 'ran'
+      })
+    }
+
+    const listener = onBeforeSendHeaders.mock.calls[0][0]
+    const callback = vi.fn()
+    listener(details('https://example.com/', { 'sec-ch-ua': 'old' }), callback)
+
+    const requestHeaders = callback.mock.calls[0][0].requestHeaders
+    expect(requestHeaders['sec-ch-ua']).toContain('Google Chrome')
+    expect(requestHeaders['x-certificate-guard']).toBe('ran')
+    expect(requestHeaders['x-network-rules']).toBe('ran')
+    expect(requestHeaders['x-request-log']).toBe('ran')
   })
 })
