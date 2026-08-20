@@ -201,6 +201,19 @@ describe('sanitizeBrowserNetworkRule', () => {
     expect(rule?.headers).toEqual([{ target: 'request', op: 'remove', name: 'X-B' }])
   })
 
+  it('drops a __proto__ header name but keeps its valid sibling', () => {
+    const rule = sanitizeBrowserNetworkRule({
+      id: 'r1',
+      match: { urlPattern: '*' },
+      headers: [
+        { target: 'request', op: 'set', name: '__PROTO__', value: 'v' },
+        { target: 'response', op: 'remove', name: '__proto__' },
+        { target: 'request', op: 'set', name: 'X-A', value: 'v' }
+      ]
+    })
+    expect(rule?.headers).toEqual([{ target: 'request', op: 'set', name: 'X-A', value: 'v' }])
+  })
+
   it('drops an unrecognized op instead of coercing it to set', () => {
     const rule = sanitizeBrowserNetworkRule({
       id: 'r1',

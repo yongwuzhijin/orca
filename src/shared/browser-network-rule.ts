@@ -123,6 +123,10 @@ function sanitizeMutation(input: unknown): BrowserHeaderMutation | null {
   if (!HEADER_NAME_PATTERN.test(name)) {
     return null
   }
+  // Why: assigning this key hits Object.prototype's accessor and stores nothing — an inert rule.
+  if (name.toLowerCase() === '__proto__') {
+    return null
+  }
   if (raw.target !== undefined && raw.target !== 'request' && raw.target !== 'response') {
     return null
   }

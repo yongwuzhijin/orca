@@ -69,6 +69,31 @@ describe('applyRequestHeaderMutations', () => {
     ])
     expect(headers).toEqual({})
   })
+
+  it('leaves the headers untouched for an empty mutation list', () => {
+    const headers: Record<string, string> = { Accept: '*/*', authorization: 'Bearer old' }
+    applyRequestHeaderMutations(headers, [])
+    expect(headers).toEqual({ Accept: '*/*', authorization: 'Bearer old' })
+  })
+
+  it('ends with the header absent when a set is followed by a remove', () => {
+    const headers: Record<string, string> = {}
+    applyRequestHeaderMutations(headers, [
+      setAuth,
+      { target: 'request', op: 'remove', name: 'authorization' }
+    ])
+    expect(headers).toEqual({})
+  })
+
+  it('applies a request mutation interleaved with response-target ones', () => {
+    const headers: Record<string, string> = { Accept: '*/*' }
+    applyRequestHeaderMutations(headers, [
+      { target: 'response', op: 'set', name: 'X-Frame-Options', value: 'DENY' },
+      setAuth,
+      { target: 'response', op: 'remove', name: 'Accept' }
+    ])
+    expect(headers).toEqual({ Accept: '*/*', Authorization: 'Bearer new' })
+  })
 })
 
 describe('applyResponseHeaderMutations', () => {
@@ -100,5 +125,45 @@ describe('applyResponseHeaderMutations', () => {
     const headers: Record<string, string[]> = {}
     applyResponseHeaderMutations(headers, [setAuth])
     expect(headers).toEqual({})
+  })
+
+  it('lets the last set on the same header win', () => {
+    const headers: Record<string, string[]> = {}
+    applyResponseHeaderMutations(headers, [
+      { target: 'response', op: 'set', name: 'X-Frame-Options', value: 'DENY' },
+      { target: 'response', op: 'set', name: 'x-frame-options', value: 'SAMEORIGIN' }
+    ])
+    expect(headers).toEqual({ 'x-frame-options': ['SAMEORIGIN'] })
+  })
+
+  it('skips a set with no value instead of writing undefined or deleting', () => {
+    const headers: Record<string, string[]> = { 'Set-Cookie': ['a=1', 'b=2'] }
+    applyResponseHeaderMutations(headers, [{ target: 'response', op: 'set', name: 'Set-Cookie' }])
+    expect(headers).toEqual({ 'Set-Cookie': ['a=1', 'b=2'] })
+  })
+
+  it('leaves the headers untouched for an empty mutation list', () => {
+    const headers: Record<string, string[]> = { 'set-cookie': ['a=1', 'b=2'] }
+    applyResponseHeaderMutations(headers, [])
+    expect(headers).toEqual({ 'set-cookie': ['a=1', 'b=2'] })
+  })
+
+  it('ends with the header absent when a set is followed by a remove', () => {
+    const headers: Record<string, string[]> = {}
+    applyResponseHeaderMutations(headers, [
+      { target: 'response', op: 'set', name: 'X-Frame-Options', value: 'DENY' },
+      { target: 'response', op: 'remove', name: 'x-frame-options' }
+    ])
+    expect(headers).toEqual({})
+  })
+
+  it('applies a response mutation interleaved with request-target ones', () => {
+    const headers: Record<string, string[]> = { 'set-cookie': ['a=1'] }
+    applyResponseHeaderMutations(headers, [
+      setAuth,
+      { target: 'response', op: 'set', name: 'X-Frame-Options', value: 'DENY' },
+      { target: 'request', op: 'remove', name: 'set-cookie' }
+    ])
+    expect(headers).toEqual({ 'set-cookie': ['a=1'], 'X-Frame-Options': ['DENY'] })
   })
 })
