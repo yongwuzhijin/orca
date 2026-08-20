@@ -23,7 +23,12 @@ const browserSession = {
       ) => {
         beforeRequestListener = listener
       }
-    )
+    ),
+    // Why: the pipeline installs all five listeners at once; a missing one throws on install.
+    onBeforeSendHeaders: () => {},
+    onHeadersReceived: () => {},
+    onCompleted: () => {},
+    onErrorOccurred: () => {}
   }
 } as unknown as Electron.Session
 
@@ -212,6 +217,17 @@ describe('BrowserCertificateTrustController', () => {
     expect(beforeRequest({ webContentsId: guest.id })).toHaveBeenCalledWith({})
 
     expect(controller.proceed('page-2', 'challenge-2')).toEqual({ ok: true })
+    expect(beforeRequest({ webContentsId: otherGuest.id })).toHaveBeenCalledWith({})
+  })
+
+  it('stops blocking once the session guard is removed', () => {
+    certificateEvent({ controller, guest })
+    expect(controller.proceed('page-1', 'challenge-1')).toEqual({ ok: true })
+    expect(certificateEvent({ controller, guest }).callback).toHaveBeenCalledWith(true)
+    expect(beforeRequest({ webContentsId: otherGuest.id })).toHaveBeenCalledWith({ cancel: true })
+
+    controller.removeSessionRequestGuard(browserSession)
+
     expect(beforeRequest({ webContentsId: otherGuest.id })).toHaveBeenCalledWith({})
   })
 
