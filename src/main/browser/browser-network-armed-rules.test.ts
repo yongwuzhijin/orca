@@ -24,12 +24,17 @@ const AUTH_RULE: BrowserNetworkRule = {
   ]
 }
 
-const sendHeaders = (webContentsId: number | undefined, url = 'https://api.example.com/v1') =>
+const sendHeaders = (
+  webContentsId: number | undefined,
+  url = 'https://api.example.com/v1',
+  method = 'GET',
+  resourceType = 'xhr'
+) =>
   ({
     id: 1,
     url,
-    method: 'GET',
-    resourceType: 'xhr',
+    method,
+    resourceType,
     timestamp: 0,
     webContentsId,
     requestHeaders: {}
@@ -123,6 +128,93 @@ describe('browser network armed rules', () => {
     const headers: Record<string, string> = {}
     armed.requestHeadersStage(sendHeaders(10), headers)
     expect(headers).toEqual({ Authorization: 'Bearer later' })
+  })
+
+  it('applies mutations in order within one rule so a later remove undoes an earlier set', () => {
+    const armed = createBrowserNetworkArmedRules(resolvePageId)
+    armed.arm('page-1', [
+      {
+        ...AUTH_RULE,
+        headers: [
+          { target: 'request', op: 'set', name: 'X-A', value: 'first' },
+          { target: 'request', op: 'remove', name: 'X-A' }
+        ]
+      }
+    ])
+    const headers: Record<string, string> = {}
+    armed.requestHeadersStage(sendHeaders(10), headers)
+    expect(headers).toEqual({})
+  })
+
+  // Why: re-arming after the user edits a rule is the primary renderer flow for this feature.
+  it('replaces the armed rule set rather than accumulating across arms', () => {
+    const armed = createBrowserNetworkArmedRules(resolvePageId)
+    armed.arm('page-1', [AUTH_RULE])
+    armed.arm('page-1', [
+      {
+        ...AUTH_RULE,
+        id: 'r2',
+        headers: [{ target: 'request', op: 'set', name: 'X-Env', value: 'staging' }]
+      }
+    ])
+    const headers: Record<string, string> = {}
+    armed.requestHeadersStage(sendHeaders(10), headers)
+    expect(headers).toEqual({ 'X-Env': 'staging' })
+    expect(armed.rulesFor('page-1').map((rule) => rule.id)).toEqual(['r2'])
+  })
+
+  it('snapshots the array handed to arm so the caller cannot arm a rule afterwards', () => {
+    const armed = createBrowserNetworkArmedRules(resolvePageId)
+    const caller: BrowserNetworkRule[] = [AUTH_RULE]
+    armed.arm('page-1', caller)
+    caller.push({
+      ...AUTH_RULE,
+      id: 'sneaky',
+      headers: [{ target: 'request', op: 'set', name: 'X-Sneaky', value: '1' }]
+    })
+    const headers: Record<string, string> = {}
+    armed.requestHeadersStage(sendHeaders(10), headers)
+    expect(headers).toEqual({ Authorization: 'Bearer x' })
+    expect(armed.rulesFor('page-1').map((rule) => rule.id)).toEqual(['r1'])
+  })
+
+  it('hands rulesFor a copy so emptying it does not disarm the page', () => {
+    const armed = createBrowserNetworkArmedRules(resolvePageId)
+    armed.arm('page-1', [AUTH_RULE])
+    armed.rulesFor('page-1').length = 0
+    const headers: Record<string, string> = {}
+    armed.requestHeadersStage(sendHeaders(10), headers)
+    expect(headers).toEqual({ Authorization: 'Bearer x' })
+    expect(armed.rulesFor('page-1')).toHaveLength(1)
+  })
+
+  it('matches on method and resourceType, not just the URL', () => {
+    const armed = createBrowserNetworkArmedRules(resolvePageId)
+    armed.arm('page-1', [
+      {
+        ...AUTH_RULE,
+        match: {
+          urlPattern: 'https://api.example.com/*',
+          methods: ['POST'],
+          resourceTypes: ['xhr']
+        }
+      }
+    ])
+    const matched: Record<string, string> = {}
+    armed.requestHeadersStage(sendHeaders(10, 'https://api.example.com/v1', 'POST', 'xhr'), matched)
+    expect(matched).toEqual({ Authorization: 'Bearer x' })
+    const otherMethod: Record<string, string> = {}
+    armed.requestHeadersStage(
+      sendHeaders(10, 'https://api.example.com/v1', 'GET', 'xhr'),
+      otherMethod
+    )
+    expect(otherMethod).toEqual({})
+    const otherResourceType: Record<string, string> = {}
+    armed.requestHeadersStage(
+      sendHeaders(10, 'https://api.example.com/v1', 'POST', 'image'),
+      otherResourceType
+    )
+    expect(otherResourceType).toEqual({})
   })
 
   it('stops rewriting once the page is disarmed', () => {

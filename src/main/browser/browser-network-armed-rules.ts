@@ -21,21 +21,18 @@ export type BrowserNetworkArmedRules = {
   responseHeadersStage: BrowserResponseHeadersStage
 }
 
-type MatchableDetails = {
-  url: string
-  method: string
-  resourceType: string
-  webContentsId?: number
-}
+type MatchableDetails = Pick<
+  Electron.OnBeforeSendHeadersListenerDetails,
+  'url' | 'method' | 'resourceType' | 'webContentsId'
+>
 
 export function createBrowserNetworkArmedRules(
   resolvePageId: (webContentsId: number) => string | null
 ): BrowserNetworkArmedRules {
   const rulesByPage = new Map<string, BrowserNetworkRule[]>()
 
-  // Why: requests with no owning WebContents (service workers, some prefetches) are never
-  // rewritten — there is no page to attribute them to, so there is no armed rule set to apply.
   const matchingMutations = (details: MatchableDetails): BrowserHeaderMutation[] => {
+    // Why: requests with no owning WebContents (service workers, prefetches) are never rewritten.
     const webContentsId = details.webContentsId
     if (typeof webContentsId !== 'number') {
       return []
@@ -59,14 +56,16 @@ export function createBrowserNetworkArmedRules(
   }
 
   return {
+    // Why: arming is a snapshot — the caller keeps editing its array as the user edits the panel.
     arm: (browserPageId, rules) => {
-      rulesByPage.set(browserPageId, rules)
+      rulesByPage.set(browserPageId, [...rules])
     },
     disarm: (browserPageId) => {
       rulesByPage.delete(browserPageId)
     },
     armedPageIds: () => [...rulesByPage.keys()],
-    rulesFor: (browserPageId) => rulesByPage.get(browserPageId) ?? [],
+    // Why: handing out the live array would let a reader disarm the page by mutating it.
+    rulesFor: (browserPageId) => [...(rulesByPage.get(browserPageId) ?? [])],
     requestHeadersStage: (details, headers) => {
       applyRequestHeaderMutations(headers, matchingMutations(details))
     },
