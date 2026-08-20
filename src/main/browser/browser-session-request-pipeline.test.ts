@@ -145,9 +145,11 @@ describe('browser session request pipeline', () => {
 
   it('removes a stage when null is passed', () => {
     const stage = vi.fn()
+    const callback = vi.fn()
     setBrowserRequestHeadersStage(fake.sess, 'network-rules', stage)
     setBrowserRequestHeadersStage(fake.sess, 'network-rules', null)
-    fake.captured.requestHeaders?.(sendHeadersDetails({}), vi.fn())
+    fake.captured.requestHeaders?.(sendHeadersDetails({}), callback)
+    expect(callback).toHaveBeenCalledTimes(1)
     expect(stage).not.toHaveBeenCalled()
   })
 
@@ -163,13 +165,17 @@ describe('browser session request pipeline', () => {
     setBrowserRequestHeadersStage(fake.sess, 'client-hints', () => {
       throw new Error('boom')
     })
-    const later = vi.fn()
-    setBrowserRequestHeadersStage(fake.sess, 'network-rules', later)
-    const callback = vi.fn()
-    fake.captured.requestHeaders?.(sendHeadersDetails({}), callback)
-    expect(later).toHaveBeenCalledTimes(1)
-    expect(callback).toHaveBeenCalledTimes(1)
-    consoleError.mockRestore()
+    try {
+      const later = vi.fn()
+      setBrowserRequestHeadersStage(fake.sess, 'network-rules', later)
+      const callback = vi.fn()
+      fake.captured.requestHeaders?.(sendHeadersDetails({}), callback)
+      expect(later).toHaveBeenCalledTimes(1)
+      expect(callback).toHaveBeenCalledTimes(1)
+      expect(consoleError).toHaveBeenCalled()
+    } finally {
+      consoleError.mockRestore()
+    }
   })
 
   it('short-circuits onBeforeRequest as soon as a stage cancels', () => {
@@ -202,6 +208,15 @@ describe('browser session request pipeline', () => {
       callback
     )
     expect(callback).toHaveBeenCalledWith({ responseHeaders: { Server: ['nginx'] } })
+  })
+
+  it('hands response-header stages a draft and leaves details.responseHeaders untouched', () => {
+    setBrowserResponseHeadersStage(fake.sess, 'network-rules', (_details, headers) => {
+      delete headers['content-security-policy']
+    })
+    const details = headersReceivedDetails({ 'content-security-policy': ["default-src 'self'"] })
+    fake.captured.responseHeaders?.(details, vi.fn())
+    expect(details.responseHeaders).toEqual({ 'content-security-policy': ["default-src 'self'"] })
   })
 
   it('does not invent response headers when the response carried none', () => {

@@ -34,23 +34,23 @@ type PipelineState = {
 
 const pipelines = new WeakMap<Session, PipelineState>()
 
-function orderedStages<T>(stages: Map<BrowserRequestStageKey, T>): T[] {
-  const ordered: T[] = []
+function orderedStages<T>(stages: Map<BrowserRequestStageKey, T>): [BrowserRequestStageKey, T][] {
+  const ordered: [BrowserRequestStageKey, T][] = []
   for (const key of STAGE_ORDER) {
     const stage = stages.get(key)
     if (stage) {
-      ordered.push(stage)
+      ordered.push([key, stage])
     }
   }
   return ordered
 }
 
 // Why: a throwing stage must never strand a paused request — the callback has to fire regardless.
-function runStage<T>(run: () => T): T | undefined {
+function runStage<T>(key: BrowserRequestStageKey, run: () => T): T | undefined {
   try {
     return run()
   } catch (error) {
-    console.error('[browser.request-pipeline] stage failed', error)
+    console.error('[browser-request-pipeline] stage failed', key, error)
     return undefined
   }
 }
@@ -71,8 +71,8 @@ export function installBrowserSessionRequestPipeline(sess: Session): PipelineSta
   pipelines.set(sess, state)
 
   sess.webRequest.onBeforeRequest((details, callback) => {
-    for (const stage of orderedStages(state.beforeRequest)) {
-      if (runStage(() => stage(details))?.cancel === true) {
+    for (const [key, stage] of orderedStages(state.beforeRequest)) {
+      if (runStage(key, () => stage(details))?.cancel === true) {
         callback({ cancel: true })
         return
       }
@@ -82,30 +82,32 @@ export function installBrowserSessionRequestPipeline(sess: Session): PipelineSta
 
   sess.webRequest.onBeforeSendHeaders((details, callback) => {
     const headers = details.requestHeaders
-    for (const stage of orderedStages(state.requestHeaders)) {
-      runStage(() => stage(details, headers))
+    for (const [key, stage] of orderedStages(state.requestHeaders)) {
+      runStage(key, () => stage(details, headers))
     }
     callback({ requestHeaders: headers })
   })
 
   sess.webRequest.onHeadersReceived((details, callback) => {
+    // Why: stages edit a draft so later stages still see details.responseHeaders as the server sent
+    // it; request headers are shared because Electron requires returning that same full set.
     const headers: Record<string, string[]> = { ...details.responseHeaders }
-    for (const stage of orderedStages(state.responseHeaders)) {
-      runStage(() => stage(details, headers))
+    for (const [key, stage] of orderedStages(state.responseHeaders)) {
+      runStage(key, () => stage(details, headers))
     }
     // Why: handing Electron an empty responseHeaders map strips the real ones off the response.
     callback(Object.keys(headers).length > 0 ? { responseHeaders: headers } : {})
   })
 
   sess.webRequest.onCompleted((details) => {
-    for (const stage of orderedStages(state.completed)) {
-      runStage(() => stage(details))
+    for (const [key, stage] of orderedStages(state.completed)) {
+      runStage(key, () => stage(details))
     }
   })
 
   sess.webRequest.onErrorOccurred((details) => {
-    for (const stage of orderedStages(state.errored)) {
-      runStage(() => stage(details))
+    for (const [key, stage] of orderedStages(state.errored)) {
+      runStage(key, () => stage(details))
     }
   })
 
