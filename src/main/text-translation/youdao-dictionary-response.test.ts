@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DICTIONARY_LOOKUP_MAX_ENTRIES } from '../../shared/text-translation-types'
 import { parseYoudaoDictionaryResponse } from './youdao-dictionary-response'
 
 // Recorded from dict.youdao.com/suggest?q=dependent so a shape change fails here, not in the UI.
@@ -71,6 +72,30 @@ describe('parseYoudaoDictionaryResponse', () => {
             { entry: '', explain: 'adj. 依赖的' },
             { entry: 'dependents' },
             { entry: 'dependently', explain: 42 }
+          ]
+        }
+      })
+    ).toEqual([{ headword: 'dependent', explain: 'adj. 依赖的' }])
+  })
+
+  it('caps the rows so an oversized payload cannot flood the panel', () => {
+    const entries = Array.from({ length: DICTIONARY_LOOKUP_MAX_ENTRIES + 5 }, (_, index) => ({
+      entry: `word${index}`,
+      explain: 'gloss'
+    }))
+    expect(
+      parseYoudaoDictionaryResponse({ result: { code: 200 }, data: { entries } })
+    ).toHaveLength(DICTIONARY_LOOKUP_MAX_ENTRIES)
+  })
+
+  it('keeps the first of a repeated headword, which the renderer uses as a row key', () => {
+    expect(
+      parseYoudaoDictionaryResponse({
+        result: { code: 200 },
+        data: {
+          entries: [
+            { entry: 'dependent', explain: 'adj. 依赖的' },
+            { entry: 'dependent', explain: 'n. 受供养者' }
           ]
         }
       })

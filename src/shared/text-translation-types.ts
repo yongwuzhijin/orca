@@ -74,3 +74,6 @@ export type DictionaryLookupRequest = { text: string }
 export type DictionaryLookupResponse = { entries: DictionaryHeadwordEntry[] }
 
 export const DICTIONARY_LOOKUP_MAX_LENGTH = 24
+
+/** Asked of the provider and re-applied when parsing, since `num` is only a hint. */
+export const DICTIONARY_LOOKUP_MAX_ENTRIES = 8

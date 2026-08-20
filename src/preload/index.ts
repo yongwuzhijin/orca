@@ -5206,7 +5206,7 @@ const api = {
     cancelAi: (): Promise<void> => ipcRenderer.invoke('translation:cancelAi'),
     lookupDictionary: (request: DictionaryLookupRequest): Promise<DictionaryLookupResponse> =>
       ipcRenderer.invoke('translation:lookupDictionary', request)
-  }
+  } satisfies PreloadApi['translation']
 }
 
 // Expose Electron APIs via contextBridge when context-isolated, otherwise attach to the DOM global.

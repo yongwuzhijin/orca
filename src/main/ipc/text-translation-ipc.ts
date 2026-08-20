@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import type { GlobalSettings } from '../../shared/global-settings-types'
 import {
+  DICTIONARY_LOOKUP_MAX_LENGTH,
   type DictionaryLookupResponse,
   isTranslationDirectionPreference,
   type TranslationRequest,
@@ -97,10 +98,18 @@ function parseTranslationRequest(args: unknown): TranslationRequest | null {
   return { text, preference }
 }
 
+// The renderer gate is a UX affordance; this one keeps an untrusted payload out of the third-party URL.
 function readDictionaryText(args: unknown): string | null {
   if (typeof args !== 'object' || args === null) {
     return null
   }
   const { text } = args as { text?: unknown }
-  return typeof text === 'string' ? text : null
+  if (typeof text !== 'string') {
+    return null
+  }
+  const trimmed = text.trim()
+  if (trimmed === '' || trimmed.length > DICTIONARY_LOOKUP_MAX_LENGTH) {
+    return null
+  }
+  return trimmed
 }

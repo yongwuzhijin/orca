@@ -31,9 +31,10 @@ export function TranslateResultPanel({
     result.queriedText !== typedText.trim()
   ) {
     notes.push(
+      // A function replacer: a typed `$&` would otherwise be expanded by String.replace.
       translate('statusBar.translate.normalizedNote', 'Looked up as “{query}”').replace(
         '{query}',
-        result.queriedText
+        () => result.queriedText
       )
     )
   }

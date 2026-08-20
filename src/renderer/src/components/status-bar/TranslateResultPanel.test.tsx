@@ -109,6 +109,17 @@ describe('TranslateResultPanel dictionary block', () => {
     expect(screen.getByText('属，依赖的')).toBeTruthy()
   })
 
+  it('prints a query containing $& literally rather than expanding it', () => {
+    render(
+      <TranslateResultPanel
+        result={{ ...GTX, queriedText: 'a$&b' }}
+        typedText="A$&B"
+        headwordEntries={[]}
+      />
+    )
+    expect(screen.getByText(/a\$&b/)).toBeTruthy()
+  })
+
   it('renders no normalized note when queriedText was normalized away to empty', () => {
     const { container } = render(
       <TranslateResultPanel

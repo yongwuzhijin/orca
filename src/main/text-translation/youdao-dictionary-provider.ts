@@ -1,4 +1,7 @@
-import type { DictionaryHeadwordEntry } from '../../shared/text-translation-types'
+import {
+  DICTIONARY_LOOKUP_MAX_ENTRIES,
+  type DictionaryHeadwordEntry
+} from '../../shared/text-translation-types'
 import { TRANSLATION_REQUEST_TIMEOUT_MS, type TranslationFetch } from './translation-provider'
 import { parseYoudaoDictionaryResponse } from './youdao-dictionary-response'
 
@@ -10,7 +13,7 @@ export async function lookupYoudaoDictionary(
   fetchImpl: TranslationFetch
 ): Promise<DictionaryHeadwordEntry[]> {
   // le=en serves both directions, so the caller never resolves a language pair.
-  const url = `${ENDPOINT}?num=8&ver=3.0&doctype=json&cache=false&le=en&q=${encodeURIComponent(text)}`
+  const url = `${ENDPOINT}?num=${DICTIONARY_LOOKUP_MAX_ENTRIES}&ver=3.0&doctype=json&cache=false&le=en&q=${encodeURIComponent(text)}`
   let body: string
   try {
     const response = await fetchImpl(url, {

@@ -1,4 +1,7 @@
-import type { DictionaryHeadwordEntry } from '../../shared/text-translation-types'
+import {
+  DICTIONARY_LOOKUP_MAX_ENTRIES,
+  type DictionaryHeadwordEntry
+} from '../../shared/text-translation-types'
 
 function readCode(value: unknown): number | null {
   if (typeof value !== 'object' || value === null) {
@@ -26,17 +29,22 @@ export function parseYoudaoDictionaryResponse(raw: unknown): DictionaryHeadwordE
     return []
   }
   const parsed: DictionaryHeadwordEntry[] = []
+  const seen = new Set<string>()
   for (const candidate of entries) {
+    if (parsed.length === DICTIONARY_LOOKUP_MAX_ENTRIES) {
+      break
+    }
     if (typeof candidate !== 'object' || candidate === null) {
       continue
     }
     const { entry, explain } = candidate as Record<string, unknown>
-    if (typeof entry !== 'string' || entry === '') {
+    if (typeof entry !== 'string' || entry === '' || seen.has(entry)) {
       continue
     }
     if (typeof explain !== 'string' || explain === '') {
       continue
     }
+    seen.add(entry)
     parsed.push({ headword: entry, explain })
   }
   return parsed

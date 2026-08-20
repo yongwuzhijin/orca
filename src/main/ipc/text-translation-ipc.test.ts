@@ -34,6 +34,7 @@ vi.mock('../text-translation/youdao-dictionary-provider', () => ({
   lookupYoudaoDictionary: lookupDictionaryMock
 }))
 
+import { DICTIONARY_LOOKUP_MAX_LENGTH } from '../../shared/text-translation-types'
 import {
   registerTextTranslationHandlers,
   TRANSLATION_CANCEL_AI_CHANNEL,
@@ -165,6 +166,22 @@ describe('text translation IPC', () => {
       const handler = registerAndGetHandler(TRANSLATION_LOOKUP_DICTIONARY_CHANNEL)
       await expect(handler({}, { text: 42 })).resolves.toEqual({ entries: [] })
       await expect(handler({}, null)).resolves.toEqual({ entries: [] })
+    })
+
+    it('never sends blank or oversized text to the third-party endpoint', async () => {
+      const handler = registerAndGetHandler(TRANSLATION_LOOKUP_DICTIONARY_CHANNEL)
+      await expect(handler({}, { text: '   ' })).resolves.toEqual({ entries: [] })
+      await expect(
+        handler({}, { text: 'a'.repeat(DICTIONARY_LOOKUP_MAX_LENGTH + 1) })
+      ).resolves.toEqual({ entries: [] })
+      expect(lookupDictionaryMock).not.toHaveBeenCalled()
+    })
+
+    it('trims the text before querying so the length cap matches the renderer gate', async () => {
+      lookupDictionaryMock.mockResolvedValue([])
+      const handler = registerAndGetHandler(TRANSLATION_LOOKUP_DICTIONARY_CHANNEL)
+      await handler({}, { text: '  dependent  ' })
+      expect(lookupDictionaryMock).toHaveBeenCalledWith('dependent', expect.anything())
     })
 
     it('resolves rather than rejects when the provider throws', async () => {
