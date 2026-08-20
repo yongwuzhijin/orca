@@ -3126,6 +3126,10 @@
           },
           "TerminalTabLeadingIcon": {
             "7ab2964bea": "未読の Agent 完了"
+          },
+          "TabBarQuickCommandHostLoadStatus": {
+            "82e294f3ca": "ホストを利用できません",
+            "7c129b08ff": "ホストを読み込み中…"
           }
         }
       },
@@ -3239,6 +3243,7 @@
             "runtime_reconnecting": "再接続中",
             "runtime_last_close_reason": "クローズ: {{value0}}",
             "runtime_reconnect_attempt": "試行 {{value0}}",
+            "runtime_workspace_window_closed": "ワークスペースのウィンドウが閉じられました",
             "connectedHostCount_one": "{{count}} 台のホスト",
             "connectedHostCount_other": "{{count}} 台のホスト",
             "connecting": "接続中…",
@@ -3548,6 +3553,18 @@
             "stoppingLabel": "更新を停止しています",
             "stoppingTooltip": "スキルの更新を停止しています…",
             "stoppingAria": "スキルの更新を停止しています。クリックすると詳細を開きます。"
+          },
+          "CaffeinateStatusSegment": {
+            "on": "オン",
+            "auto": "Agent",
+            "off": "オフ",
+            "active": "アクティブ",
+            "inactive": "非アクティブ",
+            "ariaLabel": "スリープ防止、{{status}}",
+            "title": "スリープ防止",
+            "onDescription": "このコンピュータを常に起動状態に保つ",
+            "autoDescription": "Agent の作業中は起動状態を維持",
+            "offDescription": "システムの通常のスリープ動作を許可"
           }
         }
       },
@@ -11284,6 +11301,31 @@
                   "8f9a0b1c2d": "コミットするものがありません。ブランチは最新です。",
                   "h3i4j5k607": "このブランチが {{value0}} を作成できるか確認中…"
                 }
+              },
+              "conflict": {
+                "status": {
+                  "cards": {
+                    "5302a1ddba": "マージ競合",
+                    "7f3af87549": "リベース競合",
+                    "6a8e9ad490": "チェリーピック競合",
+                    "bdf8772106": "競合",
+                    "edc2d82a2b": "マージ進行中",
+                    "5c3707aa44": "リベース進行中",
+                    "ffe53a1da6": "チェリーピック進行中",
+                    "35eb76d323": "操作進行中"
+                  }
+                }
+              },
+              "content": {
+                "status": {
+                  "3f425c239c": "このブランチに変更はありません",
+                  "640f6fdb36": "このワークスペースはクリーンで、このブランチには {{value0}} より先の変更はありません",
+                  "8deb86bbec": "ベース",
+                  "978eba351e": "検索テキストが大きすぎます",
+                  "0bce43409f": "より短いファイルフィルターを使用してください。",
+                  "1b6caf533d": "一致するファイルはありません",
+                  "00c07771b7": "「{{value0}}」に一致する変更ファイルはありません"
+                }
               }
             }
           },
@@ -15031,6 +15073,13 @@
       "sent": "セッションコンテキストを新規 {{agent}} セッションに送信しました。",
       "deliveryFailed": "新規 {{agent}} セッションは開始しましたが、コンテキストを送信できませんでした。",
       "launchFailed": "新規 {{agent}} セッションを開始できませんでした。"
+    },
+    "status": {
+      "bar": {
+        "workspaceSpace": {
+          "otherTopLevelItems": "その他のトップレベル項目 ({{value0}})"
+        }
+      }
     }
   },
   "dashboardPopout": {

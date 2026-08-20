@@ -3138,6 +3138,10 @@
           },
           "TerminalTabLeadingIcon": {
             "7ab2964bea": "未读的代理完成"
+          },
+          "TabBarQuickCommandHostLoadStatus": {
+            "82e294f3ca": "主机不可用",
+            "7c129b08ff": "正在加载主机…"
           }
         }
       },
@@ -3251,6 +3255,7 @@
             "runtime_reconnecting": "重新连接中",
             "runtime_last_close_reason": "已关闭：{{value0}}",
             "runtime_reconnect_attempt": "第 {{value0}} 次尝试",
+            "runtime_workspace_window_closed": "工作区窗口已关闭",
             "connectedHostCount_one": "{{count}} 个主机",
             "connectedHostCount_other": "{{count}} 个主机",
             "connecting": "正在连接…",
@@ -3560,6 +3565,18 @@
             "stoppingLabel": "Stopping update",
             "stoppingTooltip": "正在停止技能更新…",
             "stoppingAria": "正在停止技能更新。点击查看详情。"
+          },
+          "CaffeinateStatusSegment": {
+            "on": "开",
+            "auto": "智能体",
+            "off": "关",
+            "active": "生效中",
+            "inactive": "未生效",
+            "ariaLabel": "保持唤醒，{{status}}",
+            "title": "保持唤醒",
+            "onDescription": "持续保持此电脑唤醒",
+            "autoDescription": "智能体工作时保持唤醒",
+            "offDescription": "允许系统正常睡眠"
           }
         }
       },
@@ -11304,6 +11321,31 @@
                   "8f9a0b1c2d": "没有可提交的内容。分支已是最新状态。",
                   "h3i4j5k607": "正在检查此分支是否可以创建 {{value0}}…"
                 }
+              },
+              "conflict": {
+                "status": {
+                  "cards": {
+                    "5302a1ddba": "合并冲突",
+                    "7f3af87549": "变基冲突",
+                    "6a8e9ad490": "Cherry-pick 冲突",
+                    "bdf8772106": "冲突",
+                    "edc2d82a2b": "合并进行中",
+                    "5c3707aa44": "变基进行中",
+                    "ffe53a1da6": "Cherry-pick 进行中",
+                    "35eb76d323": "操作进行中"
+                  }
+                }
+              },
+              "content": {
+                "status": {
+                  "3f425c239c": "此分支没有变更",
+                  "640f6fdb36": "此工作区是干净的，且此分支相对 {{value0}} 没有领先的变更",
+                  "8deb86bbec": "基准",
+                  "978eba351e": "搜索文本过长",
+                  "0bce43409f": "请使用更短的文件筛选条件。",
+                  "1b6caf533d": "没有匹配的文件",
+                  "00c07771b7": "没有变更文件匹配“{{value0}}”"
+                }
               }
             }
           },
@@ -15051,6 +15093,13 @@
       "sent": "已将会话上下文发送到新的 {{agent}} 会话。",
       "deliveryFailed": "新的 {{agent}} 会话已启动，但无法发送上下文。",
       "launchFailed": "无法启动新的 {{agent}} 会话。"
+    },
+    "status": {
+      "bar": {
+        "workspaceSpace": {
+          "otherTopLevelItems": "其他顶级项（{{value0}}）"
+        }
+      }
     }
   },
   "dashboardPopout": {

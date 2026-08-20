@@ -3126,6 +3126,10 @@
           },
           "TerminalTabLeadingIcon": {
             "7ab2964bea": "Finalización de agente sin leer"
+          },
+          "TabBarQuickCommandHostLoadStatus": {
+            "82e294f3ca": "Host no disponible",
+            "7c129b08ff": "Cargando host…"
           }
         }
       },
@@ -3239,6 +3243,7 @@
             "runtime_reconnecting": "Reconectando",
             "runtime_last_close_reason": "Cerrado: {{value0}}",
             "runtime_reconnect_attempt": "Intento {{value0}}",
+            "runtime_workspace_window_closed": "Ventana del espacio de trabajo cerrada",
             "connectedHostCount_one": "{{count}} host",
             "connectedHostCount_other": "{{count}} hosts",
             "connecting": "Conectando…",
@@ -3548,6 +3553,18 @@
             "stoppingLabel": "Stopping update",
             "stoppingTooltip": "Stopping the skill update…",
             "stoppingAria": "Stopping the skill update. Click to open details."
+          },
+          "CaffeinateStatusSegment": {
+            "on": "Activado",
+            "auto": "Agente",
+            "off": "Desactivado",
+            "active": "Activo",
+            "inactive": "Inactivo",
+            "ariaLabel": "Mantener activo, {{status}}",
+            "title": "Mantener activo",
+            "onDescription": "Mantener este equipo despierto de forma continua",
+            "autoDescription": "Mantenerse despierto mientras un agente trabaja",
+            "offDescription": "Permitir el comportamiento normal de suspensión del sistema"
           }
         }
       },
@@ -11284,6 +11301,31 @@
                   "8f9a0b1c2d": "No hay nada para hacer commit. La rama está actualizada.",
                   "h3i4j5k607": "Comprobando si esta rama puede crear un {{value0}}…"
                 }
+              },
+              "conflict": {
+                "status": {
+                  "cards": {
+                    "5302a1ddba": "Conflictos de merge",
+                    "7f3af87549": "Conflictos de rebase",
+                    "6a8e9ad490": "Conflictos de cherry-pick",
+                    "bdf8772106": "Conflictos",
+                    "edc2d82a2b": "Merge en curso",
+                    "5c3707aa44": "Rebase en curso",
+                    "ffe53a1da6": "Cherry-pick en curso",
+                    "35eb76d323": "Operación en curso"
+                  }
+                }
+              },
+              "content": {
+                "status": {
+                  "3f425c239c": "No hay cambios en esta rama",
+                  "640f6fdb36": "Este espacio de trabajo está limpio y esta rama no tiene cambios por delante de {{value0}}",
+                  "8deb86bbec": "base",
+                  "978eba351e": "El texto de búsqueda es demasiado grande",
+                  "0bce43409f": "Usa un filtro de archivos más corto.",
+                  "1b6caf533d": "No hay archivos coincidentes",
+                  "00c07771b7": "Ningún archivo modificado coincide con \"{{value0}}\""
+                }
               }
             }
           },
@@ -15031,6 +15073,13 @@
       "sent": "El contexto de la sesión se envió a {{agent}} en una sesión nueva.",
       "deliveryFailed": "La nueva sesión de {{agent}} se inició, pero no se pudo enviar su contexto.",
       "launchFailed": "No se pudo iniciar una sesión nueva de {{agent}}."
+    },
+    "status": {
+      "bar": {
+        "workspaceSpace": {
+          "otherTopLevelItems": "Otros elementos de nivel superior ({{value0}})"
+        }
+      }
     }
   },
   "dashboardPopout": {
