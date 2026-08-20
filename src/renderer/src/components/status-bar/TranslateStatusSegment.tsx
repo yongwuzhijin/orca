@@ -7,6 +7,7 @@ import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
 import {
   TRANSLATION_INPUT_MAX_LENGTH,
+  type DictionaryHeadwordEntry,
   type TranslationDirectionPreference
 } from '../../../../shared/text-translation-types'
 import { resolveTranslationTargetLanguage } from '../../../../shared/translation-target-language'
@@ -16,6 +17,7 @@ import {
   describeTranslationDirection,
   isTranslationInputTooLong,
   nextTranslationPreference,
+  shouldLookUpDictionary,
   toTranslateResult,
   type TranslatePopoverStatus
 } from './translate-popover-state'
@@ -41,6 +43,7 @@ export function TranslateStatusSegment({
   const [preference, setPreference] = useState<TranslationDirectionPreference>('auto')
   const [useAi, setUseAi] = useState(false)
   const [status, setStatus] = useState<TranslatePopoverStatus>({ phase: 'idle' })
+  const [headwordEntries, setHeadwordEntries] = useState<DictionaryHeadwordEntry[]>([])
   // Late responses from a superseded submit must not overwrite a newer result.
   const submitSeqRef = useRef(0)
 
@@ -70,6 +73,18 @@ export function TranslateStatusSegment({
       const seq = submitSeqRef.current + 1
       submitSeqRef.current = seq
       setStatus({ phase: 'translating', usedAi: withAi })
+      setHeadwordEntries([])
+      if (shouldLookUpDictionary(text, withAi)) {
+        void window.api.translation
+          .lookupDictionary({ text: trimmed })
+          .then((response) => {
+            // The same sequence guard as the translation: a superseded lookup is discarded.
+            if (submitSeqRef.current === seq) {
+              setHeadwordEntries(Array.isArray(response.entries) ? response.entries : [])
+            }
+          })
+          .catch(() => {})
+      }
       const api = window.api.translation
       const pending = withAi
         ? api.translateWithAi({ text, preference })
@@ -262,6 +277,7 @@ export function TranslateStatusSegment({
               key={status.result.translatedText}
               result={status.result}
               typedText={text}
+              headwordEntries={headwordEntries}
             />
           )}
         </div>
