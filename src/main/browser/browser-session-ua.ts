@@ -7,6 +7,10 @@ import {
   setUserAgentHeader,
   stripClientHints
 } from './browser-google-auth-ua'
+import {
+  setBrowserRequestHeadersStage,
+  type BrowserRequestHeadersStage
+} from './browser-session-request-pipeline'
 
 // Why: Electron's default UA includes "Electron/X.X.X" and the app name
 // (e.g. "orca/1.2.3"), which Cloudflare Turnstile and other bot detectors
@@ -27,26 +31,27 @@ export function cleanElectronUserAgent(ua: string): string {
 // presents. Rewrite the hint headers to the brand set Chrome ships for the same
 // engine version so the two surfaces tell one story. Also owns the Google
 // auth-host Firefox switch, which must install even for a non-Chrome-shaped UA.
-export function setupClientHintsOverride(
-  sess: Session,
+export function createClientHintsStage(
   ua: string,
   options: { googleAuthOverride?: boolean } = {}
-): void {
+): BrowserRequestHeadersStage {
   // Why: only Chrome-shaped base UAs carry sec-ch-ua hints to rewrite, but the
   // Google-auth Firefox switch below must install regardless, so keep the hints
   // optional rather than bailing out of the whole handler.
   const chromeHints = buildChromeClientHints(ua)
   const firefoxUa = googleAuthUserAgent()
 
-  sess.webRequest.onBeforeSendHeaders({ urls: ['https://*/*'] }, (details, callback) => {
-    const headers = details.requestHeaders
+  return (details, headers) => {
+    // Why: the old listener carried an { urls: ['https://*/*'] } filter; the pipeline has none.
+    if (!details.url.startsWith('https://')) {
+      return
+    }
     if (options.googleAuthOverride !== false && isGoogleAuthUrl(details.url)) {
       // Why: present a Firefox identity on Google's sign-in hosts so the user logs
       // in inside the app and Google issues self-refreshing bound cookies. Strip
       // sec-ch-ua* because real Firefox sends none.
       setUserAgentHeader(headers, firefoxUa)
       stripClientHints(headers)
-      callback({ requestHeaders: headers })
       return
     }
     if (options.googleAuthOverride !== false && currentUserAgent(headers) === firefoxUa) {
@@ -58,7 +63,6 @@ export function setupClientHintsOverride(
       // alone, which can stall Google's password-submit challenge. Real Firefox
       // sends no client hints, so strip them to keep one identity for the flow.
       stripClientHints(headers)
-      callback({ requestHeaders: headers })
       return
     }
     if (chromeHints) {
@@ -71,8 +75,17 @@ export function setupClientHintsOverride(
         }
       }
     }
-    callback({ requestHeaders: headers })
-  })
+  }
+}
+
+// Why: registering as a keyed pipeline stage instead of owning onBeforeSendHeaders leaves the event
+// free for later stages, and makes the repeat calls from partition policies idempotent.
+export function setupClientHintsOverride(
+  sess: Session,
+  ua: string,
+  options: { googleAuthOverride?: boolean } = {}
+): void {
+  setBrowserRequestHeadersStage(sess, 'client-hints', createClientHintsStage(ua, options))
 }
 
 function buildChromeClientHints(ua: string): { secChUa: string; secChUaFull: string } | null {
