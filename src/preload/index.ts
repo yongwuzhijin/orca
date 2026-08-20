@@ -265,7 +265,12 @@ import type {
   SpeechModelState,
   SpeechTranscriptEvent
 } from '../shared/speech-types'
-import type { TranslationRequest, TranslationResponse } from '../shared/text-translation-types'
+import type {
+  DictionaryLookupRequest,
+  DictionaryLookupResponse,
+  TranslationRequest,
+  TranslationResponse
+} from '../shared/text-translation-types'
 import type { TelemetryConsentState } from '../shared/telemetry-consent-types'
 import type {
   PreflightRuntimeContext,
@@ -5198,7 +5203,9 @@ const api = {
       ipcRenderer.invoke('translation:translate', request),
     translateWithAi: (request: TranslationRequest): Promise<TranslationResponse> =>
       ipcRenderer.invoke('translation:translateWithAi', request),
-    cancelAi: (): Promise<void> => ipcRenderer.invoke('translation:cancelAi')
+    cancelAi: (): Promise<void> => ipcRenderer.invoke('translation:cancelAi'),
+    lookupDictionary: (request: DictionaryLookupRequest): Promise<DictionaryLookupResponse> =>
+      ipcRenderer.invoke('translation:lookupDictionary', request)
   }
 }
 
