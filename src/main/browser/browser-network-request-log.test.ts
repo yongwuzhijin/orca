@@ -305,6 +305,10 @@ describe('browser network request log', () => {
     log.clear('page-1')
     expect(log.read('page-1', 50).entries).toEqual([])
     expect(log.read('page-2', 50).entries).toHaveLength(1)
+    // Why: the sibling's in-flight record has to survive too, or its request never completes.
+    vi.setSystemTime(1_500)
+    log.recordCompletion(completed(2, 204))
+    expect(log.read('page-2', 50).entries[0]).toMatchObject({ statusCode: 204, durationMs: 500 })
   })
 
   it('ignores a completion for a cleared page', () => {
