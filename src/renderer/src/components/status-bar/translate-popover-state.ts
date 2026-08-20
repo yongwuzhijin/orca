@@ -1,4 +1,5 @@
 import {
+  DICTIONARY_LOOKUP_MAX_LENGTH,
   TRANSLATION_INPUT_MAX_LENGTH,
   type TranslationDictionaryEntry,
   type TranslationDirectionPreference,
@@ -23,7 +24,7 @@ export function toTranslateResult(response: TranslationSuccess): TranslateResult
   return {
     translatedText: response.translatedText,
     dictionaryEntries: Array.isArray(response.dictionaryEntries) ? response.dictionaryEntries : [],
-    queriedText: response.queriedText,
+    queriedText: typeof response.queriedText === 'string' ? response.queriedText : '',
     providerId: response.providerId,
     agentLabel: response.agentLabel
   }
@@ -74,4 +75,15 @@ export function describeTranslationDirection(
     target,
     forced: preference !== 'auto'
   }
+}
+
+/** Youdao only helps for word-like input, and AI mode deliberately shows the agent alone. */
+export function shouldLookUpDictionary(text: string, withAi: boolean): boolean {
+  if (withAi) {
+    return false
+  }
+  const trimmed = text.trim()
+  return (
+    trimmed.length > 0 && trimmed.length <= DICTIONARY_LOOKUP_MAX_LENGTH && !/[\r\n]/.test(trimmed)
+  )
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DICTIONARY_LOOKUP_MAX_LENGTH,
   TRANSLATION_INPUT_MAX_LENGTH,
   type TranslationSuccess
 } from '../../../../shared/text-translation-types'
@@ -8,6 +9,7 @@ import {
   describeTranslationDirection,
   isTranslationInputTooLong,
   nextTranslationPreference,
+  shouldLookUpDictionary,
   toTranslateResult,
   type TranslatePopoverStatus
 } from './translate-popover-state'
@@ -78,6 +80,16 @@ describe('toTranslateResult', () => {
     const { dictionaryEntries: _dropped, ...skewed } = SUCCESS
     expect(toTranslateResult(skewed as TranslationSuccess).dictionaryEntries).toEqual([])
   })
+
+  it('blanks a queriedText the payload never supplied', () => {
+    // Why: a stale main bundle omits the field, and the panel used to print "undefined".
+    const stale = {
+      ok: true,
+      translatedText: '依赖的',
+      providerId: 'google-gtx'
+    } as unknown as TranslationSuccess
+    expect(toTranslateResult(stale).queriedText).toBe('')
+  })
 })
 
 describe('describeTranslationDirection', () => {
@@ -97,5 +109,32 @@ describe('describeTranslationDirection', () => {
   it('marks an explicit preference as forced', () => {
     expect(describeTranslationDirection('en', 'en').forced).toBe(true)
     expect(describeTranslationDirection('zh-CN', 'zh-CN').forced).toBe(true)
+  })
+})
+
+describe('shouldLookUpDictionary', () => {
+  it('looks up a short single word', () => {
+    expect(shouldLookUpDictionary('dependent', false)).toBe(true)
+    expect(shouldLookUpDictionary('依赖', false)).toBe(true)
+    expect(shouldLookUpDictionary('  dependent  ', false)).toBe(true)
+  })
+
+  it('skips AI submissions so the panel shows only the agent output', () => {
+    expect(shouldLookUpDictionary('dependent', true)).toBe(false)
+  })
+
+  it('skips input past the word-like length cap', () => {
+    expect(shouldLookUpDictionary('a'.repeat(DICTIONARY_LOOKUP_MAX_LENGTH), false)).toBe(true)
+    expect(shouldLookUpDictionary('a'.repeat(DICTIONARY_LOOKUP_MAX_LENGTH + 1), false)).toBe(false)
+  })
+
+  it('skips multiline input, which is prose rather than a lookup', () => {
+    expect(shouldLookUpDictionary('one\ntwo', false)).toBe(false)
+    expect(shouldLookUpDictionary('one\r\ntwo', false)).toBe(false)
+  })
+
+  it('skips empty input', () => {
+    expect(shouldLookUpDictionary('', false)).toBe(false)
+    expect(shouldLookUpDictionary('   ', false)).toBe(false)
   })
 })
