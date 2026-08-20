@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { TranslationFetch } from './translation-provider'
+import { TRANSLATION_REQUEST_TIMEOUT_MS, type TranslationFetch } from './translation-provider'
 import { lookupYoudaoDictionary } from './youdao-dictionary-provider'
 
 const BODY = JSON.stringify({
@@ -21,9 +21,9 @@ describe('lookupYoudaoDictionary', () => {
     const entries = await lookupYoudaoDictionary('dependent', fetchImpl)
     expect(entries).toEqual([{ headword: 'dependent', explain: 'adj. 依赖的' }])
     const [url] = vi.mocked(fetchImpl).mock.calls[0]
-    expect(url).toContain('https://dict.youdao.com/suggest?')
-    expect(url).toContain('q=dependent')
-    expect(url).toContain('le=en')
+    expect(url).toBe(
+      'https://dict.youdao.com/suggest?num=8&ver=3.0&doctype=json&cache=false&le=en&q=dependent'
+    )
   })
 
   it('percent-encodes a Chinese query', async () => {
@@ -40,10 +40,20 @@ describe('lookupYoudaoDictionary', () => {
     await expect(lookupYoudaoDictionary('dependent', fetchImpl)).resolves.toEqual([])
   })
 
-  it('returns nothing when the request times out', async () => {
-    const timeout = Object.assign(new Error('timed out'), { name: 'TimeoutError' })
+  it('bounds the request with the shared translation timeout', async () => {
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout')
+    const fetchImpl = respondWith(BODY)
+    await lookupYoudaoDictionary('dependent', fetchImpl)
+    expect(timeoutSpy).toHaveBeenCalledWith(TRANSLATION_REQUEST_TIMEOUT_MS)
+    const [, init] = vi.mocked(fetchImpl).mock.calls[0]
+    expect(init.signal).toBeInstanceOf(AbortSignal)
+    expect(init.signal.aborted).toBe(false)
+    timeoutSpy.mockRestore()
+  })
+
+  it('returns nothing when an aborted request throws', async () => {
     const fetchImpl: TranslationFetch = vi.fn(async () => {
-      throw timeout
+      throw Object.assign(new Error('timed out'), { name: 'TimeoutError' })
     })
     await expect(lookupYoudaoDictionary('dependent', fetchImpl)).resolves.toEqual([])
   })
