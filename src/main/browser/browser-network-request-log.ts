@@ -1,9 +1,8 @@
-import type {
-  BrowserNetworkLogEntry,
-  BrowserNetworkLogRead
+import {
+  BROWSER_NETWORK_LOG_MAX_ENTRIES,
+  type BrowserNetworkLogEntry,
+  type BrowserNetworkLogRead
 } from '../../shared/browser-network-log-types'
-
-export const BROWSER_NETWORK_LOG_MAX_ENTRIES = 200
 
 export type BrowserNetworkRequestLog = {
   recordStart: (details: Electron.OnBeforeSendHeadersListenerDetails) => void
@@ -22,7 +21,6 @@ export function createBrowserNetworkRequestLog(
   const entriesByPage = new Map<string, BrowserNetworkLogEntry[]>()
   const inFlightById = new Map<number, InFlight>()
 
-  // Why: Date.now() at both ends rather than details.timestamp, whose unit is not documented.
   const finish = (id: number, patch: Partial<BrowserNetworkLogEntry>): void => {
     const inFlight = inFlightById.get(id)
     // Why: dropping the record is what makes a second terminal event for this id a no-op.
@@ -51,6 +49,7 @@ export function createBrowserNetworkRequestLog(
         url: details.url,
         method: details.method,
         resourceType: details.resourceType,
+        // Why: Date.now() at both ends rather than details.timestamp, whose unit is not documented.
         startedAt: Date.now(),
         requestHeaders: { ...details.requestHeaders }
       }
@@ -58,8 +57,9 @@ export function createBrowserNetworkRequestLog(
       entries.push(entry)
       while (entries.length > BROWSER_NETWORK_LOG_MAX_ENTRIES) {
         const evicted = entries.shift()
-        // Why: bounds the in-flight map for requests that never complete; the entry is already gone.
-        if (evicted) {
+        // Why: bounds the in-flight map for requests that never complete, but a redirect chain
+        // reuses one id across entries, so only the evicted entry's own record may go.
+        if (evicted && inFlightById.get(evicted.id)?.entry === evicted) {
           inFlightById.delete(evicted.id)
         }
       }
@@ -74,7 +74,13 @@ export function createBrowserNetworkRequestLog(
       }
       inFlight.entry.statusCode = details.statusCode
       if (details.responseHeaders) {
-        inFlight.entry.responseHeaders = { ...details.responseHeaders }
+        // Why: the values are arrays, so a shallow spread would leave them aliased to details.
+        inFlight.entry.responseHeaders = Object.fromEntries(
+          Object.entries(details.responseHeaders).map(([name, values]): [string, string[]] => [
+            name,
+            [...values]
+          ])
+        )
       }
     },
 
@@ -88,10 +94,12 @@ export function createBrowserNetworkRequestLog(
 
     read: (browserPageId, limit) => {
       const entries = entriesByPage.get(browserPageId) ?? []
-      const capped = Math.max(0, limit)
+      // Why: limit is renderer-supplied and structured clone preserves NaN, which would otherwise
+      // read as slice(0) and hand back the whole buffer with truncated:false.
+      const normalizedLimit = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : 0
       return {
-        entries: entries.slice(Math.max(0, entries.length - capped)).toReversed(),
-        truncated: entries.length > capped
+        entries: entries.slice(Math.max(0, entries.length - normalizedLimit)).toReversed(),
+        truncated: entries.length > normalizedLimit
       }
     },
 

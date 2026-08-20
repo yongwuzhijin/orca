@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  BROWSER_NETWORK_LOG_MAX_ENTRIES,
-  createBrowserNetworkRequestLog
-} from './browser-network-request-log'
+import { BROWSER_NETWORK_LOG_MAX_ENTRIES } from '../../shared/browser-network-log-types'
+import { createBrowserNetworkRequestLog } from './browser-network-request-log'
 
 const PAGE_BY_WEB_CONTENTS = new Map<number, string>([
   [10, 'page-1'],
@@ -28,6 +26,16 @@ const start = (id: number, webContentsId: number | undefined, url = 'https://a.c
     webContentsId,
     requestHeaders: { ...REQUEST_HEADERS }
   }) as Electron.OnBeforeSendHeadersListenerDetails
+
+const received = (id: number, statusCode: number, responseHeaders?: Record<string, string[]>) =>
+  ({ id, statusCode, responseHeaders }) as Electron.OnHeadersReceivedListenerDetails
+
+// Why: Electron types fromCache as required on both terminal events, so fixtures must carry it.
+const completed = (id: number, statusCode: number, fromCache = false) =>
+  ({ id, statusCode, fromCache }) as Electron.OnCompletedListenerDetails
+
+const failed = (id: number, error: string) =>
+  ({ id, error, fromCache: false }) as Electron.OnErrorOccurredListenerDetails
 
 describe('browser network request log', () => {
   beforeEach(() => {
@@ -74,9 +82,9 @@ describe('browser network request log', () => {
     expect(log.read('page-2', 50).entries).toEqual([])
     // An unlogged request must not claim the in-flight slot of a logged one reusing its id.
     log.recordStart(start(1, 999))
-    log.recordCompletion({ id: 1, statusCode: 200 } as Electron.OnCompletedListenerDetails)
+    log.recordCompletion(completed(1, 200))
     expect(log.read('page-1', 50).entries[0]).toMatchObject({ statusCode: 200 })
-    log.recordCompletion({ id: 2, statusCode: 500 } as Electron.OnCompletedListenerDetails)
+    log.recordCompletion(completed(2, 500))
     expect(log.read('page-1', 50).entries.map((entry) => entry.id)).toEqual([1])
     expect(log.read('page-2', 50).entries).toEqual([])
   })
@@ -93,11 +101,7 @@ describe('browser network request log', () => {
     const log = createBrowserNetworkRequestLog(resolvePageId)
     log.recordStart(start(1, 10))
     log.recordStart(start(2, 10))
-    log.recordResponseHeaders({
-      id: 2,
-      statusCode: 404,
-      responseHeaders: { ...RESPONSE_HEADERS }
-    } as Electron.OnHeadersReceivedListenerDetails)
+    log.recordResponseHeaders(received(2, 404, { ...RESPONSE_HEADERS }))
     const byId = new Map(log.read('page-1', 50).entries.map((entry) => [entry.id, entry]))
     expect(byId.get(2)).toMatchObject({ statusCode: 404, responseHeaders: { Server: ['nginx'] } })
     expect(byId.get(1)?.statusCode).toBeUndefined()
@@ -105,10 +109,7 @@ describe('browser network request log', () => {
 
   it('ignores a response for a request it never saw start', () => {
     const log = createBrowserNetworkRequestLog(resolvePageId)
-    log.recordResponseHeaders({
-      id: 77,
-      statusCode: 200
-    } as Electron.OnHeadersReceivedListenerDetails)
+    log.recordResponseHeaders(received(77, 200))
     expect(log.read('page-1', 50).entries).toEqual([])
   })
 
@@ -123,25 +124,25 @@ describe('browser network request log', () => {
   it('snapshots response headers rather than aliasing the live details object', () => {
     const log = createBrowserNetworkRequestLog(resolvePageId)
     log.recordStart(start(1, 10))
-    const responseHeaders: Record<string, string[]> = { Server: ['caddy'] }
-    log.recordResponseHeaders({
-      id: 1,
-      statusCode: 200,
-      responseHeaders
-    } as Electron.OnHeadersReceivedListenerDetails)
+    const responseHeaders: Record<string, string[]> = {
+      Server: ['caddy'],
+      'Set-Cookie': ['a=1']
+    }
+    log.recordResponseHeaders(received(1, 200, responseHeaders))
     responseHeaders.Server = ['rewritten-after-receive']
-    expect(log.read('page-1', 50).entries[0]?.responseHeaders).toEqual({ Server: ['caddy'] })
+    // A response-override edits a header array in place, which a shallow spread would let through.
+    responseHeaders['Set-Cookie']?.push('b=2')
+    expect(log.read('page-1', 50).entries[0]?.responseHeaders).toEqual({
+      Server: ['caddy'],
+      'Set-Cookie': ['a=1']
+    })
   })
 
   it('stamps a duration and the cache flag on completion', () => {
     const log = createBrowserNetworkRequestLog(resolvePageId)
     log.recordStart(start(1, 10))
     vi.setSystemTime(1_250)
-    log.recordCompletion({
-      id: 1,
-      statusCode: 200,
-      fromCache: true
-    } as Electron.OnCompletedListenerDetails)
+    log.recordCompletion(completed(1, 200, true))
     expect(log.read('page-1', 50).entries[0]).toMatchObject({
       statusCode: 200,
       fromCache: true,
@@ -149,23 +150,58 @@ describe('browser network request log', () => {
     })
   })
 
-  // Electron reuses one request id across a redirect chain, so an entry can see several passes.
   it('ignores a second terminal event for the same request id', () => {
     const log = createBrowserNetworkRequestLog(resolvePageId)
     log.recordStart(start(1, 10))
     vi.setSystemTime(1_250)
-    log.recordCompletion({ id: 1, statusCode: 200 } as Electron.OnCompletedListenerDetails)
+    log.recordCompletion(completed(1, 200))
     expect(log.read('page-1', 50).entries[0]).toMatchObject({ durationMs: 250 })
     vi.setSystemTime(2_000)
-    log.recordCompletion({ id: 1, statusCode: 200 } as Electron.OnCompletedListenerDetails)
+    log.recordCompletion(completed(1, 200))
     expect(log.read('page-1', 50).entries[0]?.durationMs).toBe(250)
+  })
+
+  // Electron reuses one request id across a redirect chain, so every hop is its own recordStart.
+  it('logs every hop of a redirect chain under the reused request id', () => {
+    const log = createBrowserNetworkRequestLog(resolvePageId)
+    log.recordStart(start(0, 10, 'https://a.com/hop1'))
+    log.recordResponseHeaders(received(0, 301))
+    log.recordStart(start(0, 10, 'https://a.com/hop2'))
+    log.recordResponseHeaders(received(0, 200))
+    log.recordCompletion(completed(0, 200))
+    const { entries } = log.read('page-1', 50)
+    expect(entries.map((entry) => entry.url)).toEqual(['https://a.com/hop2', 'https://a.com/hop1'])
+    expect(entries[0]).toMatchObject({ statusCode: 200, durationMs: 0 })
+    // Only the last hop is finished, so the superseded hop keeps its status and no duration.
+    expect(entries[1]).toMatchObject({ statusCode: 301 })
+    expect(entries[1]?.durationMs).toBeUndefined()
+  })
+
+  it('completes a still-in-flight redirect hop whose predecessor was evicted', () => {
+    const log = createBrowserNetworkRequestLog(resolvePageId)
+    log.recordStart(start(0, 10, 'https://a.com/hop1'))
+    log.recordResponseHeaders(received(0, 301))
+    log.recordStart(start(0, 10, 'https://a.com/hop2'))
+    // Push hop1 out of the buffer while hop2 still owns the shared id's in-flight record.
+    for (let index = 1; index < BROWSER_NETWORK_LOG_MAX_ENTRIES; index += 1) {
+      log.recordStart(start(index, 10, `https://a.com/${index}`))
+    }
+    vi.setSystemTime(1_400)
+    log.recordCompletion(completed(0, 200))
+    const { entries } = log.read('page-1', BROWSER_NETWORK_LOG_MAX_ENTRIES)
+    expect(entries.map((entry) => entry.url)).not.toContain('https://a.com/hop1')
+    expect(entries.at(-1)).toMatchObject({
+      url: 'https://a.com/hop2',
+      statusCode: 200,
+      durationMs: 400
+    })
   })
 
   it('clamps a backwards system clock to a zero duration', () => {
     const log = createBrowserNetworkRequestLog(resolvePageId)
     log.recordStart(start(1, 10))
     vi.setSystemTime(500)
-    log.recordCompletion({ id: 1, statusCode: 200 } as Electron.OnCompletedListenerDetails)
+    log.recordCompletion(completed(1, 200))
     expect(log.read('page-1', 50).entries[0]?.durationMs).toBe(0)
   })
 
@@ -173,10 +209,7 @@ describe('browser network request log', () => {
     const log = createBrowserNetworkRequestLog(resolvePageId)
     log.recordStart(start(1, 10))
     vi.setSystemTime(1_100)
-    log.recordError({
-      id: 1,
-      error: 'net::ERR_CONNECTION_REFUSED'
-    } as Electron.OnErrorOccurredListenerDetails)
+    log.recordError(failed(1, 'net::ERR_CONNECTION_REFUSED'))
     expect(log.read('page-1', 50).entries[0]).toMatchObject({
       error: 'net::ERR_CONNECTION_REFUSED',
       durationMs: 100
@@ -215,6 +248,16 @@ describe('browser network request log', () => {
     expect(truncated).toBe(true)
   })
 
+  it('returns the whole buffer when the limit sits above it, rather than a suffix', () => {
+    const log = createBrowserNetworkRequestLog(resolvePageId)
+    log.recordStart(start(1, 10))
+    log.recordStart(start(2, 10))
+    log.recordStart(start(3, 10))
+    const { entries, truncated } = log.read('page-1', 5)
+    expect(entries.map((entry) => entry.id)).toEqual([3, 2, 1])
+    expect(truncated).toBe(false)
+  })
+
   // The limit arrives from the renderer over IPC, so a negative value is reachable.
   it('clamps a negative limit to an empty read', () => {
     const log = createBrowserNetworkRequestLog(resolvePageId)
@@ -224,12 +267,31 @@ describe('browser network request log', () => {
     expect(log.read('page-2', -1)).toEqual({ entries: [], truncated: false })
   })
 
-  it('ignores a completion for an evicted request', () => {
+  // Structured clone hands NaN across IPC intact, so it must not read as "no limit".
+  it('reads nothing for a NaN limit and still reports the buffer as truncated', () => {
+    const log = createBrowserNetworkRequestLog(resolvePageId)
+    log.recordStart(start(1, 10))
+    log.recordStart(start(2, 10))
+    log.recordStart(start(3, 10))
+    expect(log.read('page-1', Number.NaN)).toEqual({ entries: [], truncated: true })
+  })
+
+  it('floors a fractional limit rather than overshooting it', () => {
+    const log = createBrowserNetworkRequestLog(resolvePageId)
+    log.recordStart(start(1, 10))
+    log.recordStart(start(2, 10))
+    log.recordStart(start(3, 10))
+    const { entries, truncated } = log.read('page-1', 2.5)
+    expect(entries.map((entry) => entry.id)).toEqual([3, 2])
+    expect(truncated).toBe(true)
+  })
+
+  it('keeps an evicted request out of reads even when its completion arrives later', () => {
     const log = createBrowserNetworkRequestLog(resolvePageId)
     for (let index = 0; index < BROWSER_NETWORK_LOG_MAX_ENTRIES + 1; index += 1) {
       log.recordStart(start(index, 10, `https://a.com/${index}`))
     }
-    log.recordCompletion({ id: 0, statusCode: 200 } as Electron.OnCompletedListenerDetails)
+    log.recordCompletion(completed(0, 200))
     // Read above the cap so the absence is the eviction, not this read's own limit.
     const { entries } = log.read('page-1', BROWSER_NETWORK_LOG_MAX_ENTRIES + 5)
     expect(entries).toHaveLength(BROWSER_NETWORK_LOG_MAX_ENTRIES)
@@ -249,7 +311,7 @@ describe('browser network request log', () => {
     const log = createBrowserNetworkRequestLog(resolvePageId)
     log.recordStart(start(1, 10))
     log.clear('page-1')
-    log.recordCompletion({ id: 1, statusCode: 200 } as Electron.OnCompletedListenerDetails)
+    log.recordCompletion(completed(1, 200))
     expect(log.read('page-1', 50).entries).toEqual([])
   })
 

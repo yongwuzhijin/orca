@@ -1,3 +1,5 @@
+export const BROWSER_NETWORK_LOG_MAX_ENTRIES = 200
+
 export type BrowserNetworkLogEntry = {
   /** Electron's webRequest request id, unique per in-flight request. */
   id: number
@@ -8,6 +10,7 @@ export type BrowserNetworkLogEntry = {
   statusCode?: number
   fromCache?: boolean
   error?: string
+  /** Absent means in flight OR a superseded redirect hop, which never gets finished. */
   durationMs?: number
   requestHeaders?: Record<string, string>
   responseHeaders?: Record<string, string[]>
