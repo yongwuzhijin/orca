@@ -25,6 +25,7 @@ export function createBrowserNetworkRequestLog(
   // Why: Date.now() at both ends rather than details.timestamp, whose unit is not documented.
   const finish = (id: number, patch: Partial<BrowserNetworkLogEntry>): void => {
     const inFlight = inFlightById.get(id)
+    // Why: dropping the record is what makes a second terminal event for this id a no-op.
     inFlightById.delete(id)
     if (!inFlight) {
       return

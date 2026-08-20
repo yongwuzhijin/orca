@@ -9,8 +9,10 @@ const PAGE_BY_WEB_CONTENTS = new Map<number, string>([
   [20, 'page-2']
 ])
 
-const resolvePageId = (webContentsId: number): string | null =>
-  PAGE_BY_WEB_CONTENTS.get(webContentsId) ?? null
+// Why: spied so the "never asked" half of recordStart's guard pair stays observable.
+const resolvePageId = vi.fn(
+  (webContentsId: number): string | null => PAGE_BY_WEB_CONTENTS.get(webContentsId) ?? null
+)
 
 // Why: Electron types these as Record maps, which are not comparable to inline literal types.
 const REQUEST_HEADERS: Record<string, string> = { Accept: '*/*' }
@@ -29,6 +31,7 @@ const start = (id: number, webContentsId: number | undefined, url = 'https://a.c
 
 describe('browser network request log', () => {
   beforeEach(() => {
+    resolvePageId.mockClear()
     vi.useFakeTimers()
     vi.setSystemTime(1_000)
   })
@@ -55,11 +58,27 @@ describe('browser network request log', () => {
     })
   })
 
-  it('ignores a request with no owning WebContents', () => {
+  it('never asks for a page when the request carries no WebContents id', () => {
     const log = createBrowserNetworkRequestLog(resolvePageId)
     log.recordStart(start(1, undefined))
-    log.recordStart(start(2, 999))
+    expect(resolvePageId).not.toHaveBeenCalled()
     expect(log.read('page-1', 50).entries).toEqual([])
+  })
+
+  it('ignores a request whose WebContents resolves to no page', () => {
+    const log = createBrowserNetworkRequestLog(resolvePageId)
+    log.recordStart(start(1, 10))
+    log.recordStart(start(2, 999))
+    expect(resolvePageId).toHaveBeenCalledWith(999)
+    expect(log.read('page-1', 50).entries.map((entry) => entry.id)).toEqual([1])
+    expect(log.read('page-2', 50).entries).toEqual([])
+    // An unlogged request must not claim the in-flight slot of a logged one reusing its id.
+    log.recordStart(start(1, 999))
+    log.recordCompletion({ id: 1, statusCode: 200 } as Electron.OnCompletedListenerDetails)
+    expect(log.read('page-1', 50).entries[0]).toMatchObject({ statusCode: 200 })
+    log.recordCompletion({ id: 2, statusCode: 500 } as Electron.OnCompletedListenerDetails)
+    expect(log.read('page-1', 50).entries.map((entry) => entry.id)).toEqual([1])
+    expect(log.read('page-2', 50).entries).toEqual([])
   })
 
   it('keeps sibling pages in separate buffers', () => {
@@ -93,6 +112,27 @@ describe('browser network request log', () => {
     expect(log.read('page-1', 50).entries).toEqual([])
   })
 
+  it('snapshots request headers rather than aliasing the live details object', () => {
+    const log = createBrowserNetworkRequestLog(resolvePageId)
+    const requestHeaders: Record<string, string> = { Accept: 'text/html' }
+    log.recordStart({ ...start(1, 10), requestHeaders })
+    requestHeaders.Accept = 'rewritten-after-send'
+    expect(log.read('page-1', 50).entries[0]?.requestHeaders).toEqual({ Accept: 'text/html' })
+  })
+
+  it('snapshots response headers rather than aliasing the live details object', () => {
+    const log = createBrowserNetworkRequestLog(resolvePageId)
+    log.recordStart(start(1, 10))
+    const responseHeaders: Record<string, string[]> = { Server: ['caddy'] }
+    log.recordResponseHeaders({
+      id: 1,
+      statusCode: 200,
+      responseHeaders
+    } as Electron.OnHeadersReceivedListenerDetails)
+    responseHeaders.Server = ['rewritten-after-receive']
+    expect(log.read('page-1', 50).entries[0]?.responseHeaders).toEqual({ Server: ['caddy'] })
+  })
+
   it('stamps a duration and the cache flag on completion', () => {
     const log = createBrowserNetworkRequestLog(resolvePageId)
     log.recordStart(start(1, 10))
@@ -107,6 +147,26 @@ describe('browser network request log', () => {
       fromCache: true,
       durationMs: 250
     })
+  })
+
+  // Electron reuses one request id across a redirect chain, so an entry can see several passes.
+  it('ignores a second terminal event for the same request id', () => {
+    const log = createBrowserNetworkRequestLog(resolvePageId)
+    log.recordStart(start(1, 10))
+    vi.setSystemTime(1_250)
+    log.recordCompletion({ id: 1, statusCode: 200 } as Electron.OnCompletedListenerDetails)
+    expect(log.read('page-1', 50).entries[0]).toMatchObject({ durationMs: 250 })
+    vi.setSystemTime(2_000)
+    log.recordCompletion({ id: 1, statusCode: 200 } as Electron.OnCompletedListenerDetails)
+    expect(log.read('page-1', 50).entries[0]?.durationMs).toBe(250)
+  })
+
+  it('clamps a backwards system clock to a zero duration', () => {
+    const log = createBrowserNetworkRequestLog(resolvePageId)
+    log.recordStart(start(1, 10))
+    vi.setSystemTime(500)
+    log.recordCompletion({ id: 1, statusCode: 200 } as Electron.OnCompletedListenerDetails)
+    expect(log.read('page-1', 50).entries[0]?.durationMs).toBe(0)
   })
 
   it('records the error text when a request fails', () => {
@@ -153,6 +213,15 @@ describe('browser network request log', () => {
     const { entries, truncated } = log.read('page-1', 2)
     expect(entries).toHaveLength(2)
     expect(truncated).toBe(true)
+  })
+
+  // The limit arrives from the renderer over IPC, so a negative value is reachable.
+  it('clamps a negative limit to an empty read', () => {
+    const log = createBrowserNetworkRequestLog(resolvePageId)
+    log.recordStart(start(1, 10))
+    expect(log.read('page-1', -1)).toEqual({ entries: [], truncated: true })
+    // An empty buffer has nothing left over to truncate, even for a nonsense limit.
+    expect(log.read('page-2', -1)).toEqual({ entries: [], truncated: false })
   })
 
   it('ignores a completion for an evicted request', () => {
