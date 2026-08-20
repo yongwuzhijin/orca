@@ -15236,6 +15236,7 @@
       "agentNote": "Traducido por {agent}",
       "agentFallbackName": "el agente de IA",
       "normalizedNote": "Consultado como «{query}»",
+      "dictionaryAriaLabel": "Entradas del diccionario",
       "ai": "AI",
       "aiHint": "Usa tu agente de IA configurado en lugar del servicio gratuito",
       "cancel": "Cancelar",

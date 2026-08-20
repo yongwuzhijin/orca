@@ -15236,6 +15236,7 @@
       "agentNote": "{agent} が翻訳しました",
       "agentFallbackName": "AI Agent",
       "normalizedNote": "「{query}」として検索しました",
+      "dictionaryAriaLabel": "辞書項目",
       "ai": "AI",
       "aiHint": "無料サービスの代わりに設定済みの AI Agent を使います",
       "cancel": "キャンセル",

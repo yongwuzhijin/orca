@@ -16912,6 +16912,7 @@
       "agentNote": "Translated by {agent}",
       "agentFallbackName": "the AI agent",
       "normalizedNote": "Looked up as “{query}”",
+      "dictionaryAriaLabel": "Dictionary entries",
       "ai": "AI",
       "aiHint": "Use your configured AI agent instead of the free service",
       "cancel": "Cancel",

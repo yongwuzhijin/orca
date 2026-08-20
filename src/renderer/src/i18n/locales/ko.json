@@ -15247,6 +15247,7 @@
       "agentNote": "{agent}이(가) 번역했습니다",
       "agentFallbackName": "AI 에이전트",
       "normalizedNote": "“{query}”(으)로 조회했습니다",
+      "dictionaryAriaLabel": "사전 항목",
       "ai": "AI",
       "aiHint": "무료 서비스 대신 설정된 AI 에이전트를 사용합니다",
       "cancel": "취소",

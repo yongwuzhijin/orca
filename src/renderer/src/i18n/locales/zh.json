@@ -15256,6 +15256,7 @@
       "agentNote": "由 {agent} 翻译",
       "agentFallbackName": "AI Agent",
       "normalizedNote": "以“{query}”查询",
+      "dictionaryAriaLabel": "词典释义",
       "ai": "AI",
       "aiHint": "使用已配置的 AI Agent 翻译，而不是免费服务",
       "cancel": "取消",
