@@ -1,14 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GlobalSettings } from '../../shared/global-settings-types'
 
-const { handleMock, removeHandlerMock, translateTextMock, translateWithAiMock, cancelAiMock } =
-  vi.hoisted(() => ({
-    handleMock: vi.fn(),
-    removeHandlerMock: vi.fn(),
-    translateTextMock: vi.fn(),
-    translateWithAiMock: vi.fn(),
-    cancelAiMock: vi.fn()
-  }))
+const {
+  handleMock,
+  removeHandlerMock,
+  translateTextMock,
+  translateWithAiMock,
+  cancelAiMock,
+  lookupDictionaryMock
+} = vi.hoisted(() => ({
+  handleMock: vi.fn(),
+  removeHandlerMock: vi.fn(),
+  translateTextMock: vi.fn(),
+  translateWithAiMock: vi.fn(),
+  cancelAiMock: vi.fn(),
+  lookupDictionaryMock: vi.fn()
+}))
 
 vi.mock('electron', () => ({
   ipcMain: { handle: handleMock, removeHandler: removeHandlerMock }
@@ -23,9 +30,14 @@ vi.mock('../text-translation/ai-translation', () => ({
   cancelAiTranslation: cancelAiMock
 }))
 
+vi.mock('../text-translation/youdao-dictionary-provider', () => ({
+  lookupYoudaoDictionary: lookupDictionaryMock
+}))
+
 import {
   registerTextTranslationHandlers,
   TRANSLATION_CANCEL_AI_CHANNEL,
+  TRANSLATION_LOOKUP_DICTIONARY_CHANNEL,
   TRANSLATION_TRANSLATE_CHANNEL,
   TRANSLATION_TRANSLATE_WITH_AI_CHANNEL
 } from './text-translation-ipc'
@@ -50,6 +62,7 @@ describe('text translation IPC', () => {
     translateTextMock.mockReset()
     translateWithAiMock.mockReset()
     cancelAiMock.mockReset()
+    lookupDictionaryMock.mockReset()
     translateTextMock.mockResolvedValue({ ok: true, translatedText: '缓存很冷。' })
     translateWithAiMock.mockResolvedValue({
       ok: true,
@@ -137,5 +150,28 @@ describe('text translation IPC', () => {
     const handler = registerAndGetHandler(TRANSLATION_CANCEL_AI_CHANNEL)
     await expect(handler({}, undefined)).resolves.toBeUndefined()
     expect(cancelAiMock).toHaveBeenCalledTimes(1)
+  })
+
+  describe('translation:lookupDictionary', () => {
+    it('returns the provider entries for a valid request', async () => {
+      lookupDictionaryMock.mockResolvedValue([{ headword: 'dependent', explain: 'adj. 依赖的' }])
+      const handler = registerAndGetHandler(TRANSLATION_LOOKUP_DICTIONARY_CHANNEL)
+      await expect(handler({}, { text: 'dependent' })).resolves.toEqual({
+        entries: [{ headword: 'dependent', explain: 'adj. 依赖的' }]
+      })
+    })
+
+    it('returns no entries for a request without a string text', async () => {
+      const handler = registerAndGetHandler(TRANSLATION_LOOKUP_DICTIONARY_CHANNEL)
+      await expect(handler({}, { text: 42 })).resolves.toEqual({ entries: [] })
+      await expect(handler({}, null)).resolves.toEqual({ entries: [] })
+    })
+
+    it('resolves rather than rejects when the provider throws', async () => {
+      // Why: a rejected invoke surfaces in the renderer as an unhandled crash, not a missed lookup.
+      lookupDictionaryMock.mockRejectedValue(new Error('boom'))
+      const handler = registerAndGetHandler(TRANSLATION_LOOKUP_DICTIONARY_CHANNEL)
+      await expect(handler({}, { text: 'dependent' })).resolves.toEqual({ entries: [] })
+    })
   })
 })

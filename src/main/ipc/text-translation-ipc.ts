@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import type { GlobalSettings } from '../../shared/global-settings-types'
 import {
+  type DictionaryLookupResponse,
   isTranslationDirectionPreference,
   type TranslationRequest,
   type TranslationResponse
@@ -8,10 +9,12 @@ import {
 import { cancelAiTranslation, translateTextWithAi } from '../text-translation/ai-translation'
 import { translationFetch } from '../text-translation/translation-fetch'
 import { translateText } from '../text-translation/translation-service'
+import { lookupYoudaoDictionary } from '../text-translation/youdao-dictionary-provider'
 
 export const TRANSLATION_TRANSLATE_CHANNEL = 'translation:translate'
 export const TRANSLATION_TRANSLATE_WITH_AI_CHANNEL = 'translation:translateWithAi'
 export const TRANSLATION_CANCEL_AI_CHANNEL = 'translation:cancelAi'
+export const TRANSLATION_LOOKUP_DICTIONARY_CHANNEL = 'translation:lookupDictionary'
 
 export type TextTranslationHandlerDeps = {
   getSettings: () => GlobalSettings
@@ -21,7 +24,8 @@ export function registerTextTranslationHandlers(deps: TextTranslationHandlerDeps
   for (const channel of [
     TRANSLATION_TRANSLATE_CHANNEL,
     TRANSLATION_TRANSLATE_WITH_AI_CHANNEL,
-    TRANSLATION_CANCEL_AI_CHANNEL
+    TRANSLATION_CANCEL_AI_CHANNEL,
+    TRANSLATION_LOOKUP_DICTIONARY_CHANNEL
   ]) {
     ipcMain.removeHandler(channel)
   }
@@ -61,6 +65,21 @@ export function registerTextTranslationHandlers(deps: TextTranslationHandlerDeps
     }
   )
 
+  ipcMain.handle(
+    TRANSLATION_LOOKUP_DICTIONARY_CHANNEL,
+    async (_event, args: unknown): Promise<DictionaryLookupResponse> => {
+      const text = readDictionaryText(args)
+      if (text === null) {
+        return { entries: [] }
+      }
+      try {
+        return { entries: await lookupYoudaoDictionary(text, translationFetch) }
+      } catch {
+        return { entries: [] }
+      }
+    }
+  )
+
   // Safe with nothing in flight: the lane lookup simply misses.
   ipcMain.handle(TRANSLATION_CANCEL_AI_CHANNEL, async (): Promise<void> => {
     cancelAiTranslation()
@@ -76,4 +95,12 @@ function parseTranslationRequest(args: unknown): TranslationRequest | null {
     return null
   }
   return { text, preference }
+}
+
+function readDictionaryText(args: unknown): string | null {
+  if (typeof args !== 'object' || args === null) {
+    return null
+  }
+  const { text } = args as { text?: unknown }
+  return typeof text === 'string' ? text : null
 }
