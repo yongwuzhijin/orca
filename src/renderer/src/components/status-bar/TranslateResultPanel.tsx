@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react'
 import { Check, Copy } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
+import type { DictionaryHeadwordEntry } from '../../../../shared/text-translation-types'
 import type { TranslateResult } from './translate-popover-state'
 import { describeTranslationPartOfSpeech } from './translation-part-of-speech'
 
@@ -8,11 +9,14 @@ type TranslateResultPanelProps = {
   result: TranslateResult
   /** What the user typed, so a normalized query can be called out. */
   typedText: string
+  /** Youdao headwords; empty when the lookup was skipped, missed, or failed. */
+  headwordEntries: DictionaryHeadwordEntry[]
 }
 
 export function TranslateResultPanel({
   result,
-  typedText
+  typedText,
+  headwordEntries
 }: TranslateResultPanelProps): React.JSX.Element {
   const [copied, setCopied] = useState(false)
 
@@ -21,7 +25,11 @@ export function TranslateResultPanel({
   }, [result.translatedText])
 
   const notes: string[] = []
-  if (result.queriedText !== typedText.trim()) {
+  if (
+    typeof result.queriedText === 'string' &&
+    result.queriedText !== '' &&
+    result.queriedText !== typedText.trim()
+  ) {
     notes.push(
       translate('statusBar.translate.normalizedNote', 'Looked up as “{query}”').replace(
         '{query}',
@@ -34,7 +42,7 @@ export function TranslateResultPanel({
     notes.push(provider)
   }
   // Second line of defense: an IPC payload without the array must not crash the status bar.
-  const dictionaryEntries = result.dictionaryEntries ?? []
+  const posEntries = headwordEntries.length > 0 ? [] : (result.dictionaryEntries ?? [])
 
   return (
     <div className="flex flex-col gap-1.5 rounded border border-border bg-muted/40 p-2">
@@ -42,9 +50,23 @@ export function TranslateResultPanel({
         {result.translatedText}
       </p>
 
-      {dictionaryEntries.length > 0 && (
+      {headwordEntries.length > 0 && (
+        <dl
+          aria-label={translate('statusBar.translate.dictionaryAriaLabel', 'Dictionary entries')}
+          className="scrollbar-sleek m-0 flex max-h-40 flex-col gap-1 overflow-y-auto border-t border-border pt-1.5"
+        >
+          {headwordEntries.map((entry) => (
+            <div key={entry.headword} className="flex flex-col gap-0.5">
+              <dt className="text-[11px] font-medium text-muted-foreground">{entry.headword}</dt>
+              <dd className="m-0 text-[12px] text-foreground select-text">{entry.explain}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {posEntries.length > 0 && (
         <dl className="scrollbar-sleek m-0 flex max-h-40 flex-col gap-1 overflow-y-auto border-t border-border pt-1.5">
-          {dictionaryEntries.map((entry) => (
+          {posEntries.map((entry) => (
             <div key={entry.partOfSpeech} className="flex items-baseline gap-1.5">
               <dt className="w-12 shrink-0 text-[11px] font-medium text-muted-foreground italic">
                 {describeTranslationPartOfSpeech(entry.partOfSpeech)}

@@ -19,7 +19,7 @@ afterEach(cleanup)
 
 describe('TranslateResultPanel', () => {
   it('renders one abbreviated row per part of speech with its senses', () => {
-    render(<TranslateResultPanel result={GTX} typedText="dependent" />)
+    render(<TranslateResultPanel result={GTX} typedText="dependent" headwordEntries={[]} />)
     expect(screen.getByText('adj.')).toBeTruthy()
     expect(screen.getByText('属，依赖的')).toBeTruthy()
     expect(screen.getByText('n.')).toBeTruthy()
@@ -27,12 +27,14 @@ describe('TranslateResultPanel', () => {
   })
 
   it('calls out the normalized query so a shouted word does not look mistranslated', () => {
-    render(<TranslateResultPanel result={GTX} typedText="DEPENDENT" />)
+    render(<TranslateResultPanel result={GTX} typedText="DEPENDENT" headwordEntries={[]} />)
     expect(screen.getByText(/dependent/)).toBeTruthy()
   })
 
   it('stays silent about the provider when the primary one answered', () => {
-    const { container } = render(<TranslateResultPanel result={GTX} typedText="dependent" />)
+    const { container } = render(
+      <TranslateResultPanel result={GTX} typedText="dependent" headwordEntries={[]} />
+    )
     expect(container.textContent).not.toContain('backup')
   })
 
@@ -47,6 +49,7 @@ describe('TranslateResultPanel', () => {
           agentLabel: 'Claude'
         }}
         typedText="dependent"
+        headwordEntries={[]}
       />
     )
     expect(screen.getByText(/Claude/)).toBeTruthy()
@@ -56,7 +59,11 @@ describe('TranslateResultPanel', () => {
     // A stale main bundle predates the field; undefined used to crash the whole status bar.
     const { dictionaryEntries: _dropped, ...withoutDictionary } = GTX
     render(
-      <TranslateResultPanel result={withoutDictionary as TranslateResult} typedText="dependent" />
+      <TranslateResultPanel
+        result={withoutDictionary as TranslateResult}
+        typedText="dependent"
+        headwordEntries={[]}
+      />
     )
     expect(screen.getByText('家属')).toBeTruthy()
     expect(screen.queryByText('adj.')).toBeNull()
@@ -67,8 +74,50 @@ describe('TranslateResultPanel', () => {
       <TranslateResultPanel
         result={{ ...GTX, dictionaryEntries: [], providerId: 'mymemory' }}
         typedText="dependent"
+        headwordEntries={[]}
       />
     )
     expect(screen.getByText(/backup service/)).toBeTruthy()
+  })
+})
+
+const HEADWORDS = [
+  { headword: 'dependent', explain: 'adj. 依赖的，依靠的；取决于 n. 受供养者' },
+  { headword: 'dependent variable', explain: '因变量' }
+]
+
+describe('TranslateResultPanel dictionary block', () => {
+  it('lists each Youdao headword with its gloss', () => {
+    render(<TranslateResultPanel result={GTX} typedText="dependent" headwordEntries={HEADWORDS} />)
+    expect(screen.getByText('dependent')).toBeTruthy()
+    expect(screen.getByText('adj. 依赖的，依靠的；取决于 n. 受供养者')).toBeTruthy()
+    expect(screen.getByText('dependent variable')).toBeTruthy()
+    expect(screen.getByText('因变量')).toBeTruthy()
+  })
+
+  it('suppresses the gtx part-of-speech block so only one dictionary shows', () => {
+    // Why: gtx synonyms and Youdao headwords are both dictionaries; stacked they read as duplicates.
+    render(<TranslateResultPanel result={GTX} typedText="dependent" headwordEntries={HEADWORDS} />)
+    expect(screen.queryByText('adj.')).toBeNull()
+    expect(screen.queryByText('属，依赖的')).toBeNull()
+  })
+
+  it('falls back to the gtx block when Youdao returned nothing', () => {
+    render(<TranslateResultPanel result={GTX} typedText="dependent" headwordEntries={[]} />)
+    expect(screen.getByText('adj.')).toBeTruthy()
+    expect(screen.getByText('属，依赖的')).toBeTruthy()
+  })
+
+  it('renders no normalized note when the payload omitted queriedText', () => {
+    // Regression: the note used to interpolate undefined and print “Looked up as “undefined””.
+    const { container } = render(
+      <TranslateResultPanel
+        result={{ ...GTX, queriedText: '' }}
+        typedText="dependent"
+        headwordEntries={[]}
+      />
+    )
+    expect(container.textContent).not.toContain('undefined')
+    expect(container.textContent).not.toContain('Looked up as')
   })
 })
