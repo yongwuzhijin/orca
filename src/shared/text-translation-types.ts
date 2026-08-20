@@ -57,3 +57,20 @@ export function isTranslationDirectionPreference(
 ): value is TranslationDirectionPreference {
   return value === 'auto' || value === 'zh-CN' || value === 'en'
 }
+
+/**
+ * A Youdao headword row. Distinct from TranslationDictionaryEntry above: that one
+ * groups gtx synonyms under a part of speech, this one is a dictionary headword
+ * whose part of speech is already inline in `explain`.
+ */
+export type DictionaryHeadwordEntry = {
+  headword: string
+  explain: string
+}
+
+export type DictionaryLookupRequest = { text: string }
+
+/** No failure variant: a miss, a timeout, and a bad payload are all "no entries". */
+export type DictionaryLookupResponse = { entries: DictionaryHeadwordEntry[] }
+
+export const DICTIONARY_LOOKUP_MAX_LENGTH = 24
