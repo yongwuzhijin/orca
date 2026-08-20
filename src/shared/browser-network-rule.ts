@@ -107,23 +107,62 @@ function sanitizeStringList(input: unknown): string[] | undefined {
   return values.length > 0 ? values : undefined
 }
 
+/** RFC 7230 token. */
+const HEADER_NAME_PATTERN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/
+
+const MAX_URL_PATTERN_LENGTH = 2048
+
 function sanitizeMutation(input: unknown): BrowserHeaderMutation | null {
   if (!input || typeof input !== 'object') {
     return null
   }
   const raw = input as Record<string, unknown>
   const name = typeof raw.name === 'string' ? raw.name.trim() : ''
-  if (name.length === 0) {
+  // Why: this output is spread into Electron webRequest header maps, so a CRLF here forges
+  // real headers on a real request — reject rather than mangle.
+  if (!HEADER_NAME_PATTERN.test(name)) {
+    return null
+  }
+  if (raw.target !== undefined && raw.target !== 'request' && raw.target !== 'response') {
     return null
   }
   const target = raw.target === 'response' ? 'response' : 'request'
   if (raw.op === 'remove') {
     return { target, op: 'remove', name }
   }
-  if (typeof raw.value !== 'string') {
+  if (raw.op !== 'set') {
+    return null
+  }
+  if (typeof raw.value !== 'string' || /[\r\n]/.test(raw.value)) {
     return null
   }
   return { target, op: 'set', name, value: raw.value }
+}
+
+function sanitizeResponseOverride(input: unknown): BrowserNetworkResponseOverride | null {
+  if (!input || typeof input !== 'object') {
+    return null
+  }
+  const raw = input as Record<string, unknown>
+  const statusCode = raw.statusCode
+  if (typeof statusCode !== 'number' || !Number.isInteger(statusCode)) {
+    return null
+  }
+  if (statusCode < 100 || statusCode > 599) {
+    return null
+  }
+  if (typeof raw.body !== 'string') {
+    return null
+  }
+  return {
+    statusCode,
+    headers: Array.isArray(raw.headers)
+      ? raw.headers
+          .map(sanitizeMutation)
+          .filter((entry): entry is BrowserHeaderMutation => entry !== null)
+      : [],
+    body: raw.body
+  }
 }
 
 /** Rules come from a JSON file on disk and from the renderer, so neither is trusted. */
@@ -139,14 +178,15 @@ export function sanitizeBrowserNetworkRule(input: unknown): BrowserNetworkRule |
   const match =
     raw.match && typeof raw.match === 'object' ? (raw.match as Record<string, unknown>) : null
   const urlPattern = match && typeof match.urlPattern === 'string' ? match.urlPattern.trim() : ''
-  if (urlPattern.length === 0) {
+  if (urlPattern.length === 0 || urlPattern.length > MAX_URL_PATTERN_LENGTH) {
     return null
   }
   const label = typeof raw.label === 'string' ? raw.label.trim() : ''
-  return {
+  const rule: BrowserNetworkRule = {
     id,
     label: label.length > 0 ? label : urlPattern,
-    enabled: raw.enabled !== false,
+    // Fail closed: only an absent key or a literal true arms a rule that rewrites requests.
+    enabled: raw.enabled === undefined || raw.enabled === true,
     match: {
       urlPattern,
       methods: sanitizeStringList(match?.methods),
@@ -158,4 +198,9 @@ export function sanitizeBrowserNetworkRule(input: unknown): BrowserNetworkRule |
           .filter((entry): entry is BrowserHeaderMutation => entry !== null)
       : []
   }
+  const responseOverride = sanitizeResponseOverride(raw.responseOverride)
+  if (responseOverride) {
+    rule.responseOverride = responseOverride
+  }
+  return rule
 }
