@@ -52,6 +52,16 @@ describe('TranslateResultPanel', () => {
     expect(screen.getByText(/Claude/)).toBeTruthy()
   })
 
+  it('still renders the translation when the payload omits the dictionary array', () => {
+    // A stale main bundle predates the field; undefined used to crash the whole status bar.
+    const { dictionaryEntries: _dropped, ...withoutDictionary } = GTX
+    render(
+      <TranslateResultPanel result={withoutDictionary as TranslateResult} typedText="dependent" />
+    )
+    expect(screen.getByText('家属')).toBeTruthy()
+    expect(screen.queryByText('adj.')).toBeNull()
+  })
+
   it('marks a fallback-provider result so a worse gloss is explained', () => {
     render(
       <TranslateResultPanel

@@ -16,6 +16,7 @@ import {
   describeTranslationDirection,
   isTranslationInputTooLong,
   nextTranslationPreference,
+  toTranslateResult,
   type TranslatePopoverStatus
 } from './translate-popover-state'
 import { TranslateResultPanel } from './TranslateResultPanel'
@@ -80,16 +81,7 @@ export function TranslateStatusSegment({
           }
           setStatus(
             response.ok
-              ? {
-                  phase: 'success',
-                  result: {
-                    translatedText: response.translatedText,
-                    dictionaryEntries: response.dictionaryEntries,
-                    queriedText: response.queriedText,
-                    providerId: response.providerId,
-                    agentLabel: response.agentLabel
-                  }
-                }
+              ? { phase: 'success', result: toTranslateResult(response) }
               : { phase: 'error', kind: response.kind, detail: response.detail }
           )
         })

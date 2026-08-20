@@ -4,7 +4,8 @@ import {
   type TranslationDirectionPreference,
   type TranslationFailureKind,
   type TranslationLanguage,
-  type TranslationProviderId
+  type TranslationProviderId,
+  type TranslationSuccess
 } from '../../../../shared/text-translation-types'
 
 export type TranslateResult = {
@@ -14,6 +15,18 @@ export type TranslateResult = {
   queriedText: string
   providerId: TranslationProviderId
   agentLabel?: string
+}
+
+// Why: main and renderer version-skew independently, so a stale main bundle omits
+// dictionaryEntries entirely — trusting it took the whole status bar down.
+export function toTranslateResult(response: TranslationSuccess): TranslateResult {
+  return {
+    translatedText: response.translatedText,
+    dictionaryEntries: Array.isArray(response.dictionaryEntries) ? response.dictionaryEntries : [],
+    queriedText: response.queriedText,
+    providerId: response.providerId,
+    agentLabel: response.agentLabel
+  }
 }
 
 export type TranslatePopoverStatus =

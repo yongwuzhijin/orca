@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { TRANSLATION_INPUT_MAX_LENGTH } from '../../../../shared/text-translation-types'
+import {
+  TRANSLATION_INPUT_MAX_LENGTH,
+  type TranslationSuccess
+} from '../../../../shared/text-translation-types'
 import {
   canSubmitTranslation,
   describeTranslationDirection,
   isTranslationInputTooLong,
   nextTranslationPreference,
+  toTranslateResult,
   type TranslatePopoverStatus
 } from './translate-popover-state'
 
@@ -50,6 +54,29 @@ describe('canSubmitTranslation', () => {
     expect(canSubmitTranslation(tooLong, IDLE)).toBe(false)
     expect(isTranslationInputTooLong(tooLong)).toBe(true)
     expect(isTranslationInputTooLong('a'.repeat(TRANSLATION_INPUT_MAX_LENGTH))).toBe(false)
+  })
+})
+
+describe('toTranslateResult', () => {
+  const SUCCESS: TranslationSuccess = {
+    ok: true,
+    translatedText: '你好',
+    targetLanguage: 'zh-CN',
+    detectedSourceLanguage: 'en',
+    providerId: 'google-gtx',
+    dictionaryEntries: [{ partOfSpeech: 'noun', terms: ['问候'] }],
+    queriedText: 'hello'
+  }
+
+  it('keeps the dictionary the provider reported', () => {
+    expect(toTranslateResult(SUCCESS).dictionaryEntries).toEqual([
+      { partOfSpeech: 'noun', terms: ['问候'] }
+    ])
+  })
+
+  it('substitutes an empty dictionary when the payload omits the array', () => {
+    const { dictionaryEntries: _dropped, ...skewed } = SUCCESS
+    expect(toTranslateResult(skewed as TranslationSuccess).dictionaryEntries).toEqual([])
   })
 })
 

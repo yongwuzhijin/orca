@@ -33,6 +33,8 @@ export function TranslateResultPanel({
   if (provider !== '') {
     notes.push(provider)
   }
+  // Second line of defense: an IPC payload without the array must not crash the status bar.
+  const dictionaryEntries = result.dictionaryEntries ?? []
 
   return (
     <div className="flex flex-col gap-1.5 rounded border border-border bg-muted/40 p-2">
@@ -40,9 +42,9 @@ export function TranslateResultPanel({
         {result.translatedText}
       </p>
 
-      {result.dictionaryEntries.length > 0 && (
+      {dictionaryEntries.length > 0 && (
         <dl className="scrollbar-sleek m-0 flex max-h-40 flex-col gap-1 overflow-y-auto border-t border-border pt-1.5">
-          {result.dictionaryEntries.map((entry) => (
+          {dictionaryEntries.map((entry) => (
             <div key={entry.partOfSpeech} className="flex items-baseline gap-1.5">
               <dt className="w-12 shrink-0 text-[11px] font-medium text-muted-foreground italic">
                 {describeTranslationPartOfSpeech(entry.partOfSpeech)}
