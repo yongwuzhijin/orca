@@ -1,9 +1,14 @@
 // @vitest-environment happy-dom
 
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { BrowserNetworkLogEntry } from '../../../../../shared/browser-network-log-types'
+import type {
+  BrowserNetworkLogEntry,
+  BrowserNetworkLogRead
+} from '../../../../../shared/browser-network-log-types'
 import { BrowserNetworkLogTab } from './browser-network-log-tab'
+
+const POLL_MS = 1500
 
 const ENTRY: BrowserNetworkLogEntry = {
   id: 1,
@@ -15,7 +20,9 @@ const ENTRY: BrowserNetworkLogEntry = {
   durationMs: 42
 }
 
-const networkReadLog = vi.fn(async () => ({ entries: [ENTRY], truncated: false }))
+const networkReadLog = vi.fn(
+  async (): Promise<BrowserNetworkLogRead> => ({ entries: [ENTRY], truncated: false })
+)
 
 beforeEach(() => {
   networkReadLog.mockClear()
@@ -70,5 +77,70 @@ describe('BrowserNetworkLogTab', () => {
     networkReadLog.mockRejectedValueOnce(new Error('ipc down'))
     render(<BrowserNetworkLogTab browserPageId="page-a" />)
     expect(await screen.findByText(/No requests recorded/)).toBeTruthy()
+  })
+
+  it('shows an em-dash for a request with no status or duration yet', async () => {
+    networkReadLog.mockResolvedValueOnce({
+      entries: [{ ...ENTRY, statusCode: undefined, durationMs: undefined }],
+      truncated: false
+    })
+    render(<BrowserNetworkLogTab browserPageId="page-a" />)
+    expect(await screen.findByText('xhr')).toBeTruthy()
+    expect(screen.getAllByText('—')).toHaveLength(2)
+  })
+
+  it('marks a failed request as destructive so it reads as an error', async () => {
+    networkReadLog.mockResolvedValueOnce({
+      entries: [{ ...ENTRY, statusCode: undefined, error: 'net::ERR_ABORTED' }],
+      truncated: false
+    })
+    render(<BrowserNetworkLogTab browserPageId="page-a" />)
+    const status = await screen.findByText('net::ERR_ABORTED')
+    expect(status.className).toContain('text-destructive')
+  })
+
+  it('re-reads on demand when Refresh is clicked', async () => {
+    render(<BrowserNetworkLogTab browserPageId="page-a" />)
+    await screen.findByText('200')
+    expect(networkReadLog).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole('button', { name: /Refresh/ }))
+    await waitFor(() => expect(networkReadLog).toHaveBeenCalledTimes(2))
+  })
+
+  it('polls while mounted and stops polling after unmount', async () => {
+    vi.useFakeTimers()
+    try {
+      const view = render(<BrowserNetworkLogTab browserPageId="page-a" />)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      expect(networkReadLog).toHaveBeenCalledTimes(1)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_MS)
+      })
+      expect(networkReadLog).toHaveBeenCalledTimes(2)
+      view.unmount()
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_MS * 2)
+      })
+      expect(networkReadLog).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('ignores a read that resolves after the page id changed', async () => {
+    let releaseA: (read: BrowserNetworkLogRead) => void = () => {}
+    networkReadLog.mockReturnValueOnce(
+      new Promise<BrowserNetworkLogRead>((resolve) => {
+        releaseA = resolve
+      })
+    )
+    const view = render(<BrowserNetworkLogTab browserPageId="page-a" />)
+    view.rerender(<BrowserNetworkLogTab browserPageId="page-b" />)
+    await screen.findByText('200')
+    releaseA({ entries: [{ ...ENTRY, id: 9, statusCode: 418 }], truncated: false })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(screen.queryByText('418')).toBeNull()
   })
 })

@@ -15,12 +15,14 @@ export function BrowserNetworkLogTab({
 }): React.JSX.Element {
   const [entries, setEntries] = useState<BrowserNetworkLogEntry[]>([])
   const [truncated, setTruncated] = useState(false)
-  const activeRef = useRef(true)
+  // Why: bumped on teardown so a read issued for the previous page id cannot land on the new one.
+  const generationRef = useRef(0)
 
   const refresh = useCallback(async () => {
+    const generation = generationRef.current
     try {
       const read = await window.api.browser.networkReadLog({ browserPageId, limit: READ_LIMIT })
-      if (!activeRef.current) {
+      if (generation !== generationRef.current) {
         return
       }
       setEntries(read.entries)
@@ -31,13 +33,12 @@ export function BrowserNetworkLogTab({
   }, [browserPageId])
 
   useEffect(() => {
-    activeRef.current = true
     void refresh()
     // Why: polling only while the tab is mounted beats a push channel that would need a
     // subscription lifecycle for a panel that is closed almost all of the time.
     const timer = setInterval(() => void refresh(), POLL_INTERVAL_MS)
     return () => {
-      activeRef.current = false
+      generationRef.current += 1
       clearInterval(timer)
     }
   }, [refresh])
@@ -68,7 +69,7 @@ export function BrowserNetworkLogTab({
           <span className="w-12 shrink-0 text-muted-foreground">{entry.method}</span>
           <span
             className={cn(
-              'w-24 shrink-0',
+              'w-24 shrink-0 truncate',
               entry.error ? 'text-destructive' : 'text-muted-foreground'
             )}
           >
