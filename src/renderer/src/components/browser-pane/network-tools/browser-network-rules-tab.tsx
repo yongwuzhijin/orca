@@ -122,6 +122,8 @@ export function BrowserNetworkRulesTab({
           size="sm"
           variant="outline"
           className="h-7"
+          // Why: adding before the load settles would let the resolved list clobber the new rule.
+          disabled={!loaded}
           onClick={() => void persist([...rules, createRule()])}
         >
           {translate('browser.networkTools.addRule', 'Add rule')}

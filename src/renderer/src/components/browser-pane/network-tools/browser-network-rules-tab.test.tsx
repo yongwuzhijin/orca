@@ -140,6 +140,20 @@ describe('BrowserNetworkRulesTab', () => {
     expect(screen.queryByText(/No rules yet/)).toBeNull()
   })
 
+  it('blocks adding a rule until the saved list has loaded', async () => {
+    let release: (rules: BrowserNetworkRule[]) => void = () => {}
+    api.networkListRules.mockReturnValueOnce(
+      new Promise<BrowserNetworkRule[]>((resolve) => {
+        release = resolve
+      })
+    )
+    render(<BrowserNetworkRulesTab browserPageId="page-a" />)
+    expect(button('Add rule').disabled).toBe(true)
+    release([RULE])
+    await screen.findByDisplayValue('staging auth')
+    expect(button('Add rule').disabled).toBe(false)
+  })
+
   it('saves an edited rule label', async () => {
     render(<BrowserNetworkRulesTab browserPageId="page-a" />)
     await screen.findByDisplayValue('staging auth')
