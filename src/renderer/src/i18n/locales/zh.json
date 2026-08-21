@@ -15245,7 +15245,13 @@
       "refresh": "刷新",
       "logTruncated": "仅显示最新 100 条请求。",
       "logDuration": "{{value}} 毫秒",
-      "logEmpty": "该标签页暂无请求记录。重新加载页面即可捕获流量。"
+      "logEmpty": "该标签页暂无请求记录。重新加载页面即可捕获流量。",
+      "title": "网络工具",
+      "resizeHandle": "调整网络工具高度",
+      "tabRules": "规则",
+      "tabLog": "日志",
+      "close": "关闭网络工具",
+      "remoteUnavailable": "网络工具不适用于运行在远程主机上的标签页。"
     }
   },
   "runtimeRpc": {

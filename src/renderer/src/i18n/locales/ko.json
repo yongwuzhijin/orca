@@ -15236,7 +15236,13 @@
       "refresh": "새로 고침",
       "logTruncated": "최신 요청 100개만 표시합니다.",
       "logDuration": "{{value}}밀리초",
-      "logEmpty": "이 탭에 기록된 요청이 아직 없습니다. 페이지를 새로 고치면 트래픽을 수집합니다."
+      "logEmpty": "이 탭에 기록된 요청이 아직 없습니다. 페이지를 새로 고치면 트래픽을 수집합니다.",
+      "title": "네트워크 도구",
+      "resizeHandle": "네트워크 도구 크기 조정",
+      "tabRules": "규칙",
+      "tabLog": "로그",
+      "close": "네트워크 도구 닫기",
+      "remoteUnavailable": "원격 호스트에서 실행 중인 탭에서는 네트워크 도구를 사용할 수 없습니다."
     }
   },
   "runtimeRpc": {

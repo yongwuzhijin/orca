@@ -15225,7 +15225,13 @@
       "refresh": "Actualizar",
       "logTruncated": "Mostrando las 100 solicitudes más recientes.",
       "logDuration": "{{value}} ms",
-      "logEmpty": "Aún no hay solicitudes registradas en esta pestaña. Vuelve a cargar la página para capturar el tráfico."
+      "logEmpty": "Aún no hay solicitudes registradas en esta pestaña. Vuelve a cargar la página para capturar el tráfico.",
+      "title": "Herramientas de red",
+      "resizeHandle": "Redimensionar herramientas de red",
+      "tabRules": "Reglas",
+      "tabLog": "Registro",
+      "close": "Cerrar herramientas de red",
+      "remoteUnavailable": "Las herramientas de red no están disponibles para pestañas que se ejecutan en un host remoto."
     }
   },
   "runtimeRpc": {

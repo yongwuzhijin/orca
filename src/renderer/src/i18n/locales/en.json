@@ -52,7 +52,13 @@
       "refresh": "Refresh",
       "logTruncated": "Showing the newest 100 requests.",
       "logDuration": "{{value}} ms",
-      "logEmpty": "No requests recorded for this tab yet. Reload the page to capture traffic."
+      "logEmpty": "No requests recorded for this tab yet. Reload the page to capture traffic.",
+      "title": "Network tools",
+      "resizeHandle": "Resize network tools",
+      "tabRules": "Rules",
+      "tabLog": "Log",
+      "close": "Close network tools",
+      "remoteUnavailable": "Network tools are unavailable for tabs running on a remote host."
     }
   },
   "githubChecks": {
