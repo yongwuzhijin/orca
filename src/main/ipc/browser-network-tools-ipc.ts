@@ -112,7 +112,10 @@ export function registerBrowserNetworkToolsHandlers(): void {
       if (typeof args?.browserPageId !== 'string' || args.browserPageId.length === 0) {
         return EMPTY_LOG
       }
-      const limit = typeof args.limit === 'number' && args.limit > 0 ? args.limit : 100
+      const limit =
+        typeof args.limit === 'number' && Number.isInteger(args.limit) && args.limit > 0
+          ? args.limit
+          : 100
       return readBrowserNetworkLog(args.browserPageId, limit)
     }
   )

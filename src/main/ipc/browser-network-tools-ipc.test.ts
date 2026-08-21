@@ -189,6 +189,15 @@ describe('browser network tools IPC', () => {
     expect(saveRulesMock).not.toHaveBeenCalled()
   })
 
+  it('reports a rejected persist as a failed save', () => {
+    saveRulesMock.mockReturnValue(false)
+
+    expect(
+      handlerFor('browser:network:saveRules')({ sender: trustedSender }, { rules: [validRule] })
+    ).toBe(false)
+    expect(saveRulesMock).toHaveBeenCalledWith([expect.objectContaining({ id: 'rule-a' })])
+  })
+
   it('persists a fully sanitized save batch', () => {
     expect(
       handlerFor('browser:network:saveRules')({ sender: trustedSender }, { rules: [validRule] })
@@ -211,6 +220,17 @@ describe('browser network tools IPC', () => {
     expect(armRulesMock).not.toHaveBeenCalled()
   })
 
+  it('rejects an arm request whose rule ids are absent or not an array', () => {
+    const handler = handlerFor('browser:network:armRules')
+    const rejected = { armed: false, reason: 'unknown_rules', armedRuleIds: [] }
+
+    expect(handler({ sender: trustedSender }, { browserPageId: 'page-1' })).toEqual(rejected)
+    expect(
+      handler({ sender: trustedSender }, { browserPageId: 'page-1', ruleIds: 'rule-a' })
+    ).toEqual(rejected)
+    expect(armRulesMock).not.toHaveBeenCalled()
+  })
+
   it('rejects an arm request with a blank page id', () => {
     const result = handlerFor('browser:network:armRules')(
       { sender: trustedSender },
@@ -229,6 +249,7 @@ describe('browser network tools IPC', () => {
 
     expect(result).toEqual({ armed: true, armedRuleIds: ['rule-a'] })
     expect(armRulesMock).toHaveBeenCalledWith('page-1', ['rule-a'])
+    expect(armedRuleIdsMock).toHaveBeenCalledWith('page-1')
   })
 
   it('reads the armed rule ids without ever arming', () => {
@@ -252,6 +273,14 @@ describe('browser network tools IPC', () => {
       handlerFor('browser:network:armedRuleIds')({ sender: trustedSender }, { browserPageId: '' })
     ).toEqual({ armedRuleIds: [] })
     expect(armedRuleIdsMock).not.toHaveBeenCalled()
+  })
+
+  it('reports a rejected disarm as a failure', () => {
+    disarmRulesMock.mockReturnValue(false)
+    const handler = handlerFor('browser:network:disarmRules')
+
+    expect(handler({ sender: trustedSender }, { browserPageId: 'page-1' })).toBe(false)
+    expect(disarmRulesMock).toHaveBeenCalledWith('page-1')
   })
 
   it('disarms a page for a trusted renderer and rejects a blank page id', () => {
@@ -289,6 +318,16 @@ describe('browser network tools IPC', () => {
     expect(readLogMock).toHaveBeenLastCalledWith('page-1', 25)
 
     handler({ sender: trustedSender }, { browserPageId: 'page-1', limit: 0 })
+    expect(readLogMock).toHaveBeenLastCalledWith('page-1', 100)
+  })
+
+  it('falls back to the default log limit for a limit that is not a whole number', () => {
+    const handler = handlerFor('browser:network:readLog')
+
+    handler({ sender: trustedSender }, { browserPageId: 'page-1', limit: Infinity })
+    expect(readLogMock).toHaveBeenLastCalledWith('page-1', 100)
+
+    handler({ sender: trustedSender }, { browserPageId: 'page-1', limit: 2.5 })
     expect(readLogMock).toHaveBeenLastCalledWith('page-1', 100)
   })
 })
