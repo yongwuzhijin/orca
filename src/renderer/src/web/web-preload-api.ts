@@ -2403,7 +2403,14 @@ function createBrowserApi(): NonNullable<Partial<PreloadApi>['browser']> {
         )
       }),
     sessionClearDefaultCookies: () => Promise.resolve(false),
-    notifyActiveTabChanged: () => Promise.resolve(false)
+    notifyActiveTabChanged: () => Promise.resolve(false),
+    networkListRules: () => Promise.resolve([]),
+    networkSaveRules: () => Promise.resolve(false),
+    networkArmRules: () =>
+      Promise.resolve({ armed: false, reason: 'no_guest' as const, armedRuleIds: [] }),
+    networkDisarmRules: () => Promise.resolve(false),
+    networkReadArmedRules: () => Promise.resolve({ armedRuleIds: [] }),
+    networkReadLog: () => Promise.resolve({ entries: [], truncated: false })
   } as unknown as NonNullable<Partial<PreloadApi>['browser']>
 }
 

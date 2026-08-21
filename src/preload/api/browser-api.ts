@@ -23,6 +23,8 @@ import type {
   BrowserPermissionDeniedEvent,
   BrowserPopupEvent
 } from '../../shared/browser-guest-events'
+import type { BrowserNetworkRule } from '../../shared/browser-network-rule'
+import type { BrowserNetworkLogRead } from '../../shared/browser-network-log-types'
 import type {
   BrowserCertificateFailure,
   BrowserCertificateProceedResult,
@@ -126,6 +128,18 @@ export type BrowserApi = {
   }) => Promise<BrowserCookieImportResult>
   sessionClearDefaultCookies: () => Promise<boolean>
   notifyActiveTabChanged: (args: { browserPageId: string }) => Promise<boolean>
+  networkListRules: () => Promise<BrowserNetworkRule[]>
+  networkSaveRules: (args: { rules: BrowserNetworkRule[] }) => Promise<boolean>
+  networkArmRules: (args: {
+    browserPageId: string
+    ruleIds: string[]
+  }) => Promise<{ armed: boolean; reason?: 'no_guest' | 'unknown_rules'; armedRuleIds: string[] }>
+  networkDisarmRules: (args: { browserPageId: string }) => Promise<boolean>
+  networkReadArmedRules: (args: { browserPageId: string }) => Promise<{ armedRuleIds: string[] }>
+  networkReadLog: (args: {
+    browserPageId: string
+    limit?: number
+  }) => Promise<BrowserNetworkLogRead>
 }
 
 export type DetectedBrowserProfileInfo = {

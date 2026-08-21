@@ -3058,7 +3058,24 @@ const api = {
       ipcRenderer.invoke('browser:session:clearDefaultCookies'),
 
     notifyActiveTabChanged: (args: { browserPageId: string }): Promise<boolean> =>
-      ipcRenderer.invoke('browser:activeTabChanged', args)
+      ipcRenderer.invoke('browser:activeTabChanged', args),
+
+    networkListRules: (): Promise<unknown[]> => ipcRenderer.invoke('browser:network:listRules'),
+
+    networkSaveRules: (args: { rules: unknown[] }): Promise<boolean> =>
+      ipcRenderer.invoke('browser:network:saveRules', args),
+
+    networkArmRules: (args: { browserPageId: string; ruleIds: string[] }): Promise<unknown> =>
+      ipcRenderer.invoke('browser:network:armRules', args),
+
+    networkDisarmRules: (args: { browserPageId: string }): Promise<boolean> =>
+      ipcRenderer.invoke('browser:network:disarmRules', args),
+
+    networkReadArmedRules: (args: { browserPageId: string }): Promise<unknown> =>
+      ipcRenderer.invoke('browser:network:armedRuleIds', args),
+
+    networkReadLog: (args: { browserPageId: string; limit?: number }): Promise<unknown> =>
+      ipcRenderer.invoke('browser:network:readLog', args)
   },
 
   emulator: {
