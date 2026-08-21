@@ -50,7 +50,14 @@ describe('BrowserSessionRegistry', () => {
       on: vi.fn(),
       removeListener: vi.fn(),
       clearStorageData: vi.fn().mockResolvedValue(undefined),
-      clearCache: vi.fn().mockResolvedValue(undefined)
+      clearCache: vi.fn().mockResolvedValue(undefined),
+      webRequest: {
+        onBeforeRequest: vi.fn(),
+        onBeforeSendHeaders: vi.fn(),
+        onHeadersReceived: vi.fn(),
+        onCompleted: vi.fn(),
+        onErrorOccurred: vi.fn()
+      }
     })
   })
 
@@ -184,6 +191,7 @@ describe('BrowserSessionRegistry', () => {
     expect(mockSession.setPermissionCheckHandler).toHaveBeenLastCalledWith(null)
     expect(mockSession.setDevicePermissionHandler).toHaveBeenLastCalledWith(null)
     expect(mockSession.setDisplayMediaRequestHandler).toHaveBeenLastCalledWith(null)
+    expect(mockSession.webRequest.onBeforeSendHeaders).toHaveBeenLastCalledWith(null)
   })
 
   it('refuses to delete the default profile', async () => {

@@ -43,7 +43,14 @@ function installModuleMocks(
     on: vi.fn(),
     removeListener: vi.fn(),
     clearStorageData: vi.fn().mockResolvedValue(undefined),
-    clearCache: vi.fn().mockResolvedValue(undefined)
+    clearCache: vi.fn().mockResolvedValue(undefined),
+    webRequest: {
+      onBeforeRequest: vi.fn(),
+      onBeforeSendHeaders: vi.fn(),
+      onHeadersReceived: vi.fn(),
+      onCompleted: vi.fn(),
+      onErrorOccurred: vi.fn()
+    }
   }))
   const setupClientHintsOverrideMock = vi.fn()
   const browserManagerHandleGuestWillDownloadMock = vi.fn()

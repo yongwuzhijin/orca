@@ -12,7 +12,8 @@ const browserMocks = vi.hoisted(() => ({
   guestOpenDevToolsMock: vi.fn(),
   webContentsFromIdMock: vi.fn(),
   screenGetCursorScreenPointMock: vi.fn(() => ({ x: 0, y: 0 })),
-  openPopupWithOriginBarMock: vi.fn()
+  openPopupWithOriginBarMock: vi.fn(),
+  handleBrowserNetworkGuestDestroyedMock: vi.fn()
 }))
 
 vi.mock('electron', () => ({
@@ -39,6 +40,10 @@ vi.mock('./popup-origin-bar-window', () => ({
   openPopupWithOriginBar: browserMocks.openPopupWithOriginBarMock
 }))
 
+vi.mock('./browser-network-tools-controller', () => ({
+  handleBrowserNetworkGuestDestroyed: browserMocks.handleBrowserNetworkGuestDestroyedMock
+}))
+
 import { browserManager } from './browser-manager'
 import {
   rendererWebContentsId,
@@ -53,13 +58,15 @@ const {
   guestSetWindowOpenHandlerMock,
   guestOpenDevToolsMock,
   webContentsFromIdMock,
-  menuBuildFromTemplateMock
+  menuBuildFromTemplateMock,
+  handleBrowserNetworkGuestDestroyedMock
 } = browserMocks
 
 describe('browserManager', () => {
   beforeEach(() => {
     resetBrowserManagerMocks(browserMocks)
     resetBrowserManagerState()
+    handleBrowserNetworkGuestDestroyedMock.mockClear()
   })
 
   afterEach(() => {
@@ -90,6 +97,75 @@ describe('browserManager', () => {
     })
 
     expect(browserManager.getSessionProfileIdForTab('browser-1')).toBe('work')
+  })
+
+  it('exposes guest registration and page resolution to the network pipeline', () => {
+    const guest = {
+      id: 810,
+      isDestroyed: vi.fn(() => false),
+      getType: vi.fn(() => 'webview'),
+      setBackgroundThrottling: guestSetBackgroundThrottlingMock,
+      setWindowOpenHandler: guestSetWindowOpenHandlerMock,
+      on: guestOnMock,
+      off: guestOffMock,
+      openDevTools: guestOpenDevToolsMock
+    }
+    webContentsFromIdMock.mockReturnValue(guest)
+
+    expect(browserManager.hasRegisteredGuestForBrowserPage('browser-network')).toBe(false)
+
+    browserManager.attachGuestPolicies(guest as never)
+    browserManager.registerGuest({
+      browserPageId: 'browser-network',
+      webContentsId: guest.id,
+      rendererWebContentsId
+    })
+
+    expect(browserManager.hasRegisteredGuestForBrowserPage('browser-network')).toBe(true)
+    expect(browserManager.resolveBrowserPageIdForGuestWebContentsId(guest.id)).toBe(
+      'browser-network'
+    )
+
+    browserManager.unregisterGuest('browser-network')
+
+    expect(browserManager.hasRegisteredGuestForBrowserPage('browser-network')).toBe(false)
+    expect(browserManager.resolveBrowserPageIdForGuestWebContentsId(guest.id)).toBeNull()
+    expect(handleBrowserNetworkGuestDestroyedMock).toHaveBeenCalledWith('browser-network')
+  })
+
+  it('keeps network tooling state across a guest process swap', () => {
+    const oldGuest = {
+      id: 811,
+      isDestroyed: vi.fn(() => false),
+      getType: vi.fn(() => 'webview'),
+      setBackgroundThrottling: guestSetBackgroundThrottlingMock,
+      setWindowOpenHandler: guestSetWindowOpenHandlerMock,
+      on: guestOnMock,
+      off: guestOffMock,
+      openDevTools: guestOpenDevToolsMock
+    }
+    const newGuest = { ...oldGuest, id: 812 }
+    webContentsFromIdMock.mockImplementation((id: number) =>
+      id === newGuest.id ? newGuest : oldGuest
+    )
+
+    browserManager.attachGuestPolicies(oldGuest as never)
+    browserManager.registerGuest({
+      browserPageId: 'browser-network',
+      webContentsId: oldGuest.id,
+      rendererWebContentsId
+    })
+    browserManager.attachGuestPolicies(newGuest as never)
+    browserManager.registerGuest({
+      browserPageId: 'browser-network',
+      webContentsId: newGuest.id,
+      rendererWebContentsId
+    })
+
+    expect(browserManager.resolveBrowserPageIdForGuestWebContentsId(newGuest.id)).toBe(
+      'browser-network'
+    )
+    expect(handleBrowserNetworkGuestDestroyedMock).not.toHaveBeenCalled()
   })
 
   it('blocks non-web guest navigations after attach', () => {

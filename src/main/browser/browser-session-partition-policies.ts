@@ -3,7 +3,9 @@ import type { Session } from 'electron'
 import type { BrowserSessionProfile } from '../../shared/browser-workspace-types'
 import { browserManager } from './browser-manager'
 import { hasSystemMediaAccess, requestSystemMediaAccess } from './browser-media-access'
+import { installBrowserNetworkToolsStages } from './browser-network-tools-controller'
 import { isAutoGrantedBrowserSessionPermission } from './browser-session-permission-policy'
+import { clearBrowserSessionRequestPipeline } from './browser-session-request-pipeline'
 import { cleanElectronUserAgent, setupClientHintsOverride } from './browser-session-ua'
 import { setBrowserSessionUserAgentMode } from './browser-session-user-agent-mode'
 import {
@@ -31,6 +33,7 @@ export function installBrowserSessionPartitionPolicies(profile: BrowserSessionPr
   }
 
   browserManager.installCertificateRequestGuard(sess)
+  installBrowserNetworkToolsStages(sess)
   if (profile.userAgentMode !== 'native' && typeof sess.getUserAgent === 'function') {
     const cleanUA = cleanElectronUserAgent(sess.getUserAgent())
     sess.setUserAgent(cleanUA)
@@ -101,6 +104,8 @@ export function clearBrowserSessionPartitionPolicies(partition: string, sess: Se
   sess.setPermissionRequestHandler(null)
   sess.setPermissionCheckHandler(null)
   sess.setDisplayMediaRequestHandler(null)
+  // Why: guard removal re-installs the pipeline listeners, so dropping them has to come last.
+  clearBrowserSessionRequestPipeline(sess)
 }
 
 export function applyBrowserSessionUserAgentModes(profiles: BrowserSessionProfile[]): void {
