@@ -8745,7 +8745,11 @@
             "d6c0a9e2f4": "grok",
             "c5b9f8d1e3": "xai",
             "usagePercentageDisplayTitle": "Usage percentages",
-            "usagePercentageDisplayDescription": "Choose whether provider limits show the percentage used or remaining."
+            "usagePercentageDisplayDescription": "Choose whether provider limits show the percentage used or remaining.",
+            "translateDictionaryTitle": "Dictionary definitions",
+            "translateDictionaryDescription": "Let the translate popover request word definitions from dict.youdao.com.",
+            "translateDictionaryKeywordDictionary": "dictionary",
+            "translateDictionaryKeywordTranslate": "translate"
           }
         },
         "auto": {

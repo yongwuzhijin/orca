@@ -96,6 +96,8 @@ export type GlobalSettings = {
   editorWordWrap?: boolean
   /** Persisted opt-out for browser spellcheck noise in rich Markdown editing surfaces. */
   richMarkdownSpellcheckEnabled?: boolean
+  /** Opt-out for the translate popover's outbound dict.youdao.com lookup; absent means on. */
+  translateDictionaryLookupEnabled?: boolean
   /** Whether local markdown review note controls and the review panel are shown. */
   markdownReviewToolsEnabled: boolean
   /** Why: mirrors terminal selection-paste muscle memory without mutating the

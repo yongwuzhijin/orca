@@ -114,31 +114,37 @@ describe('describeTranslationDirection', () => {
 
 describe('shouldLookUpDictionary', () => {
   it('looks up a short single word', () => {
-    expect(shouldLookUpDictionary('dependent', false)).toBe(true)
-    expect(shouldLookUpDictionary('依赖', false)).toBe(true)
-    expect(shouldLookUpDictionary('  dependent  ', false)).toBe(true)
+    expect(shouldLookUpDictionary('dependent', false, true)).toBe(true)
+    expect(shouldLookUpDictionary('依赖', false, true)).toBe(true)
+    expect(shouldLookUpDictionary('  dependent  ', false, true)).toBe(true)
   })
 
   it('skips AI submissions so the panel shows only the agent output', () => {
-    expect(shouldLookUpDictionary('dependent', true)).toBe(false)
+    expect(shouldLookUpDictionary('dependent', true, true)).toBe(false)
   })
 
   it('skips input past the word-like length cap', () => {
-    expect(shouldLookUpDictionary('a'.repeat(DICTIONARY_LOOKUP_MAX_LENGTH), false)).toBe(true)
-    expect(shouldLookUpDictionary('a'.repeat(DICTIONARY_LOOKUP_MAX_LENGTH + 1), false)).toBe(false)
+    expect(shouldLookUpDictionary('a'.repeat(DICTIONARY_LOOKUP_MAX_LENGTH), false, true)).toBe(true)
+    expect(shouldLookUpDictionary('a'.repeat(DICTIONARY_LOOKUP_MAX_LENGTH + 1), false, true)).toBe(
+      false
+    )
   })
 
   it('skips multiline input, which is prose rather than a lookup', () => {
-    expect(shouldLookUpDictionary('one\ntwo', false)).toBe(false)
-    expect(shouldLookUpDictionary('one\r\ntwo', false)).toBe(false)
+    expect(shouldLookUpDictionary('one\ntwo', false, true)).toBe(false)
+    expect(shouldLookUpDictionary('one\r\ntwo', false, true)).toBe(false)
   })
 
   it('still looks up a word whose only newline is trailing, since the gate reads trimmed text', () => {
-    expect(shouldLookUpDictionary('dependent\n', false)).toBe(true)
+    expect(shouldLookUpDictionary('dependent\n', false, true)).toBe(true)
   })
 
   it('skips empty input', () => {
-    expect(shouldLookUpDictionary('', false)).toBe(false)
-    expect(shouldLookUpDictionary('   ', false)).toBe(false)
+    expect(shouldLookUpDictionary('', false, true)).toBe(false)
+    expect(shouldLookUpDictionary('   ', false, true)).toBe(false)
+  })
+
+  it('skips otherwise-eligible input once the setting is off', () => {
+    expect(shouldLookUpDictionary('dependent', false, false)).toBe(false)
   })
 })

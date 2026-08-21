@@ -69,6 +69,10 @@ export function registerTextTranslationHandlers(deps: TextTranslationHandlerDeps
   ipcMain.handle(
     TRANSLATION_LOOKUP_DICTIONARY_CHANNEL,
     async (_event, args: unknown): Promise<DictionaryLookupResponse> => {
+      // Enforced here too, so a stale renderer cannot reach the third-party host after the opt-out.
+      if (deps.getSettings().translateDictionaryLookupEnabled === false) {
+        return { entries: [] }
+      }
       const text = readDictionaryText(args)
       if (text === null) {
         return { entries: [] }

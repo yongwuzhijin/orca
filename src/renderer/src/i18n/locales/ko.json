@@ -7847,7 +7847,11 @@
             "d6c0a9e2f4": "grok",
             "c5b9f8d1e3": "xai",
             "usagePercentageDisplayTitle": "사용량 백분율",
-            "usagePercentageDisplayDescription": "공급자 한도를 사용한 비율 또는 남은 비율로 표시할지 선택합니다."
+            "usagePercentageDisplayDescription": "공급자 한도를 사용한 비율 또는 남은 비율로 표시할지 선택합니다.",
+            "translateDictionaryTitle": "사전 뜻풀이",
+            "translateDictionaryDescription": "번역 팝오버가 dict.youdao.com에 단어 뜻을 요청하도록 허용합니다.",
+            "translateDictionaryKeywordDictionary": "사전",
+            "translateDictionaryKeywordTranslate": "번역"
           }
         },
         "auto": {

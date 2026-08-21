@@ -6,9 +6,13 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import type { DictionaryHeadwordEntry } from '../../../../shared/text-translation-types'
 import { TranslateStatusSegment } from './TranslateStatusSegment'
 
+const storeState = {
+  recordFeatureInteraction: () => {},
+  settings: { translateDictionaryLookupEnabled: true } as Record<string, unknown>
+}
+
 vi.mock('@/store', () => ({
-  useAppStore: (selector: (state: { recordFeatureInteraction: () => void }) => unknown) =>
-    selector({ recordFeatureInteraction: () => {} })
+  useAppStore: (selector: (state: typeof storeState) => unknown) => selector(storeState)
 }))
 
 const translateMock = vi.fn()
@@ -16,6 +20,7 @@ const translateWithAiMock = vi.fn()
 const lookupDictionaryMock = vi.fn()
 
 beforeEach(() => {
+  storeState.settings = { translateDictionaryLookupEnabled: true }
   translateMock.mockReset().mockResolvedValue({
     ok: true,
     translatedText: '依赖的',
@@ -102,6 +107,19 @@ describe('TranslateStatusSegment', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Translate' }))
     await waitFor(() => expect(translateWithAiMock).toHaveBeenCalled())
     expect(lookupDictionaryMock).not.toHaveBeenCalled()
+  })
+
+  it('skips the lookup when the setting is off but still translates', async () => {
+    storeState.settings = { translateDictionaryLookupEnabled: false }
+    openAndSubmit('dependent')
+    await waitFor(() => expect(translateMock).toHaveBeenCalled())
+    expect(lookupDictionaryMock).not.toHaveBeenCalled()
+  })
+
+  it('looks up when settings have not loaded yet, matching the default-on behavior', async () => {
+    storeState.settings = {}
+    openAndSubmit('dependent')
+    await waitFor(() => expect(lookupDictionaryMock).toHaveBeenCalledWith({ text: 'dependent' }))
   })
 
   it('drops a stale lookup so an earlier word cannot label a newer result', async () => {

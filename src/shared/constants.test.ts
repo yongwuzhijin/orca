@@ -85,6 +85,10 @@ describe('getDefaultSettings', () => {
     expect(getDefaultSettings('/tmp').richMarkdownSpellcheckEnabled).toBe(true)
   })
 
+  it('keeps the translate dictionary lookup enabled by default', () => {
+    expect(getDefaultSettings('/tmp').translateDictionaryLookupEnabled).toBe(true)
+  })
+
   it('enables Source Control AI by default without pinning a separate agent', () => {
     expect(getDefaultSettings('/tmp').commitMessageAi).toMatchObject({
       enabled: true,

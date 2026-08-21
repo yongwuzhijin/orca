@@ -20,6 +20,8 @@ import {
   getUsagePercentageDisplayEntry
 } from './appearance-search'
 import { USAGE_PERCENTAGE_DISPLAY_SETTING_ID } from './appearance-usage-percentage-search'
+import { getTranslateDictionaryEntry } from './appearance-translate-dictionary-search'
+import { TranslateDictionaryLookupSetting } from './TranslateDictionaryLookupSetting'
 import { LeftSidebarAppearanceSetting } from './LeftSidebarAppearanceSetting'
 import {
   getLeftSidebarAppearanceEntry,
@@ -94,6 +96,7 @@ export function AppearanceWindowSidebarSection({
   })
   const statusBarControlMatches =
     matchesSettingsSearch(searchQuery, usagePercentageDisplayEntry) ||
+    matchesSettingsSearch(searchQuery, getTranslateDictionaryEntry()) ||
     visibleStatusBarToggles.some((toggle) =>
       matchesSettingsSearch(searchQuery, {
         title: toggle.title,
@@ -166,6 +169,11 @@ export function AppearanceWindowSidebarSection({
                   }
                 />
               </SearchableSetting>
+
+              <TranslateDictionaryLookupSetting
+                settings={settings}
+                updateSettings={updateSettings}
+              />
 
               {visibleStatusBarToggles.map((toggle) => {
                 const enabled = statusBarItems.includes(toggle.id)

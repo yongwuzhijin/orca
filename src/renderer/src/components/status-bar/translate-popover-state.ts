@@ -78,8 +78,12 @@ export function describeTranslationDirection(
 }
 
 /** Youdao only helps for word-like input, and AI mode deliberately shows the agent alone. */
-export function shouldLookUpDictionary(text: string, withAi: boolean): boolean {
-  if (withAi) {
+export function shouldLookUpDictionary(
+  text: string,
+  withAi: boolean,
+  dictionaryEnabled: boolean
+): boolean {
+  if (withAi || !dictionaryEnabled) {
     return false
   }
   const trimmed = text.trim()

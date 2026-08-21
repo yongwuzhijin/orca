@@ -38,6 +38,7 @@ export function TranslateStatusSegment({
   iconOnly
 }: TranslateStatusSegmentProps): React.JSX.Element {
   const recordFeatureInteraction = useAppStore((s) => s.recordFeatureInteraction)
+  const dictionaryEnabled = useAppStore((s) => s.settings?.translateDictionaryLookupEnabled ?? true)
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
   const [preference, setPreference] = useState<TranslationDirectionPreference>('auto')
@@ -74,7 +75,7 @@ export function TranslateStatusSegment({
       submitSeqRef.current = seq
       setStatus({ phase: 'translating', usedAi: withAi })
       setHeadwordEntries([])
-      if (shouldLookUpDictionary(text, withAi)) {
+      if (shouldLookUpDictionary(text, withAi, dictionaryEnabled)) {
         void window.api.translation
           .lookupDictionary({ text: trimmed })
           .then((response) => {
@@ -106,7 +107,7 @@ export function TranslateStatusSegment({
           }
         })
     },
-    [preference, text]
+    [dictionaryEnabled, preference, text]
   )
 
   const handleSubmit = useCallback(() => {

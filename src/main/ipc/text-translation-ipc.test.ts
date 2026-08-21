@@ -47,8 +47,8 @@ type Handler = (event: unknown, args: unknown) => Promise<unknown>
 
 const SETTINGS = {} as GlobalSettings
 
-function registerAndGetHandler(channel: string): Handler {
-  registerTextTranslationHandlers({ getSettings: () => SETTINGS })
+function registerAndGetHandler(channel: string, settings: GlobalSettings = SETTINGS): Handler {
+  registerTextTranslationHandlers({ getSettings: () => settings })
   const call = handleMock.mock.calls.find(([registered]) => registered === channel)
   if (!call) {
     throw new Error(`${channel} handler was not registered`)
@@ -182,6 +182,21 @@ describe('text translation IPC', () => {
       const handler = registerAndGetHandler(TRANSLATION_LOOKUP_DICTIONARY_CHANNEL)
       await handler({}, { text: '  dependent  ' })
       expect(lookupDictionaryMock).toHaveBeenCalledWith('dependent', expect.anything())
+    })
+
+    it('never contacts the dictionary host once the setting is turned off', async () => {
+      const handler = registerAndGetHandler(TRANSLATION_LOOKUP_DICTIONARY_CHANNEL, {
+        translateDictionaryLookupEnabled: false
+      } as GlobalSettings)
+      await expect(handler({}, { text: 'dependent' })).resolves.toEqual({ entries: [] })
+      expect(lookupDictionaryMock).not.toHaveBeenCalled()
+    })
+
+    it('still looks up when the setting is absent, so upgrades keep working', async () => {
+      lookupDictionaryMock.mockResolvedValue([])
+      const handler = registerAndGetHandler(TRANSLATION_LOOKUP_DICTIONARY_CHANNEL)
+      await handler({}, { text: 'dependent' })
+      expect(lookupDictionaryMock).toHaveBeenCalledTimes(1)
     })
 
     it('resolves rather than rejects when the provider throws', async () => {
