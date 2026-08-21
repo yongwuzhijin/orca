@@ -15205,6 +15205,20 @@
       "certificateChallengeChanged": "La solicitud de certificado cambió. Vuelve a intentarlo con la página y revisa la nueva advertencia.",
       "certificateChallengeUnavailable": "Esta solicitud de certificado ya no está disponible. Vuelve a intentarlo con la página para solicitar una nueva.",
       "certificateProceedFailed": "Orca no pudo aprobar esta solicitud de certificado. Vuelve a intentarlo con la página e inténtalo de nuevo."
+    },
+    "networkTools": {
+      "newRuleLabel": "Nueva regla",
+      "saveFailed": "No se pudieron guardar las reglas.",
+      "armFailedNoGuest": "No se pudieron activar las reglas — esta pestaña aún no tiene una página activa.",
+      "armFailedUnknown": "No se pudieron activar las reglas — guarda tus cambios primero.",
+      "addRule": "Agregar regla",
+      "arm": "Activar",
+      "disarm": "Desactivar",
+      "armedCount": "activadas",
+      "noRules": "Aún no hay reglas. Agrega una para reescribir encabezados.",
+      "headerName": "Encabezado",
+      "headerValue": "Valor",
+      "delete": "Eliminar"
     }
   },
   "runtimeRpc": {

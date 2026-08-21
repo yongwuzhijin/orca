@@ -32,6 +32,20 @@
     "guestRecovery": {
       "title": "Browser page stopped",
       "failed": "The browser page stopped unexpectedly. Retry to restore it."
+    },
+    "networkTools": {
+      "newRuleLabel": "New rule",
+      "saveFailed": "Rules could not be saved.",
+      "armFailedNoGuest": "Rules could not be armed — this tab has no live page yet.",
+      "armFailedUnknown": "Rules could not be armed — save your edits first.",
+      "addRule": "Add rule",
+      "arm": "Arm",
+      "disarm": "Disarm",
+      "armedCount": "armed",
+      "noRules": "No rules yet. Add one to rewrite headers.",
+      "headerName": "Header",
+      "headerValue": "Value",
+      "delete": "Delete"
     }
   },
   "githubChecks": {

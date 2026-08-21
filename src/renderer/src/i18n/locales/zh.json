@@ -15225,6 +15225,20 @@
       "certificateChallengeChanged": "证书请求已更改。请重试该页面并查看新的警告。",
       "certificateChallengeUnavailable": "此证书请求已不可用。请重试该页面以重新请求。",
       "certificateProceedFailed": "Orca 无法批准此证书请求。请重试该页面后再试。"
+    },
+    "networkTools": {
+      "newRuleLabel": "新规则",
+      "saveFailed": "无法保存规则。",
+      "armFailedNoGuest": "无法启用规则 — 此标签页尚未加载页面。",
+      "armFailedUnknown": "无法启用规则 — 请先保存你的修改。",
+      "addRule": "添加规则",
+      "arm": "启用",
+      "disarm": "停用",
+      "armedCount": "已启用",
+      "noRules": "暂无规则。添加一条以改写请求头。",
+      "headerName": "请求头",
+      "headerValue": "值",
+      "delete": "删除"
     }
   },
   "runtimeRpc": {

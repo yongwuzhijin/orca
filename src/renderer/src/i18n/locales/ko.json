@@ -15216,6 +15216,20 @@
       "certificateChallengeChanged": "인증서 요청이 변경되었습니다. 페이지를 다시 시도하고 새 경고를 확인하세요.",
       "certificateChallengeUnavailable": "이 인증서 요청은 더 이상 사용할 수 없습니다. 페이지를 다시 시도해 새로 요청하세요.",
       "certificateProceedFailed": "Orca가 이 인증서 요청을 승인하지 못했습니다. 페이지를 다시 시도한 후 다시 요청하세요."
+    },
+    "networkTools": {
+      "newRuleLabel": "새 규칙",
+      "saveFailed": "규칙을 저장할 수 없습니다.",
+      "armFailedNoGuest": "규칙을 활성화할 수 없습니다 — 이 탭에는 아직 활성 페이지가 없습니다.",
+      "armFailedUnknown": "규칙을 활성화할 수 없습니다 — 먼저 편집 내용을 저장하세요.",
+      "addRule": "규칙 추가",
+      "arm": "활성화",
+      "disarm": "비활성화",
+      "armedCount": "활성화됨",
+      "noRules": "아직 규칙이 없습니다. 하나를 추가해 헤더를 다시 쓰세요.",
+      "headerName": "헤더",
+      "headerValue": "값",
+      "delete": "삭제"
     }
   },
   "runtimeRpc": {

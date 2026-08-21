@@ -15205,6 +15205,20 @@
       "certificateChallengeChanged": "証明書のリクエストが変更されました。ページを再試行して、警告の内容を改めて確認してください。",
       "certificateChallengeUnavailable": "この証明書のリクエストは利用できなくなりました。ページを再試行して、もう一度リクエストしてください。",
       "certificateProceedFailed": "Orca はこの証明書のリクエストを承認できませんでした。ページを再試行して、もう一度お試しください。"
+    },
+    "networkTools": {
+      "newRuleLabel": "新しいルール",
+      "saveFailed": "ルールを保存できませんでした。",
+      "armFailedNoGuest": "ルールを有効化できませんでした — このタブにはまだページが読み込まれていません。",
+      "armFailedUnknown": "ルールを有効化できませんでした — 先に編集内容を保存してください。",
+      "addRule": "ルールを追加",
+      "arm": "有効化",
+      "disarm": "無効化",
+      "armedCount": "有効",
+      "noRules": "ルールがまだありません。追加してヘッダーを書き換えます。",
+      "headerName": "ヘッダー",
+      "headerValue": "値",
+      "delete": "削除"
     }
   },
   "runtimeRpc": {
