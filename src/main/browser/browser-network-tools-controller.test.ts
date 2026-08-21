@@ -34,6 +34,7 @@ import {
   readBrowserNetworkLog,
   saveBrowserNetworkRules
 } from './browser-network-tools-controller'
+import { setBrowserRequestHeadersStage } from './browser-session-request-pipeline'
 
 const RULE = {
   id: 'rule-1',
@@ -159,5 +160,31 @@ describe('browser network tools controller', () => {
     handleBrowserNetworkGuestDestroyed('page-a')
     expect(readBrowserNetworkLog('page-a', 50).entries).toEqual([])
     expect(armedBrowserNetworkRuleIds('page-a')).toEqual([])
+  })
+
+  // Why: client hints registers its stage second, so a shared key silently drops rule rewriting.
+  it('keeps rewriting when a client hints stage registers on the same session', () => {
+    const { sess, listeners } = createFakeSession()
+    installBrowserNetworkToolsStages(sess)
+    setBrowserRequestHeadersStage(sess, 'client-hints', (_details, headers) => {
+      headers['Sec-Ch-Ua'] = 'Chromium'
+    })
+    saveBrowserNetworkRules([RULE])
+    armBrowserNetworkRules('page-a', ['rule-1'])
+
+    const details = {
+      id: 2,
+      url: 'https://api.example.com/v1/items',
+      method: 'GET',
+      resourceType: 'xhr',
+      webContentsId: 7,
+      requestHeaders: { Accept: '*/*' }
+    } as unknown as Electron.OnBeforeSendHeadersListenerDetails
+    let response: Electron.BeforeSendResponse = {}
+    listeners.requestHeaders(details, (value) => {
+      response = value
+    })
+
+    expect(response.requestHeaders).toMatchObject({ 'Sec-Ch-Ua': 'Chromium', 'X-Debug': '1' })
   })
 })
