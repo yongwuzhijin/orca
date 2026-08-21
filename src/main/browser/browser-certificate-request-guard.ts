@@ -44,8 +44,7 @@ export class BrowserCertificateRequestGuard {
     if (this.guardedSessions.has(session)) {
       return
     }
-    // Why: Chromium caches certificate continuations at session scope. This
-    // request gate restores the narrower per-WebContents approval boundary.
+    // Why: Chromium caches cert continuations per session; restore the per-WebContents gate.
     setBrowserBeforeRequestStage(session, 'certificate-guard', (details) =>
       this.shouldBlockRequest(session, details) ? { cancel: true } : undefined
     )

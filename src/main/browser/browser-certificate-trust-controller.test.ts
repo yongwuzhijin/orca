@@ -220,13 +220,17 @@ describe('BrowserCertificateTrustController', () => {
     expect(beforeRequest({ webContentsId: otherGuest.id })).toHaveBeenCalledWith({})
   })
 
-  it('stops blocking once the session guard is removed', () => {
+  it('stops blocking and forgets accepted identities once the session guard is removed', () => {
     certificateEvent({ controller, guest })
     expect(controller.proceed('page-1', 'challenge-1')).toEqual({ ok: true })
     expect(certificateEvent({ controller, guest }).callback).toHaveBeenCalledWith(true)
     expect(beforeRequest({ webContentsId: otherGuest.id })).toHaveBeenCalledWith({ cancel: true })
 
     controller.removeSessionRequestGuard(browserSession)
+
+    expect(beforeRequest({ webContentsId: otherGuest.id })).toHaveBeenCalledWith({})
+
+    controller.installSessionRequestGuard(browserSession)
 
     expect(beforeRequest({ webContentsId: otherGuest.id })).toHaveBeenCalledWith({})
   })
