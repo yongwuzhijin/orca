@@ -32,14 +32,14 @@ let cachedRules: BrowserNetworkRule[] | null = null
 
 export function listBrowserNetworkRules(): BrowserNetworkRule[] {
   cachedRules ??= loadBrowserNetworkRules(resolveRulesPath)
-  return cachedRules
+  return [...cachedRules]
 }
 
 export function saveBrowserNetworkRules(rules: BrowserNetworkRule[]): boolean {
   if (!persistBrowserNetworkRules(resolveRulesPath, rules)) {
     return false
   }
-  cachedRules = rules
+  cachedRules = [...rules]
   // Why: an edit to an already-armed rule must take effect without a re-arm round trip.
   for (const browserPageId of armedRules.armedPageIds()) {
     const armedIds = new Set(armedRules.rulesFor(browserPageId).map((rule) => rule.id))

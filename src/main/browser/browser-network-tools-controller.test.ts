@@ -28,6 +28,7 @@ vi.mock('./browser-manager', () => ({
 import {
   armBrowserNetworkRules,
   armedBrowserNetworkRuleIds,
+  disarmBrowserNetworkRules,
   handleBrowserNetworkGuestDestroyed,
   installBrowserNetworkToolsStages,
   listBrowserNetworkRules,
@@ -44,12 +45,25 @@ const RULE = {
   headers: [{ target: 'request' as const, op: 'set' as const, name: 'X-Debug', value: '1' }]
 }
 
+const OTHER_RULE = {
+  id: 'rule-2',
+  label: 'canary routing',
+  enabled: true,
+  match: { urlPattern: 'https://canary.example.com/*' },
+  headers: [{ target: 'request' as const, op: 'set' as const, name: 'X-Canary', value: 'on' }]
+}
+
 type CapturedListeners = {
   requestHeaders: (
     details: Electron.OnBeforeSendHeadersListenerDetails,
     callback: (response: Electron.BeforeSendResponse) => void
   ) => void
+  responseHeaders: (
+    details: Electron.OnHeadersReceivedListenerDetails,
+    callback: (response: Electron.HeadersReceivedResponse) => void
+  ) => void
   completed: (details: Electron.OnCompletedListenerDetails) => void
+  errored: (details: Electron.OnErrorOccurredListenerDetails) => void
 }
 
 function createFakeSession(): { sess: Session; listeners: CapturedListeners } {
@@ -60,11 +74,15 @@ function createFakeSession(): { sess: Session; listeners: CapturedListeners } {
       onBeforeSendHeaders: vi.fn((listener: CapturedListeners['requestHeaders']) => {
         listeners.requestHeaders = listener
       }),
-      onHeadersReceived: vi.fn(),
+      onHeadersReceived: vi.fn((listener: CapturedListeners['responseHeaders']) => {
+        listeners.responseHeaders = listener
+      }),
       onCompleted: vi.fn((listener: CapturedListeners['completed']) => {
         listeners.completed = listener
       }),
-      onErrorOccurred: vi.fn()
+      onErrorOccurred: vi.fn((listener: CapturedListeners['errored']) => {
+        listeners.errored = listener
+      })
     }
   } as unknown as Session
   return { sess, listeners }
@@ -114,6 +132,21 @@ describe('browser network tools controller', () => {
     expect(readBrowserNetworkLog('page-a', 50)).toEqual({ entries: [], truncated: false })
   })
 
+  it('disarms the rules armed on a page', () => {
+    saveBrowserNetworkRules([RULE])
+    armBrowserNetworkRules('page-a', ['rule-1'])
+    expect(armedBrowserNetworkRuleIds('page-a')).toEqual(['rule-1'])
+    expect(disarmBrowserNetworkRules('page-a')).toBe(true)
+    expect(armedBrowserNetworkRuleIds('page-a')).toEqual([])
+  })
+
+  it('keeps a save from arming rules the page never armed', () => {
+    saveBrowserNetworkRules([RULE, OTHER_RULE])
+    armBrowserNetworkRules('page-a', ['rule-1'])
+    saveBrowserNetworkRules([RULE, { ...OTHER_RULE, label: 'canary routing v2' }])
+    expect(armedBrowserNetworkRuleIds('page-a')).toEqual(['rule-1'])
+  })
+
   it('drops armed rules when the guest is destroyed', () => {
     saveBrowserNetworkRules([RULE])
     armBrowserNetworkRules('page-a', ['rule-1'])
@@ -147,6 +180,7 @@ describe('browser network tools controller', () => {
     expect(fire().requestHeaders).toMatchObject({ 'X-Debug': '1' })
     const logged = readBrowserNetworkLog('page-a', 50)
     expect(logged.entries.map((entry) => entry.url)).toEqual(['https://api.example.com/v1/items'])
+    expect(logged.entries[0].requestHeaders).toMatchObject({ 'X-Debug': '1' })
 
     listeners.completed({
       id: 1,
@@ -160,6 +194,29 @@ describe('browser network tools controller', () => {
     handleBrowserNetworkGuestDestroyed('page-a')
     expect(readBrowserNetworkLog('page-a', 50).entries).toEqual([])
     expect(armedBrowserNetworkRuleIds('page-a')).toEqual([])
+  })
+
+  it('logs the failure reason when a request errors out', () => {
+    const { sess, listeners } = createFakeSession()
+    installBrowserNetworkToolsStages(sess)
+
+    listeners.requestHeaders(
+      {
+        id: 3,
+        url: 'https://api.example.com/v1/broken',
+        method: 'GET',
+        resourceType: 'xhr',
+        webContentsId: 7,
+        requestHeaders: { Accept: '*/*' }
+      } as unknown as Electron.OnBeforeSendHeadersListenerDetails,
+      () => {}
+    )
+    listeners.errored({
+      id: 3,
+      error: 'net::ERR_CONNECTION_REFUSED'
+    } as unknown as Electron.OnErrorOccurredListenerDetails)
+
+    expect(readBrowserNetworkLog('page-a', 50).entries[0].error).toBe('net::ERR_CONNECTION_REFUSED')
   })
 
   // Why: client hints registers its stage second, so a shared key silently drops rule rewriting.

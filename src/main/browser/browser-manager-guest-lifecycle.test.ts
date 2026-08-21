@@ -122,6 +122,7 @@ describe('browserManager', () => {
     })
 
     expect(browserManager.hasRegisteredGuestForBrowserPage('browser-network')).toBe(true)
+    expect(browserManager.hasRegisteredGuestForBrowserPage('browser-other')).toBe(false)
     expect(browserManager.resolveBrowserPageIdForGuestWebContentsId(guest.id)).toBe(
       'browser-network'
     )
