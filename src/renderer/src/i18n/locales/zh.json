@@ -15234,8 +15234,11 @@
       "addRule": "添加规则",
       "arm": "启用",
       "disarm": "停用",
-      "armedCount": "已启用",
+      "armedCount": "已启用 {{count}} 条",
       "noRules": "暂无规则。添加一条以改写请求头。",
+      "loadFailed": "无法加载规则。",
+      "ruleLabelField": "规则名称",
+      "urlPatternField": "URL 匹配模式",
       "headerName": "请求头",
       "headerValue": "值",
       "delete": "删除"

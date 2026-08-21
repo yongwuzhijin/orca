@@ -41,8 +41,11 @@
       "addRule": "Add rule",
       "arm": "Arm",
       "disarm": "Disarm",
-      "armedCount": "armed",
+      "armedCount": "{{count}} armed",
       "noRules": "No rules yet. Add one to rewrite headers.",
+      "loadFailed": "Rules could not be loaded.",
+      "ruleLabelField": "Rule label",
+      "urlPatternField": "URL pattern",
       "headerName": "Header",
       "headerValue": "Value",
       "delete": "Delete"

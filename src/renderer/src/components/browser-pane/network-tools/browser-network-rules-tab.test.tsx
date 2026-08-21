@@ -29,6 +29,11 @@ const api = {
     })
   ),
   networkDisarmRules: vi.fn(async (_args: { browserPageId: string }): Promise<boolean> => true),
+  networkReadArmedRules: vi.fn(
+    async (_args: { browserPageId: string }): Promise<{ armedRuleIds: string[] }> => ({
+      armedRuleIds: []
+    })
+  ),
   networkReadLog: vi.fn(
     async (_args: {
       browserPageId: string
@@ -45,6 +50,18 @@ beforeEach(() => {
 })
 
 afterEach(cleanup)
+
+function lastSavedRules(): BrowserNetworkRule[] {
+  const last = api.networkSaveRules.mock.calls.at(-1)
+  if (!last) {
+    throw new Error('networkSaveRules was never called')
+  }
+  return last[0].rules
+}
+
+function button(name: string): HTMLButtonElement {
+  return screen.getByRole('button', { name }) as HTMLButtonElement
+}
 
 describe('BrowserNetworkRulesTab', () => {
   it('lists the saved rules', async () => {
@@ -94,5 +111,63 @@ describe('BrowserNetworkRulesTab', () => {
     fireEvent.click(screen.getByLabelText('Arm staging auth'))
     fireEvent.click(screen.getByText('Arm'))
     expect(await screen.findByText(/could not be armed/)).toBeTruthy()
+  })
+
+  it('seeds the armed state from main so a remounted tab can still disarm', async () => {
+    api.networkReadArmedRules.mockResolvedValueOnce({ armedRuleIds: ['rule-1'] })
+    render(<BrowserNetworkRulesTab browserPageId="page-a" />)
+    expect(await screen.findByText('1 armed')).toBeTruthy()
+    expect(api.networkReadArmedRules).toHaveBeenCalledWith({ browserPageId: 'page-a' })
+    expect(button('Disarm').disabled).toBe(false)
+  })
+
+  it('drops the deleted rule from the checked and armed ids', async () => {
+    render(<BrowserNetworkRulesTab browserPageId="page-a" />)
+    await screen.findByDisplayValue('staging auth')
+    fireEvent.click(screen.getByLabelText('Arm staging auth'))
+    fireEvent.click(button('Arm'))
+    await screen.findByText('1 armed')
+    fireEvent.click(screen.getByLabelText('Delete staging auth'))
+    await waitFor(() => expect(screen.queryByText('1 armed')).toBeNull())
+    expect(button('Arm').disabled).toBe(true)
+    expect(button('Disarm').disabled).toBe(true)
+  })
+
+  it('explains a failed load instead of claiming there are no rules', async () => {
+    api.networkListRules.mockRejectedValueOnce(new Error('ipc down'))
+    render(<BrowserNetworkRulesTab browserPageId="page-a" />)
+    expect(await screen.findByText('Rules could not be loaded.')).toBeTruthy()
+    expect(screen.queryByText(/No rules yet/)).toBeNull()
+  })
+
+  it('saves an edited rule label', async () => {
+    render(<BrowserNetworkRulesTab browserPageId="page-a" />)
+    await screen.findByDisplayValue('staging auth')
+    fireEvent.change(screen.getByLabelText('Rule label'), { target: { value: 'prod auth' } })
+    await waitFor(() => expect(api.networkSaveRules).toHaveBeenCalled())
+    expect(lastSavedRules()[0].label).toBe('prod auth')
+  })
+
+  it('saves an edited url pattern', async () => {
+    render(<BrowserNetworkRulesTab browserPageId="page-a" />)
+    await screen.findByDisplayValue('staging auth')
+    fireEvent.change(screen.getByLabelText('URL pattern'), {
+      target: { value: 'https://prod.example.com/*' }
+    })
+    await waitFor(() => expect(api.networkSaveRules).toHaveBeenCalled())
+    expect(lastSavedRules()[0].match.urlPattern).toBe('https://prod.example.com/*')
+  })
+
+  it('saves an edited header value without dropping the rest of the mutation', async () => {
+    render(<BrowserNetworkRulesTab browserPageId="page-a" />)
+    await screen.findByDisplayValue('staging auth')
+    fireEvent.change(screen.getByLabelText('Value'), { target: { value: '2' } })
+    await waitFor(() => expect(api.networkSaveRules).toHaveBeenCalled())
+    expect(lastSavedRules()[0].headers[0]).toEqual({
+      target: 'request',
+      op: 'set',
+      name: 'X-Debug',
+      value: '2'
+    })
   })
 })

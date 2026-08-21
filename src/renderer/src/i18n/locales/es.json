@@ -15214,8 +15214,11 @@
       "addRule": "Agregar regla",
       "arm": "Activar",
       "disarm": "Desactivar",
-      "armedCount": "activadas",
+      "armedCount": "{{count}} activadas",
       "noRules": "Aún no hay reglas. Agrega una para reescribir encabezados.",
+      "loadFailed": "No se pudieron cargar las reglas.",
+      "ruleLabelField": "Etiqueta de la regla",
+      "urlPatternField": "Patrón de URL",
       "headerName": "Encabezado",
       "headerValue": "Valor",
       "delete": "Eliminar"

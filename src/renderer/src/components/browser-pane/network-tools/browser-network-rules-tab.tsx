@@ -30,13 +30,39 @@ export function BrowserNetworkRulesTab({
   const [selected, setSelected] = useState<string[]>([])
   const [armedRuleIds, setArmedRuleIds] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    void window.api.browser.networkListRules().then(setRules)
-  }, [])
+    let cancelled = false
+    void Promise.all([
+      window.api.browser.networkListRules(),
+      window.api.browser.networkReadArmedRules({ browserPageId })
+    ])
+      .then(([saved, armed]) => {
+        if (cancelled) {
+          return
+        }
+        setRules(saved)
+        setArmedRuleIds(armed.armedRuleIds)
+        setLoaded(true)
+      })
+      .catch(() => {
+        if (cancelled) {
+          return
+        }
+        setError(translate('browser.networkTools.loadFailed', 'Rules could not be loaded.'))
+        setLoaded(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [browserPageId])
 
   const persist = useCallback(async (next: BrowserNetworkRule[]) => {
     setRules(next)
+    const liveIds = new Set(next.map((rule) => rule.id))
+    setSelected((prev) => prev.filter((id) => liveIds.has(id)))
+    setArmedRuleIds((prev) => prev.filter((id) => liveIds.has(id)))
     const ok = await window.api.browser.networkSaveRules({ rules: next })
     if (!ok) {
       setError(translate('browser.networkTools.saveFailed', 'Rules could not be saved.'))
@@ -87,6 +113,8 @@ export function BrowserNetworkRulesTab({
     setError(null)
   }, [browserPageId])
 
+  const visibleRules = loaded ? rules : []
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
@@ -117,17 +145,19 @@ export function BrowserNetworkRulesTab({
         </Button>
         {armedRuleIds.length > 0 ? (
           <span className="text-[11px] text-amber-600">
-            {translate('browser.networkTools.armedCount', 'armed')} · {armedRuleIds.length}
+            {translate('browser.networkTools.armedCount', '{{count}} armed', {
+              count: armedRuleIds.length
+            })}
           </span>
         ) : null}
       </div>
       {error ? <p className="text-[11px] text-destructive">{error}</p> : null}
-      {rules.length === 0 ? (
+      {loaded && rules.length === 0 && !error ? (
         <p className="text-muted-foreground">
           {translate('browser.networkTools.noRules', 'No rules yet. Add one to rewrite headers.')}
         </p>
       ) : null}
-      {rules.map((rule) => {
+      {visibleRules.map((rule) => {
         const header = rule.headers[0]
         return (
           <div key={rule.id} className="flex items-center gap-1.5">
@@ -142,11 +172,13 @@ export function BrowserNetworkRulesTab({
             />
             <Input
               className="h-7 w-32 text-xs"
+              aria-label={translate('browser.networkTools.ruleLabelField', 'Rule label')}
               value={rule.label}
               onChange={(event) => patchRule(rule.id, { label: event.target.value })}
             />
             <Input
               className="h-7 flex-1 text-xs"
+              aria-label={translate('browser.networkTools.urlPatternField', 'URL pattern')}
               value={rule.match.urlPattern}
               onChange={(event) =>
                 patchRule(rule.id, { match: { ...rule.match, urlPattern: event.target.value } })
@@ -154,12 +186,14 @@ export function BrowserNetworkRulesTab({
             />
             <Input
               className="h-7 w-36 text-xs"
+              aria-label={translate('browser.networkTools.headerName', 'Header')}
               placeholder={translate('browser.networkTools.headerName', 'Header')}
               value={header?.name ?? ''}
               onChange={(event) => patchHeader(rule.id, { name: event.target.value })}
             />
             <Input
               className="h-7 w-36 text-xs"
+              aria-label={translate('browser.networkTools.headerValue', 'Value')}
               placeholder={translate('browser.networkTools.headerValue', 'Value')}
               value={header?.value ?? ''}
               onChange={(event) => patchHeader(rule.id, { value: event.target.value })}

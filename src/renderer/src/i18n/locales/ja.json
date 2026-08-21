@@ -15214,8 +15214,11 @@
       "addRule": "ルールを追加",
       "arm": "有効化",
       "disarm": "無効化",
-      "armedCount": "有効",
+      "armedCount": "{{count}} 件を有効化中",
       "noRules": "ルールがまだありません。追加してヘッダーを書き換えます。",
+      "loadFailed": "ルールを読み込めませんでした。",
+      "ruleLabelField": "ルール名",
+      "urlPatternField": "URL パターン",
       "headerName": "ヘッダー",
       "headerValue": "値",
       "delete": "削除"

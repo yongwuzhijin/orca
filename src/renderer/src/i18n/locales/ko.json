@@ -15225,8 +15225,11 @@
       "addRule": "규칙 추가",
       "arm": "활성화",
       "disarm": "비활성화",
-      "armedCount": "활성화됨",
+      "armedCount": "{{count}}개 활성화됨",
       "noRules": "아직 규칙이 없습니다. 하나를 추가해 헤더를 다시 쓰세요.",
+      "loadFailed": "규칙을 불러올 수 없습니다.",
+      "ruleLabelField": "규칙 이름",
+      "urlPatternField": "URL 패턴",
       "headerName": "헤더",
       "headerValue": "값",
       "delete": "삭제"
