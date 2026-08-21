@@ -23,11 +23,13 @@ describe('useBrowserNetworkToolsPanel', () => {
     expect(INITIAL.heightPx).toBeLessThanOrEqual(BROWSER_NETWORK_DRAWER_MAX_HEIGHT)
   })
 
-  it('opens for one page at a time', () => {
-    const { open } = useBrowserNetworkToolsPanel.getState()
-    open('page-a')
-    open('page-b')
+  it('opens for one page at a time, on the rules tab', () => {
+    const store = useBrowserNetworkToolsPanel.getState()
+    store.open('page-a')
+    store.setTab('log')
+    store.open('page-b')
     expect(useBrowserNetworkToolsPanel.getState().openPageId).toBe('page-b')
+    expect(useBrowserNetworkToolsPanel.getState().tab).toBe('rules')
   })
 
   it('clears the open page on close', () => {
