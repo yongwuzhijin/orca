@@ -39,6 +39,23 @@ describe('useBrowserNetworkToolsPanel', () => {
     expect(useBrowserNetworkToolsPanel.getState().openPageId).toBeNull()
   })
 
+  it('resets the tab on close rather than leaving it to the next open', () => {
+    const store = useBrowserNetworkToolsPanel.getState()
+    store.open('page-a')
+    store.setTab('log')
+    store.close()
+    expect(useBrowserNetworkToolsPanel.getState().tab).toBe('rules')
+  })
+
+  it('keeps a resized height across close and reopen', () => {
+    const store = useBrowserNetworkToolsPanel.getState()
+    store.setHeightPx(400)
+    store.open('page-a')
+    store.close()
+    store.open('page-a')
+    expect(useBrowserNetworkToolsPanel.getState().heightPx).toBe(400)
+  })
+
   it('reopens on the rules tab so a stale log view is never what you land on', () => {
     const store = useBrowserNetworkToolsPanel.getState()
     store.open('page-a')
