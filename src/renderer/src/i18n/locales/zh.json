@@ -15241,7 +15241,11 @@
       "urlPatternField": "URL 匹配模式",
       "headerName": "请求头",
       "headerValue": "值",
-      "delete": "删除"
+      "delete": "删除",
+      "refresh": "刷新",
+      "logTruncated": "仅显示最新 100 条请求。",
+      "logDuration": "{{value}} 毫秒",
+      "logEmpty": "该标签页暂无请求记录。重新加载页面即可捕获流量。"
     }
   },
   "runtimeRpc": {

@@ -48,7 +48,11 @@
       "urlPatternField": "URL pattern",
       "headerName": "Header",
       "headerValue": "Value",
-      "delete": "Delete"
+      "delete": "Delete",
+      "refresh": "Refresh",
+      "logTruncated": "Showing the newest 100 requests.",
+      "logDuration": "{{value}} ms",
+      "logEmpty": "No requests recorded for this tab yet. Reload the page to capture traffic."
     }
   },
   "githubChecks": {

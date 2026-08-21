@@ -15232,7 +15232,11 @@
       "urlPatternField": "URL 패턴",
       "headerName": "헤더",
       "headerValue": "값",
-      "delete": "삭제"
+      "delete": "삭제",
+      "refresh": "새로 고침",
+      "logTruncated": "최신 요청 100개만 표시합니다.",
+      "logDuration": "{{value}}밀리초",
+      "logEmpty": "이 탭에 기록된 요청이 아직 없습니다. 페이지를 새로 고치면 트래픽을 수집합니다."
     }
   },
   "runtimeRpc": {

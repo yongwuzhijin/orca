@@ -15221,7 +15221,11 @@
       "urlPatternField": "URL パターン",
       "headerName": "ヘッダー",
       "headerValue": "値",
-      "delete": "削除"
+      "delete": "削除",
+      "refresh": "更新",
+      "logTruncated": "最新の 100 件のリクエストのみ表示しています。",
+      "logDuration": "{{value}} ミリ秒",
+      "logEmpty": "このタブにはまだリクエストの記録がありません。ページを再読み込みすると通信を記録できます。"
     }
   },
   "runtimeRpc": {

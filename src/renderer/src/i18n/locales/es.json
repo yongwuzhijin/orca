@@ -15221,7 +15221,11 @@
       "urlPatternField": "Patrón de URL",
       "headerName": "Encabezado",
       "headerValue": "Valor",
-      "delete": "Eliminar"
+      "delete": "Eliminar",
+      "refresh": "Actualizar",
+      "logTruncated": "Mostrando las 100 solicitudes más recientes.",
+      "logDuration": "{{value}} ms",
+      "logEmpty": "Aún no hay solicitudes registradas en esta pestaña. Vuelve a cargar la página para capturar el tráfico."
     }
   },
   "runtimeRpc": {
