@@ -78,6 +78,7 @@ export type KeybindingActionId =
   | 'tab.selectByIndex'
   | 'tab.openQuickCommandsMenu'
   | 'browser.find'
+  | 'browser.networkTools'
   | 'browser.back'
   | 'browser.forward'
   | 'browser.reload'
@@ -724,6 +725,14 @@ export const KEYBINDING_DEFINITIONS: readonly KeybindingDefinition[] = [
     scope: 'browser',
     searchKeywords: ['shortcut', 'browser', 'find', 'search'],
     defaultBindings: platformBindings(['Mod+F'])
+  },
+  {
+    id: 'browser.networkTools',
+    title: 'Toggle Browser Network Tools',
+    group: 'Browser',
+    scope: 'browser',
+    searchKeywords: ['shortcut', 'browser', 'network', 'header', 'request', 'devtools'],
+    defaultBindings: platformBindings(['Mod+Alt+N'])
   },
   {
     id: 'browser.back',

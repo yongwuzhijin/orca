@@ -15231,7 +15231,9 @@
       "tabRules": "Reglas",
       "tabLog": "Registro",
       "close": "Cerrar herramientas de red",
-      "remoteUnavailable": "Las herramientas de red no están disponibles para pestañas que se ejecutan en un host remoto."
+      "remoteUnavailable": "Las herramientas de red no están disponibles para pestañas que se ejecutan en un host remoto.",
+      "armedIndicator": "Las reglas de red están reescribiendo las solicitudes de esta pestaña",
+      "armedBadge": "RED"
     }
   },
   "runtimeRpc": {

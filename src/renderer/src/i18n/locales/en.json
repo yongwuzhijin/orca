@@ -58,7 +58,9 @@
       "tabRules": "Rules",
       "tabLog": "Log",
       "close": "Close network tools",
-      "remoteUnavailable": "Network tools are unavailable for tabs running on a remote host."
+      "remoteUnavailable": "Network tools are unavailable for tabs running on a remote host.",
+      "armedIndicator": "Network rules are rewriting requests on this tab",
+      "armedBadge": "NET"
     }
   },
   "githubChecks": {

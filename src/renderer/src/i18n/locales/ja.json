@@ -15231,7 +15231,9 @@
       "tabRules": "ルール",
       "tabLog": "ログ",
       "close": "ネットワークツールを閉じる",
-      "remoteUnavailable": "リモートホストで実行中のタブではネットワークツールを利用できません。"
+      "remoteUnavailable": "リモートホストで実行中のタブではネットワークツールを利用できません。",
+      "armedIndicator": "ネットワークルールがこのタブのリクエストを書き換えています",
+      "armedBadge": "ネット"
     }
   },
   "runtimeRpc": {

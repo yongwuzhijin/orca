@@ -15251,7 +15251,9 @@
       "tabRules": "规则",
       "tabLog": "日志",
       "close": "关闭网络工具",
-      "remoteUnavailable": "网络工具不适用于运行在远程主机上的标签页。"
+      "remoteUnavailable": "网络工具不适用于运行在远程主机上的标签页。",
+      "armedIndicator": "网络规则正在改写该标签页的请求",
+      "armedBadge": "网络"
     }
   },
   "runtimeRpc": {

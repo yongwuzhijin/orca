@@ -23,6 +23,7 @@ import type {
 import { BrowserPageChromeHeader } from './browser-page-chrome-header'
 import { BrowserPageContextMenu } from './browser-page-context-menu'
 import { BrowserPageViewportOverlays } from './browser-page-viewport-overlays'
+import { useBrowserNetworkToolsShortcut } from '../network-tools/use-browser-network-tools-shortcut'
 import { useBrowserPageAnnotationSend } from '../annotate/use-browser-page-annotation-send'
 import { useBrowserPageChromeFocus } from './use-browser-page-chrome-focus'
 import { useBrowserPageFindShortcuts } from './use-browser-page-find-shortcuts'
@@ -232,6 +233,7 @@ export function BrowserPagePane({
     findShortcutScope,
     setFindOpen
   })
+  useBrowserNetworkToolsShortcut({ browserPageId: browserTab.id, isActive })
   useBrowserPageKeyboardShortcuts({
     browserTabId: browserTab.id,
     isActive,

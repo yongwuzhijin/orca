@@ -9,6 +9,7 @@ import {
   browserViewportPresetToOverride,
   getBrowserViewportPreset
 } from '../../../../../shared/browser-viewport-presets'
+import { BrowserNetworkArmedIndicator } from '../network-tools/browser-network-armed-indicator'
 import { BrowserToolbarMenuDropdown } from './browser-toolbar-menu-dropdown'
 import { BrowserToolbarProfileDialogs } from './browser-toolbar-profile-dialogs'
 import { translate } from '@/i18n/i18n'
@@ -238,6 +239,7 @@ export function BrowserToolbarMenu({
 
   return (
     <>
+      <BrowserNetworkArmedIndicator browserPageId={browserPageId} />
       <BrowserToolbarMenuDropdown
         menuOpen={menuOpen}
         onMenuOpenChange={handleMenuOpenChange}
@@ -257,6 +259,7 @@ export function BrowserToolbarMenu({
         worktreeId={worktreeId}
         pageUrl={pageUrl}
         pageTitle={pageTitle}
+        browserPageId={browserPageId}
       />
 
       <BrowserToolbarProfileDialogs

@@ -70,6 +70,7 @@ describe('cookie-import Google disclosure footer', () => {
           worktreeId="wt-1"
           pageUrl="https://example.com"
           pageTitle="Example"
+          browserPageId="page-1"
         />
       )
     ],

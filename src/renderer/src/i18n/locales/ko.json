@@ -15242,7 +15242,9 @@
       "tabRules": "규칙",
       "tabLog": "로그",
       "close": "네트워크 도구 닫기",
-      "remoteUnavailable": "원격 호스트에서 실행 중인 탭에서는 네트워크 도구를 사용할 수 없습니다."
+      "remoteUnavailable": "원격 호스트에서 실행 중인 탭에서는 네트워크 도구를 사용할 수 없습니다.",
+      "armedIndicator": "네트워크 규칙이 이 탭의 요청을 다시 쓰고 있습니다",
+      "armedBadge": "네트"
     }
   },
   "runtimeRpc": {
