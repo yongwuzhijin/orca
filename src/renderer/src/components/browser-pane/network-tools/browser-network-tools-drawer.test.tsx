@@ -6,20 +6,35 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { BrowserNetworkToolsDrawer } from './browser-network-tools-drawer'
 import { useBrowserNetworkToolsPanel } from './browser-network-tools-panel-state'
 
+const api = {
+  networkListRules: vi.fn(async (): Promise<never[]> => []),
+  networkSaveRules: vi.fn(async (_args: { rules: unknown[] }): Promise<boolean> => true),
+  networkArmRules: vi.fn(
+    async (_args: {
+      browserPageId: string
+      ruleIds: string[]
+    }): Promise<{ armed: boolean; armedRuleIds: string[] }> => ({ armed: true, armedRuleIds: [] })
+  ),
+  networkDisarmRules: vi.fn(async (_args: { browserPageId: string }): Promise<boolean> => true),
+  networkReadArmedRules: vi.fn(
+    async (_args: { browserPageId: string }): Promise<{ armedRuleIds: string[] }> => ({
+      armedRuleIds: []
+    })
+  ),
+  networkReadLog: vi.fn(
+    async (_args: {
+      browserPageId: string
+      limit?: number
+    }): Promise<{ entries: never[]; truncated: boolean }> => ({ entries: [], truncated: false })
+  )
+}
+
 beforeEach(() => {
   useBrowserNetworkToolsPanel.getState().close()
-  Object.assign(window, {
-    api: {
-      browser: {
-        networkListRules: vi.fn(async () => []),
-        networkSaveRules: vi.fn(async () => true),
-        networkArmRules: vi.fn(async () => ({ armed: true, armedRuleIds: [] })),
-        networkDisarmRules: vi.fn(async () => true),
-        networkReadArmedRules: vi.fn(async () => ({ armedRuleIds: [] })),
-        networkReadLog: vi.fn(async () => ({ entries: [], truncated: false }))
-      }
-    }
-  })
+  for (const fn of Object.values(api)) {
+    fn.mockClear()
+  }
+  Object.assign(window, { api: { browser: api } })
 })
 
 afterEach(cleanup)
@@ -44,6 +59,8 @@ describe('BrowserNetworkToolsDrawer', () => {
     useBrowserNetworkToolsPanel.getState().open('page-a')
     render(<BrowserNetworkToolsDrawer browserPageId="page-a" browserRuntimeEnvironmentId={null} />)
     expect(await screen.findByText('Add rule')).toBeTruthy()
+    // Why: a drawer that forwards the wrong id silently shows another tab's rules.
+    expect(api.networkReadArmedRules).toHaveBeenCalledWith({ browserPageId: 'page-a' })
   })
 
   // Radix's TabsTrigger activates on mousedown/focus, not on a bare `click` event, so this needs
@@ -54,6 +71,7 @@ describe('BrowserNetworkToolsDrawer', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Log' }))
     expect(await screen.findByText('Refresh')).toBeTruthy()
     expect(useBrowserNetworkToolsPanel.getState().tab).toBe('log')
+    expect(api.networkReadLog).toHaveBeenCalledWith({ browserPageId: 'page-a', limit: 100 })
   })
 
   it('closes from the close button', () => {
@@ -80,5 +98,21 @@ describe('BrowserNetworkToolsDrawer', () => {
     fireEvent.pointerUp(window)
     fireEvent.pointerMove(window, { clientY: 300 })
     expect(useBrowserNetworkToolsPanel.getState().heightPx).toBe(340)
+    const frame = screen.getByRole('region', { name: 'Network tools' }) as HTMLElement
+    expect(frame.style.height).toBe('340px')
+  })
+
+  // Why: the OS can steal the pointer mid-drag, and without pointercancel the drawer stays stuck
+  // in drag mode and resizes on every later pointer move.
+  it('stops resizing when the pointer is cancelled mid-drag', () => {
+    useBrowserNetworkToolsPanel.getState().open('page-a')
+    useBrowserNetworkToolsPanel.getState().setHeightPx(280)
+    render(<BrowserNetworkToolsDrawer browserPageId="page-a" browserRuntimeEnvironmentId={null} />)
+    fireEvent.pointerDown(screen.getByRole('separator'), { clientY: 500 })
+    fireEvent.pointerMove(window, { clientY: 460 })
+    expect(useBrowserNetworkToolsPanel.getState().heightPx).toBe(320)
+    fireEvent.pointerCancel(window)
+    fireEvent.pointerMove(window, { clientY: 380 })
+    expect(useBrowserNetworkToolsPanel.getState().heightPx).toBe(320)
   })
 })
