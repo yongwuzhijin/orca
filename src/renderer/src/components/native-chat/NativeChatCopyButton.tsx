@@ -12,10 +12,12 @@ import { translate } from '@/i18n/i18n'
  */
 export function NativeChatCopyButton({
   text,
-  className
+  className,
+  label: idleLabel
 }: {
   text: string
   className?: string
+  label?: string
 }): React.JSX.Element {
   const [copied, setCopied] = useState(false)
   const resetTimerRef = useRef<number | null>(null)
@@ -46,7 +48,7 @@ export function NativeChatCopyButton({
 
   const label = copied
     ? translate('components.native-chat.copyMessage.copied', 'Copied')
-    : translate('components.native-chat.copyMessage.copy', 'Copy message')
+    : (idleLabel ?? translate('components.native-chat.copyMessage.copy', 'Copy message'))
 
   return (
     <button
