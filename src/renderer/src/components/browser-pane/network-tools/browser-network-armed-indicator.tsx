@@ -36,6 +36,7 @@ export function BrowserNetworkArmedIndicator({
   }
   return (
     <span
+      role="status"
       className="rounded-sm bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-600"
       title={translate(
         'browser.networkTools.armedIndicator',

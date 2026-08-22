@@ -233,7 +233,11 @@ export function BrowserPagePane({
     findShortcutScope,
     setFindOpen
   })
-  useBrowserNetworkToolsShortcut({ browserPageId: browserTab.id, isActive })
+  useBrowserNetworkToolsShortcut({
+    browserPageId: browserTab.id,
+    isActive,
+    shortcutScope: findShortcutScope
+  })
   useBrowserPageKeyboardShortcuts({
     browserTabId: browserTab.id,
     isActive,
