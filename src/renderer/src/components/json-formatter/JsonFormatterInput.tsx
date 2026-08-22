@@ -6,12 +6,16 @@ import '@/lib/monaco-setup'
 
 type JsonFormatterInputProps = {
   value: string
-  onChange: (value: string) => void
+  onChange?: (value: string) => void
+  readOnly?: boolean
+  language?: string
 }
 
 export function JsonFormatterInput({
   value,
-  onChange
+  onChange,
+  readOnly = false,
+  language = 'json'
 }: JsonFormatterInputProps): React.JSX.Element {
   const settings = useAppStore((s) => s.settings)
   const editorFontZoomLevel = useAppStore((s) => s.editorFontZoomLevel)
@@ -22,10 +26,10 @@ export function JsonFormatterInput({
       height="100%"
       // Why: the JSON worker is already wired in monaco-setup, so this alone
       // buys inline syntax-error squiggles with no validation code of our own.
-      language="json"
+      language={language}
       value={value}
       theme={isDark ? 'vs-dark' : 'vs'}
-      onChange={(next) => onChange(next ?? '')}
+      onChange={(next) => onChange?.(next ?? '')}
       options={{
         fontSize: computeEditorFontSize(settings?.terminalFontSize ?? 13, editorFontZoomLevel),
         fontFamily: resolveEditorFontFamily(settings),
@@ -35,7 +39,11 @@ export function JsonFormatterInput({
         scrollBeyondLastLine: false,
         automaticLayout: true,
         tabSize: 2,
-        renderWhitespace: 'none'
+        renderWhitespace: 'none',
+        readOnly,
+        // Why: readOnly alone still focuses Monaco's hidden textarea, which swallows the
+        // drawer's own key handling; domReadOnly keeps the viewer out of the typing path.
+        domReadOnly: readOnly
       }}
     />
   )
