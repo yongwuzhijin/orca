@@ -9,7 +9,9 @@ const {
   disarmRulesMock,
   armedRuleIdsMock,
   readLogMock,
-  handleGuestDestroyedMock
+  handleGuestDestroyedMock,
+  sendRequestMock,
+  cancelRequestMock
 } = vi.hoisted(() => ({
   handleMock: vi.fn(),
   removeHandlerMock: vi.fn(),
@@ -19,7 +21,9 @@ const {
   disarmRulesMock: vi.fn(),
   armedRuleIdsMock: vi.fn(),
   readLogMock: vi.fn(),
-  handleGuestDestroyedMock: vi.fn()
+  handleGuestDestroyedMock: vi.fn(),
+  sendRequestMock: vi.fn(),
+  cancelRequestMock: vi.fn()
 }))
 
 vi.mock('electron', () => ({
@@ -58,6 +62,11 @@ vi.mock('../browser/browser-network-tools-controller', () => ({
   armedBrowserNetworkRuleIds: armedRuleIdsMock,
   readBrowserNetworkLog: readLogMock,
   handleBrowserNetworkGuestDestroyed: handleGuestDestroyedMock
+}))
+
+vi.mock('../browser/browser-api-test-controller', () => ({
+  runBrowserApiTestRequest: sendRequestMock,
+  cancelBrowserApiTestRequest: cancelRequestMock
 }))
 
 import { notifyBrowserGuestTeardown } from '../browser/browser-guest-teardown-listeners'
@@ -99,6 +108,34 @@ const logEntry = {
   startedAt: 1000
 }
 
+const validApiRequest = {
+  browserPageId: 'page-1',
+  requestId: 'req-1',
+  method: 'POST',
+  url: 'https://example.com/api',
+  headers: [{ name: 'X-Test', value: '1', enabled: true }],
+  body: '{"a":1}'
+}
+
+const okApiResponse = {
+  status: 'ok',
+  statusCode: 200,
+  statusMessage: 'OK',
+  headers: { 'content-type': ['application/json'] },
+  body: '{}',
+  bodyBytes: 2,
+  truncated: false,
+  textual: true,
+  durationMs: 12
+}
+
+const UNTRUSTED_API_RESULT = {
+  status: 'error',
+  reason: 'no_guest',
+  message: 'Renderer is not allowed to send API test requests.',
+  durationMs: 0
+}
+
 function handlerFor(channel: string): Handler {
   const entry = handleMock.mock.calls.find(([name]) => name === channel)
   if (!entry) {
@@ -114,7 +151,9 @@ function controllerMocks(): ReturnType<typeof vi.fn>[] {
     armRulesMock,
     disarmRulesMock,
     armedRuleIdsMock,
-    readLogMock
+    readLogMock,
+    sendRequestMock,
+    cancelRequestMock
   ]
 }
 
@@ -132,18 +171,22 @@ describe('browser network tools IPC', () => {
     disarmRulesMock.mockReturnValue(true)
     armedRuleIdsMock.mockReturnValue(['rule-a'])
     readLogMock.mockReturnValue({ entries: [logEntry], truncated: true })
+    sendRequestMock.mockResolvedValue(okApiResponse)
+    cancelRequestMock.mockReturnValue(true)
     setTrustedBrowserRendererWebContentsId(TRUSTED_ID)
     registerBrowserHandlers()
   })
 
-  it('registers all six network tools channels', () => {
+  it('registers all eight network tools channels', () => {
     const channels = [
       'browser:network:listRules',
       'browser:network:saveRules',
       'browser:network:armRules',
       'browser:network:disarmRules',
       'browser:network:armedRuleIds',
-      'browser:network:readLog'
+      'browser:network:readLog',
+      'browser:network:sendRequest',
+      'browser:network:cancelRequest'
     ]
     for (const channel of channels) {
       expect(removeHandlerMock).toHaveBeenCalledWith(channel)
@@ -178,10 +221,16 @@ describe('browser network tools IPC', () => {
       channel: 'browser:network:readLog',
       args: { browserPageId: 'page-1' },
       expected: { entries: [], truncated: false }
-    }
+    },
+    {
+      channel: 'browser:network:sendRequest',
+      args: { request: validApiRequest },
+      expected: UNTRUSTED_API_RESULT
+    },
+    { channel: 'browser:network:cancelRequest', args: { requestId: 'req-1' }, expected: false }
   ])('$channel', ({ channel, args, expected }) => {
-    it('returns the safe value and never reaches the controller for an untrusted sender', () => {
-      expect(handlerFor(channel)({ sender: untrustedSender }, args)).toEqual(expected)
+    it('returns the safe value and skips the controller for an untrusted sender', async () => {
+      expect(await handlerFor(channel)({ sender: untrustedSender }, args)).toEqual(expected)
       for (const mock of controllerMocks()) {
         expect(mock).not.toHaveBeenCalled()
       }
@@ -343,5 +392,123 @@ describe('browser network tools IPC', () => {
 
     handler({ sender: trustedSender }, { browserPageId: 'page-1', limit: 2.5 })
     expect(readLogMock).toHaveBeenLastCalledWith('page-1', 100)
+  })
+
+  describe('api test channels', () => {
+    it('forwards a well-formed request to the controller and returns its response', async () => {
+      const result = await handlerFor('browser:network:sendRequest')(
+        { sender: trustedSender },
+        { request: validApiRequest }
+      )
+
+      expect(result).toEqual(okApiResponse)
+      expect(sendRequestMock).toHaveBeenCalledWith(validApiRequest)
+    })
+
+    it('defaults a header with no enabled flag to enabled', async () => {
+      await handlerFor('browser:network:sendRequest')(
+        { sender: trustedSender },
+        { request: { ...validApiRequest, headers: [{ name: 'X-Test', value: '1' }] } }
+      )
+
+      expect(sendRequestMock).toHaveBeenCalledWith({
+        ...validApiRequest,
+        headers: [{ name: 'X-Test', value: '1', enabled: true }]
+      })
+    })
+
+    it('preserves an explicitly disabled header', async () => {
+      await handlerFor('browser:network:sendRequest')(
+        { sender: trustedSender },
+        {
+          request: {
+            ...validApiRequest,
+            headers: [{ name: 'X-Test', value: '1', enabled: false }]
+          }
+        }
+      )
+
+      expect(sendRequestMock).toHaveBeenCalledWith({
+        ...validApiRequest,
+        headers: [{ name: 'X-Test', value: '1', enabled: false }]
+      })
+    })
+
+    // Why: a stale renderer bundle can send a half-built payload, and the controller's own
+    // short-circuits assume every field is present with the right type.
+    it.each([
+      { label: 'missing browserPageId', patch: { browserPageId: '' } },
+      { label: 'missing requestId', patch: { requestId: '' } },
+      { label: 'non-string method', patch: { method: 7 } },
+      { label: 'non-string url', patch: { url: null } },
+      { label: 'non-string body', patch: { body: undefined } },
+      { label: 'non-array headers', patch: { headers: 'X-Test: 1' } },
+      { label: 'header with a non-string value', patch: { headers: [{ name: 'X', value: 3 }] } },
+      // A string is iterable, so the case above passes even with the Array.isArray guard gone. A
+      // Set survives structured clone, which makes it the payload that actually pins the guard.
+      {
+        label: 'iterable-but-not-array headers',
+        patch: { headers: new Set([{ name: 'X', value: '1' }]) }
+      },
+      { label: 'non-iterable headers', patch: { headers: 7 } }
+    ])('rejects a malformed request: $label', async ({ patch }) => {
+      const result = await handlerFor('browser:network:sendRequest')(
+        { sender: trustedSender },
+        { request: { ...validApiRequest, ...patch } }
+      )
+
+      expect(result).toEqual({
+        status: 'error',
+        reason: 'network',
+        message: 'Malformed request payload.',
+        durationMs: 0
+      })
+      expect(sendRequestMock).not.toHaveBeenCalled()
+    })
+
+    it('rejects a request payload that is not an object at all', async () => {
+      const result = await handlerFor('browser:network:sendRequest')(
+        { sender: trustedSender },
+        undefined
+      )
+
+      expect((result as { status: string }).status).toBe('error')
+      expect(sendRequestMock).not.toHaveBeenCalled()
+    })
+
+    // Why: the trust guard must run before payload validation, so an untrusted sender learns
+    // nothing about which field it got wrong.
+    it('rejects an untrusted sender before inspecting the payload', async () => {
+      const result = await handlerFor('browser:network:sendRequest')(
+        { sender: untrustedSender },
+        { request: { ...validApiRequest, url: null } }
+      )
+
+      expect(result).toEqual(UNTRUSTED_API_RESULT)
+      expect(sendRequestMock).not.toHaveBeenCalled()
+    })
+
+    it('forwards a cancel to the controller and returns its verdict', () => {
+      cancelRequestMock.mockReturnValue(false)
+
+      expect(
+        handlerFor('browser:network:cancelRequest')(
+          { sender: trustedSender },
+          { requestId: 'req-1' }
+        )
+      ).toBe(false)
+      expect(cancelRequestMock).toHaveBeenCalledWith('req-1')
+    })
+
+    it.each([
+      { label: 'blank', args: { requestId: '' } },
+      { label: 'non-string', args: { requestId: 12 } },
+      { label: 'absent', args: {} }
+    ])('refuses a cancel with a $label requestId', ({ args }) => {
+      expect(handlerFor('browser:network:cancelRequest')({ sender: trustedSender }, args)).toBe(
+        false
+      )
+      expect(cancelRequestMock).not.toHaveBeenCalled()
+    })
   })
 })

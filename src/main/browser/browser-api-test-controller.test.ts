@@ -7,6 +7,8 @@ import type {
 const guestIdByPageId = new Map<string, number>()
 const sessionByWebContentsId = new Map<number, { id: string }>()
 const destroyedWebContentsIds = new Set<number>()
+const throwingSessionWebContentsIds = new Set<number>()
+const throwingLookupPageIds = new Set<string>()
 const netRequestCalls: unknown[] = []
 
 type FakeRequest = {
@@ -83,13 +85,28 @@ vi.mock('electron', () => ({
       if (!session) {
         return null
       }
-      return { session, isDestroyed: () => destroyedWebContentsIds.has(id) }
+      return {
+        isDestroyed: () => destroyedWebContentsIds.has(id),
+        get session() {
+          // A getter, not a field: isDestroyed() can lag the native teardown, and this is the
+          // shape that lets a test express "the guard passed but the accessor still threw".
+          if (throwingSessionWebContentsIds.has(id)) {
+            throw new TypeError('Object has been destroyed')
+          }
+          return session
+        }
+      }
     }
   }
 }))
 vi.mock('./browser-manager', () => ({
   browserManager: {
-    getGuestWebContentsId: (pageId: string) => guestIdByPageId.get(pageId) ?? null
+    getGuestWebContentsId: (pageId: string) => {
+      if (throwingLookupPageIds.has(pageId)) {
+        throw new TypeError('page registry is gone')
+      }
+      return guestIdByPageId.get(pageId) ?? null
+    }
   }
 }))
 
@@ -115,6 +132,8 @@ beforeEach(async () => {
   guestIdByPageId.clear()
   sessionByWebContentsId.clear()
   destroyedWebContentsIds.clear()
+  throwingSessionWebContentsIds.clear()
+  throwingLookupPageIds.clear()
   netRequestCalls.length = 0
   fakeRequests.length = 0
   guestIdByPageId.set('page-1', 7)
@@ -175,6 +194,26 @@ describe('runBrowserApiTestRequest', () => {
     destroyedWebContentsIds.add(7)
     const result = await runBrowserApiTestRequest(REQUEST)
     expect(result).toMatchObject({ status: 'error', reason: 'no_guest' })
+    expect(netRequestCalls).toHaveLength(0)
+  })
+
+  // Why: an ipcMain.handle caller gets a thrown Error instead of a response if this rejects, and
+  // the panel's send button stays disabled behind it — so a throwing accessor must still resolve.
+  it('reports no_guest when the session accessor throws behind a false isDestroyed()', async () => {
+    throwingSessionWebContentsIds.add(7)
+    await expect(runBrowserApiTestRequest(REQUEST)).resolves.toMatchObject({
+      status: 'error',
+      reason: 'no_guest'
+    })
+    expect(netRequestCalls).toHaveLength(0)
+  })
+
+  it('reports no_guest when the guest id lookup itself throws', async () => {
+    throwingLookupPageIds.add('page-1')
+    await expect(runBrowserApiTestRequest(REQUEST)).resolves.toMatchObject({
+      status: 'error',
+      reason: 'no_guest'
+    })
     expect(netRequestCalls).toHaveLength(0)
   })
 

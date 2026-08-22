@@ -23,16 +23,23 @@ function failure(reason: BrowserApiTestFailureReason, message: string): BrowserA
 }
 
 function resolveGuestSession(browserPageId: string): Session | null {
-  const guestWebContentsId = browserManager.getGuestWebContentsId(browserPageId)
-  if (typeof guestWebContentsId !== 'number') {
+  try {
+    const guestWebContentsId = browserManager.getGuestWebContentsId(browserPageId)
+    if (typeof guestWebContentsId !== 'number') {
+      return null
+    }
+    const guest = webContents.fromId(guestWebContentsId)
+    // Mid-teardown contents are still returned by fromId, and every accessor on them throws.
+    if (!guest || guest.isDestroyed()) {
+      return null
+    }
+    return guest.session
+  } catch {
+    // isDestroyed() can lag the native teardown, and then the session getter throws. Letting that
+    // escape an async handler rejects the invoke, so the renderer gets an Error where it typed a
+    // response and the drawer stays stuck behind its disabled send button.
     return null
   }
-  const guest = webContents.fromId(guestWebContentsId)
-  // Mid-teardown contents are still returned by fromId, and every accessor on them throws.
-  if (!guest || guest.isDestroyed()) {
-    return null
-  }
-  return guest.session
 }
 
 export async function runBrowserApiTestRequest(
