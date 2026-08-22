@@ -167,7 +167,7 @@ describe('browser network tools IPC', () => {
     handleGuestDestroyedMock.mockReset()
     listRulesMock.mockReturnValue([storedRule])
     saveRulesMock.mockReturnValue(true)
-    armRulesMock.mockReturnValue({ armed: true })
+    armRulesMock.mockResolvedValue({ armed: true })
     disarmRulesMock.mockReturnValue(true)
     armedRuleIdsMock.mockReturnValue(['rule-a'])
     readLogMock.mockReturnValue({ entries: [logEntry], truncated: true })
@@ -273,8 +273,8 @@ describe('browser network tools IPC', () => {
     expect(saveRulesMock).not.toHaveBeenCalled()
   })
 
-  it('rejects an arm request carrying a non-string rule id', () => {
-    const result = handlerFor('browser:network:armRules')(
+  it('rejects an arm request carrying a non-string rule id', async () => {
+    const result = await handlerFor('browser:network:armRules')(
       { sender: trustedSender },
       { browserPageId: 'page-1', ruleIds: ['a', 7] }
     )
@@ -283,19 +283,19 @@ describe('browser network tools IPC', () => {
     expect(armRulesMock).not.toHaveBeenCalled()
   })
 
-  it('rejects an arm request whose rule ids are absent or not an array', () => {
+  it('rejects an arm request whose rule ids are absent or not an array', async () => {
     const handler = handlerFor('browser:network:armRules')
     const rejected = { armed: false, reason: 'unknown_rules', armedRuleIds: [] }
 
-    expect(handler({ sender: trustedSender }, { browserPageId: 'page-1' })).toEqual(rejected)
+    expect(await handler({ sender: trustedSender }, { browserPageId: 'page-1' })).toEqual(rejected)
     expect(
-      handler({ sender: trustedSender }, { browserPageId: 'page-1', ruleIds: 'rule-a' })
+      await handler({ sender: trustedSender }, { browserPageId: 'page-1', ruleIds: 'rule-a' })
     ).toEqual(rejected)
     expect(armRulesMock).not.toHaveBeenCalled()
   })
 
-  it('rejects an arm request with a blank page id', () => {
-    const result = handlerFor('browser:network:armRules')(
+  it('rejects an arm request with a blank page id', async () => {
+    const result = await handlerFor('browser:network:armRules')(
       { sender: trustedSender },
       { browserPageId: '', ruleIds: ['rule-a'] }
     )
@@ -304,8 +304,8 @@ describe('browser network tools IPC', () => {
     expect(armRulesMock).not.toHaveBeenCalled()
   })
 
-  it('arms rules and reports the resulting armed set', () => {
-    const result = handlerFor('browser:network:armRules')(
+  it('arms rules and reports the resulting armed set', async () => {
+    const result = await handlerFor('browser:network:armRules')(
       { sender: trustedSender },
       { browserPageId: 'page-1', ruleIds: ['rule-a'] }
     )
@@ -313,6 +313,20 @@ describe('browser network tools IPC', () => {
     expect(result).toEqual({ armed: true, armedRuleIds: ['rule-a'] })
     expect(armRulesMock).toHaveBeenCalledWith('page-1', ['rule-a'])
     expect(armedRuleIdsMock).toHaveBeenCalledWith('page-1')
+  })
+
+  // Why: cdp_error is the reason the renderer needs to tell "no tab" apart from "interception
+  // refused", so the boundary must carry it through instead of flattening it to a bare false.
+  it('carries a cdp_error arm refusal through to the renderer', async () => {
+    armRulesMock.mockResolvedValue({ armed: false, reason: 'cdp_error' })
+    armedRuleIdsMock.mockReturnValue([])
+
+    const result = await handlerFor('browser:network:armRules')(
+      { sender: trustedSender },
+      { browserPageId: 'page-1', ruleIds: ['rule-a'] }
+    )
+
+    expect(result).toEqual({ armed: false, reason: 'cdp_error', armedRuleIds: [] })
   })
 
   it('reads the armed rule ids without ever arming', () => {

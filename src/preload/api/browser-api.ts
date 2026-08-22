@@ -134,10 +134,11 @@ export type BrowserApi = {
   notifyActiveTabChanged: (args: { browserPageId: string }) => Promise<boolean>
   networkListRules: () => Promise<BrowserNetworkRule[]>
   networkSaveRules: (args: { rules: BrowserNetworkRule[] }) => Promise<boolean>
-  networkArmRules: (args: {
-    browserPageId: string
-    ruleIds: string[]
-  }) => Promise<{ armed: boolean; reason?: 'no_guest' | 'unknown_rules'; armedRuleIds: string[] }>
+  networkArmRules: (args: { browserPageId: string; ruleIds: string[] }) => Promise<{
+    armed: boolean
+    reason?: 'no_guest' | 'unknown_rules' | 'cdp_error'
+    armedRuleIds: string[]
+  }>
   networkDisarmRules: (args: { browserPageId: string }) => Promise<boolean>
   networkReadArmedRules: (args: { browserPageId: string }) => Promise<{ armedRuleIds: string[] }>
   networkReadLog: (args: {

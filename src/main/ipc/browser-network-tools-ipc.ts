@@ -134,10 +134,10 @@ export function registerBrowserNetworkToolsHandlers(): void {
 
   ipcMain.handle(
     'browser:network:armRules',
-    (
+    async (
       event,
       args: { browserPageId?: unknown; ruleIds?: unknown }
-    ): BrowserNetworkArmResult & { armedRuleIds: string[] } => {
+    ): Promise<BrowserNetworkArmResult & { armedRuleIds: string[] }> => {
       if (!isTrustedBrowserRenderer(event.sender)) {
         return { armed: false, reason: 'no_guest', armedRuleIds: [] }
       }
@@ -146,7 +146,7 @@ export function registerBrowserNetworkToolsHandlers(): void {
       if (!browserPageId || !ruleIds) {
         return { armed: false, reason: 'unknown_rules', armedRuleIds: [] }
       }
-      const result = armBrowserNetworkRules(browserPageId, ruleIds)
+      const result = await armBrowserNetworkRules(browserPageId, ruleIds)
       return { ...result, armedRuleIds: armedBrowserNetworkRuleIds(browserPageId) }
     }
   )
