@@ -11,7 +11,8 @@ beforeEach(() => {
   useBrowserNetworkToolsPanel.setState({
     openPageId: INITIAL.openPageId,
     tab: INITIAL.tab,
-    heightPx: INITIAL.heightPx
+    heightPx: INITIAL.heightPx,
+    apiPrefill: INITIAL.apiPrefill
   })
 })
 
@@ -99,5 +100,86 @@ describe('useBrowserNetworkToolsPanel', () => {
     const { setHeightPx } = useBrowserNetworkToolsPanel.getState()
     setHeightPx(300.6)
     expect(useBrowserNetworkToolsPanel.getState().heightPx).toBe(301)
+  })
+
+  it('starts with no api prefill', () => {
+    expect(INITIAL.apiPrefill).toBeNull()
+  })
+
+  it('opens straight onto the api tab with a prefill', () => {
+    useBrowserNetworkToolsPanel.getState().openApiTest('page-a', {
+      method: 'POST',
+      url: 'https://example.com/api',
+      headers: [{ name: 'X-One', value: '1', enabled: true }]
+    })
+
+    const state = useBrowserNetworkToolsPanel.getState()
+
+    expect(state.openPageId).toBe('page-a')
+    expect(state.tab).toBe('api')
+    expect(state.apiPrefill).toEqual({
+      method: 'POST',
+      url: 'https://example.com/api',
+      headers: [{ name: 'X-One', value: '1', enabled: true }]
+    })
+  })
+
+  // Why: the tab copies the seed into form state, so leaving it parked would stomp later edits
+  // on the next mount.
+  it('drops the prefill once consumed without disturbing the drawer', () => {
+    const store = useBrowserNetworkToolsPanel.getState()
+    store.openApiTest('page-a', { method: 'GET', url: 'https://example.com', headers: [] })
+    store.clearApiPrefill()
+
+    expect(useBrowserNetworkToolsPanel.getState().apiPrefill).toBeNull()
+    expect(useBrowserNetworkToolsPanel.getState().tab).toBe('api')
+    expect(useBrowserNetworkToolsPanel.getState().openPageId).toBe('page-a')
+  })
+
+  it('discards a stale prefill when the drawer opens normally', () => {
+    const store = useBrowserNetworkToolsPanel.getState()
+    store.openApiTest('page-a', { method: 'GET', url: 'https://example.com', headers: [] })
+    store.open('page-a')
+
+    expect(useBrowserNetworkToolsPanel.getState().apiPrefill).toBeNull()
+    expect(useBrowserNetworkToolsPanel.getState().tab).toBe('rules')
+  })
+
+  it('discards a stale prefill on close', () => {
+    const store = useBrowserNetworkToolsPanel.getState()
+    store.openApiTest('page-a', { method: 'GET', url: 'https://example.com', headers: [] })
+    store.close()
+
+    expect(useBrowserNetworkToolsPanel.getState().apiPrefill).toBeNull()
+  })
+
+  it('discards a stale prefill when toggling shut', () => {
+    const store = useBrowserNetworkToolsPanel.getState()
+    store.openApiTest('page-a', { method: 'GET', url: 'https://example.com', headers: [] })
+    store.toggle('page-a')
+
+    expect(useBrowserNetworkToolsPanel.getState().openPageId).toBeNull()
+    expect(useBrowserNetworkToolsPanel.getState().apiPrefill).toBeNull()
+  })
+
+  // Why: toggle has two branches, and only one of them is the close path.
+  it('discards a stale prefill when toggling over to another page', () => {
+    const store = useBrowserNetworkToolsPanel.getState()
+    store.openApiTest('page-a', { method: 'GET', url: 'https://example.com', headers: [] })
+    store.toggle('page-b')
+
+    expect(useBrowserNetworkToolsPanel.getState().openPageId).toBe('page-b')
+    expect(useBrowserNetworkToolsPanel.getState().apiPrefill).toBeNull()
+    expect(useBrowserNetworkToolsPanel.getState().tab).toBe('rules')
+  })
+
+  it('accepts the api tab from setTab and leaves a pending prefill alone', () => {
+    const store = useBrowserNetworkToolsPanel.getState()
+    store.openApiTest('page-a', { method: 'GET', url: 'https://example.com', headers: [] })
+    store.setTab('log')
+    store.setTab('api')
+
+    expect(useBrowserNetworkToolsPanel.getState().tab).toBe('api')
+    expect(useBrowserNetworkToolsPanel.getState().apiPrefill).not.toBeNull()
   })
 })
