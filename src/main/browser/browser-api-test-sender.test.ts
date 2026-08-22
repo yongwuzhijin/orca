@@ -343,6 +343,34 @@ describe('sendBrowserApiTestRequest', () => {
     }
   })
 
+  // Why: setHeader runs inside the promise executor, so a header name the user typed used to
+  // reject the result promise and leave the 30s timer armed on a request nobody owned.
+  it('reports a throwing setHeader instead of rejecting, and clears the timeout', async () => {
+    vi.useFakeTimers()
+    try {
+      const fake = createFakeRequest()
+      const throwing = {
+        ...fake.request,
+        setHeader: () => {
+          throw new Error('invalid header name: X A')
+        }
+      } as unknown as BrowserApiTestClientRequest
+      const handle = sendBrowserApiTestRequest(BASE, {
+        createRequest: () => throwing,
+        now: () => 0
+      })
+      await expect(handle.result).resolves.toMatchObject({
+        status: 'error',
+        reason: 'network',
+        message: 'invalid header name: X A'
+      })
+      expect(vi.getTimerCount()).toBe(0)
+      expect(fake.aborted()).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('reports a mid-stream response error', async () => {
     const fake = createFakeRequest()
     const handle = sendBrowserApiTestRequest(BASE, {

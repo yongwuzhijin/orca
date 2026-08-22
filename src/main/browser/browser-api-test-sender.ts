@@ -173,13 +173,20 @@ export function sendBrowserApiTestRequest(
       response.on('end', () => finishOk(false))
     })
 
-    for (const [name, value] of Object.entries(args.headers)) {
-      activeRequest.setHeader(name, value)
+    try {
+      for (const [name, value] of Object.entries(args.headers)) {
+        activeRequest.setHeader(name, value)
+      }
+      if (args.body.length > 0 && browserApiTestMethodAllowsBody(args.method)) {
+        activeRequest.write(args.body)
+      }
+      activeRequest.end()
+    } catch (error) {
+      // A header name the user typed can make setHeader throw in here, where a throw would become
+      // a rejection instead of a result and strand the timeout on a request nobody owns.
+      fail('network', error instanceof Error ? error.message : String(error))
+      activeRequest.abort()
     }
-    if (args.body.length > 0 && browserApiTestMethodAllowsBody(args.method)) {
-      activeRequest.write(args.body)
-    }
-    activeRequest.end()
   })
 
   return {

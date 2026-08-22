@@ -22,7 +22,10 @@ export type BrowserApiTestHeader = {
 
 export type BrowserApiTestRequest = {
   browserPageId: string
-  /** Renderer-generated; the cancel channel addresses an in-flight send by this id. */
+  /**
+   * Renderer-generated and unique across every page, not just within one: the cancel channel
+   * addresses an in-flight send by this id alone, so a collision cancels another tab's request.
+   */
   requestId: string
   method: string
   url: string
