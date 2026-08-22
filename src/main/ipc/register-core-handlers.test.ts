@@ -22,6 +22,12 @@ const {
   registerTerminalRenderDesyncEvidenceHandlerMock,
   registerShellHandlersMock,
   registerPetHandlersMock,
+  registerTextTranslationHandlersMock,
+  registerTodoHandlersMock,
+  registerAcpHandlersMock,
+  registerTodoReviewHandlersMock,
+  registerTodoMergeHandlersMock,
+  registerTodoDashboardHandlersMock,
   registerSessionHandlersMock,
   registerUIHandlersMock,
   setTrustedUIRendererWebContentsIdMock,
@@ -87,6 +93,12 @@ const {
   registerTerminalRenderDesyncEvidenceHandlerMock: vi.fn(),
   registerShellHandlersMock: vi.fn(),
   registerPetHandlersMock: vi.fn(),
+  registerTextTranslationHandlersMock: vi.fn(),
+  registerTodoHandlersMock: vi.fn(),
+  registerAcpHandlersMock: vi.fn(),
+  registerTodoReviewHandlersMock: vi.fn(),
+  registerTodoMergeHandlersMock: vi.fn(),
+  registerTodoDashboardHandlersMock: vi.fn(),
   registerSessionHandlersMock: vi.fn(),
   registerUIHandlersMock: vi.fn(),
   setTrustedUIRendererWebContentsIdMock: vi.fn(),
@@ -254,6 +266,30 @@ vi.mock('./shell', () => ({
   registerShellHandlers: registerShellHandlersMock
 }))
 
+vi.mock('./text-translation-ipc', () => ({
+  registerTextTranslationHandlers: registerTextTranslationHandlersMock
+}))
+
+vi.mock('./todos', () => ({
+  registerTodoHandlers: registerTodoHandlersMock
+}))
+
+vi.mock('./acp', () => ({
+  registerAcpHandlers: registerAcpHandlersMock
+}))
+
+vi.mock('./todo-review', () => ({
+  registerTodoReviewHandlers: registerTodoReviewHandlersMock
+}))
+
+vi.mock('./todo-merge', () => ({
+  registerTodoMergeHandlers: registerTodoMergeHandlersMock
+}))
+
+vi.mock('./todo-dashboard', () => ({
+  registerTodoDashboardHandlers: registerTodoDashboardHandlersMock
+}))
+
 vi.mock('./pet', () => ({
   registerPetHandlers: registerPetHandlersMock
 }))
@@ -383,6 +419,13 @@ vi.mock('./native-chat', () => ({
 
 import { registerCoreHandlers } from './register-core-handlers'
 
+const todoRepository = { marker: 'todoRepository', listItems: () => [] }
+const acpKernel = {
+  executeRouter: { marker: 'executeRouter' },
+  sessionManager: { marker: 'sessionManager', listSessions: () => [] },
+  permissionBridge: { marker: 'permissionBridge' }
+}
+
 describe('registerCoreHandlers', () => {
   beforeEach(() => {
     getPathMock.mockReset()
@@ -408,6 +451,12 @@ describe('registerCoreHandlers', () => {
     registerTerminalRenderDesyncEvidenceHandlerMock.mockReset()
     registerShellHandlersMock.mockReset()
     registerPetHandlersMock.mockReset()
+    registerTextTranslationHandlersMock.mockReset()
+    registerTodoHandlersMock.mockReset()
+    registerAcpHandlersMock.mockReset()
+    registerTodoReviewHandlersMock.mockReset()
+    registerTodoMergeHandlersMock.mockReset()
+    registerTodoDashboardHandlersMock.mockReset()
     registerSessionHandlersMock.mockReset()
     registerUIHandlersMock.mockReset()
     setTrustedUIRendererWebContentsIdMock.mockReset()
@@ -451,7 +500,12 @@ describe('registerCoreHandlers', () => {
 
   it('passes the store through to handler registrars that need it', async () => {
     const store = { marker: 'store' }
-    const runtime = { marker: 'runtime', getAgentBrowserBridge: () => null }
+    const runtime = {
+      marker: 'runtime',
+      getAgentBrowserBridge: () => null,
+      getTodoRepository: () => todoRepository,
+      getAcpKernel: () => acpKernel
+    }
     const stats = { marker: 'stats' }
     const claudeUsage = { marker: 'claudeUsage' }
     const codexUsage = { marker: 'codexUsage' }
@@ -507,6 +561,18 @@ describe('registerCoreHandlers', () => {
       codexAccounts.runtimeHomeService
     )
     expect(registerPetHandlersMock).toHaveBeenCalled()
+    expect(registerTextTranslationHandlersMock).toHaveBeenCalledWith({
+      getSettings: expect.any(Function)
+    })
+    expect(registerTodoHandlersMock).toHaveBeenCalledWith(todoRepository)
+    expect(registerAcpHandlersMock).toHaveBeenCalledWith({
+      executeRouter: acpKernel.executeRouter,
+      sessionManager: acpKernel.sessionManager,
+      permissionBridge: acpKernel.permissionBridge
+    })
+    expect(registerTodoReviewHandlersMock).toHaveBeenCalled()
+    expect(registerTodoMergeHandlersMock).toHaveBeenCalled()
+    expect(registerTodoDashboardHandlersMock).toHaveBeenCalled()
     expect(registerClaudeAccountHandlersMock).toHaveBeenCalledWith(claudeAccounts)
     expect(registerMiniMaxCredentialsHandlersMock).toHaveBeenCalledWith(rateLimits)
     expect(registerGrokAccountHandlersMock).toHaveBeenCalled()
@@ -624,7 +690,12 @@ describe('registerCoreHandlers', () => {
     // The first test already called registerCoreHandlers, so the module-level
     // guard is now set. beforeEach reset all mocks, so call counts are 0.
     const store2 = { marker: 'store2' }
-    const runtime2 = { marker: 'runtime2', getAgentBrowserBridge: () => null }
+    const runtime2 = {
+      marker: 'runtime2',
+      getAgentBrowserBridge: () => null,
+      getTodoRepository: () => todoRepository,
+      getAcpKernel: () => acpKernel
+    }
     const stats2 = { marker: 'stats2' }
     const claudeUsage2 = { marker: 'claudeUsage2' }
     const codexUsage2 = { marker: 'codexUsage2' }
