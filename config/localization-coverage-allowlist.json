@@ -82,5 +82,12 @@
     "text": "ghostty",
     "dynamic": false,
     "count": 1
+  },
+  {
+    "filePath": "src/renderer/src/web/web-preload-api.ts",
+    "kind": "object-property:message",
+    "text": "API testing is unavailable in the browser client.",
+    "dynamic": false,
+    "count": 1
   }
 ]

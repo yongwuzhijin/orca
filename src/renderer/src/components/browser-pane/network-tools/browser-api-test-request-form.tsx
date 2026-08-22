@@ -55,7 +55,10 @@ export function BrowserApiTestRequestForm({
         <Input
           className="h-7 flex-1 font-mono text-xs"
           aria-label={translate('browser.networkTools.apiUrl', 'Request URL')}
-          placeholder="https://example.com/api"
+          placeholder={translate(
+            'browser.networkTools.apiUrlPlaceholder',
+            'https://example.com/api'
+          )}
           value={url}
           onChange={(event) => onUrlChange(event.target.value)}
         />
