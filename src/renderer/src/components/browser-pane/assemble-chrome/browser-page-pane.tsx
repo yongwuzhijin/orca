@@ -360,6 +360,7 @@ export function BrowserPagePane({
               containerRef={containerRef}
               browserOverlayViewport={browserOverlayViewport}
               worktreeId={worktreeId}
+              sessionProfileId={sessionProfileId}
               grab={grab}
               annotationSend={annotationSend}
               grabAnnotations={grabAnnotations}

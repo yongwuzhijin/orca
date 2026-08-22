@@ -54,6 +54,7 @@ export function BrowserPageViewportOverlays({
   containerRef,
   browserOverlayViewport,
   worktreeId,
+  sessionProfileId,
   grab,
   annotationSend,
   grabAnnotations
@@ -77,6 +78,8 @@ export function BrowserPageViewportOverlays({
   containerRef: RefObject<HTMLDivElement | null>
   browserOverlayViewport: BrowserOverlayViewport
   worktreeId: string
+  /** Workspace-level, so it arrives as a prop — BrowserPage carries only its workspaceId. */
+  sessionProfileId: string | null
   grab: GrabModeHook
   annotationSend: ReturnType<typeof useBrowserPageAnnotationSend>
   grabAnnotations: ReturnType<typeof useBrowserPageGrabAnnotations>
@@ -132,6 +135,7 @@ export function BrowserPageViewportOverlays({
       <BrowserNetworkToolsDrawer
         browserPageId={browserTab.id}
         browserRuntimeEnvironmentId={browserTab.browserRuntimeEnvironmentId ?? null}
+        sessionProfileId={sessionProfileId}
       />
       {showFailureOverlay && browserTab.loadError ? (
         <BrowserLoadFailureOverlay
