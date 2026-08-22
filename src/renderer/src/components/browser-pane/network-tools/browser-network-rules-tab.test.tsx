@@ -7,7 +7,7 @@ import { BrowserNetworkRulesTab } from './browser-network-rules-tab'
 
 type ArmResult = {
   armed: boolean
-  reason?: 'no_guest' | 'unknown_rules'
+  reason?: 'no_guest' | 'unknown_rules' | 'cdp_error'
   armedRuleIds: string[]
 }
 
@@ -111,6 +111,32 @@ describe('BrowserNetworkRulesTab', () => {
     fireEvent.click(screen.getByLabelText('Arm staging auth'))
     fireEvent.click(screen.getByText('Arm'))
     expect(await screen.findByText(/could not be armed/)).toBeTruthy()
+  })
+
+  it('names DevTools as the culprit when CDP attach fails', async () => {
+    api.networkArmRules.mockResolvedValueOnce({
+      armed: false,
+      reason: 'cdp_error',
+      armedRuleIds: []
+    })
+    render(<BrowserNetworkRulesTab browserPageId="page-a" />)
+    await screen.findByDisplayValue('staging auth')
+    fireEvent.click(screen.getByLabelText('Arm staging auth'))
+    fireEvent.click(screen.getByText('Arm'))
+    expect(
+      await screen.findByText(
+        'Rules could not be armed — close DevTools for this tab and try again.'
+      )
+    ).toBeTruthy()
+  })
+
+  it('reaches the response override editor from a rule row', async () => {
+    api.networkListRules.mockResolvedValueOnce([
+      { ...RULE, responseOverride: { statusCode: 503, headers: [], body: 'down' } }
+    ])
+    render(<BrowserNetworkRulesTab browserPageId="page-a" />)
+    const status = (await screen.findByLabelText('Status')) as HTMLInputElement
+    expect(status.value).toBe('503')
   })
 
   it('seeds the armed state from main so a remounted tab can still disarm', async () => {

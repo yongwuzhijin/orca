@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
 import { translate } from '@/i18n/i18n'
+import { BrowserNetworkRuleRow } from './browser-network-rule-row'
 import type {
   BrowserHeaderMutation,
   BrowserNetworkRule
@@ -93,17 +91,28 @@ export function BrowserNetworkRulesTab({
     const result = await window.api.browser.networkArmRules({ browserPageId, ruleIds: selected })
     setArmedRuleIds(result.armedRuleIds)
     if (!result.armed) {
-      setError(
-        result.reason === 'no_guest'
-          ? translate(
-              'browser.networkTools.armFailedNoGuest',
-              'Rules could not be armed — this tab has no live page yet.'
-            )
-          : translate(
-              'browser.networkTools.armFailedUnknown',
-              'Rules could not be armed — save your edits first.'
-            )
-      )
+      if (result.reason === 'no_guest') {
+        setError(
+          translate(
+            'browser.networkTools.armFailedNoGuest',
+            'Rules could not be armed — this tab has no live page yet.'
+          )
+        )
+      } else if (result.reason === 'cdp_error') {
+        setError(
+          translate(
+            'browser.networkTools.armFailedCdp',
+            'Rules could not be armed — close DevTools for this tab and try again.'
+          )
+        )
+      } else {
+        setError(
+          translate(
+            'browser.networkTools.armFailedUnknown',
+            'Rules could not be armed — save your edits first.'
+          )
+        )
+      }
     }
   }, [browserPageId, selected])
 
@@ -159,59 +168,21 @@ export function BrowserNetworkRulesTab({
           {translate('browser.networkTools.noRules', 'No rules yet. Add one to rewrite headers.')}
         </p>
       ) : null}
-      {visibleRules.map((rule) => {
-        const header = rule.headers[0]
-        return (
-          <div key={rule.id} className="flex items-center gap-1.5">
-            <Checkbox
-              aria-label={`${translate('browser.networkTools.arm', 'Arm')} ${rule.label}`}
-              checked={selected.includes(rule.id)}
-              onCheckedChange={(checked) =>
-                setSelected((prev) =>
-                  checked ? [...prev, rule.id] : prev.filter((id) => id !== rule.id)
-                )
-              }
-            />
-            <Input
-              className="h-7 w-32 text-xs"
-              aria-label={translate('browser.networkTools.ruleLabelField', 'Rule label')}
-              value={rule.label}
-              onChange={(event) => patchRule(rule.id, { label: event.target.value })}
-            />
-            <Input
-              className="h-7 flex-1 text-xs"
-              aria-label={translate('browser.networkTools.urlPatternField', 'URL pattern')}
-              value={rule.match.urlPattern}
-              onChange={(event) =>
-                patchRule(rule.id, { match: { ...rule.match, urlPattern: event.target.value } })
-              }
-            />
-            <Input
-              className="h-7 w-36 text-xs"
-              aria-label={translate('browser.networkTools.headerName', 'Header')}
-              placeholder={translate('browser.networkTools.headerName', 'Header')}
-              value={header?.name ?? ''}
-              onChange={(event) => patchHeader(rule.id, { name: event.target.value })}
-            />
-            <Input
-              className="h-7 w-36 text-xs"
-              aria-label={translate('browser.networkTools.headerValue', 'Value')}
-              placeholder={translate('browser.networkTools.headerValue', 'Value')}
-              value={header?.value ?? ''}
-              onChange={(event) => patchHeader(rule.id, { value: event.target.value })}
-            />
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7"
-              aria-label={`${translate('browser.networkTools.delete', 'Delete')} ${rule.label}`}
-              onClick={() => void persist(rules.filter((candidate) => candidate.id !== rule.id))}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        )
-      })}
+      {visibleRules.map((rule) => (
+        <BrowserNetworkRuleRow
+          key={rule.id}
+          rule={rule}
+          selected={selected.includes(rule.id)}
+          onSelectedChange={(checked) =>
+            setSelected((prev) =>
+              checked ? [...prev, rule.id] : prev.filter((id) => id !== rule.id)
+            )
+          }
+          onPatchRule={(patch) => patchRule(rule.id, patch)}
+          onPatchHeader={(patch) => patchHeader(rule.id, patch)}
+          onDelete={() => void persist(rules.filter((candidate) => candidate.id !== rule.id))}
+        />
+      ))}
     </div>
   )
 }
