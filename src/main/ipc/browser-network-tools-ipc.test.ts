@@ -8,7 +8,8 @@ const {
   armRulesMock,
   disarmRulesMock,
   armedRuleIdsMock,
-  readLogMock
+  readLogMock,
+  handleGuestDestroyedMock
 } = vi.hoisted(() => ({
   handleMock: vi.fn(),
   removeHandlerMock: vi.fn(),
@@ -17,7 +18,8 @@ const {
   armRulesMock: vi.fn(),
   disarmRulesMock: vi.fn(),
   armedRuleIdsMock: vi.fn(),
-  readLogMock: vi.fn()
+  readLogMock: vi.fn(),
+  handleGuestDestroyedMock: vi.fn()
 }))
 
 vi.mock('electron', () => ({
@@ -54,9 +56,11 @@ vi.mock('../browser/browser-network-tools-controller', () => ({
   armBrowserNetworkRules: armRulesMock,
   disarmBrowserNetworkRules: disarmRulesMock,
   armedBrowserNetworkRuleIds: armedRuleIdsMock,
-  readBrowserNetworkLog: readLogMock
+  readBrowserNetworkLog: readLogMock,
+  handleBrowserNetworkGuestDestroyed: handleGuestDestroyedMock
 }))
 
+import { notifyBrowserGuestTeardown } from '../browser/browser-guest-teardown-listeners'
 import { registerBrowserHandlers } from './browser'
 import { setTrustedBrowserRendererWebContentsId } from './browser-renderer-trust'
 
@@ -121,6 +125,7 @@ describe('browser network tools IPC', () => {
     for (const mock of controllerMocks()) {
       mock.mockReset()
     }
+    handleGuestDestroyedMock.mockReset()
     listRulesMock.mockReturnValue([storedRule])
     saveRulesMock.mockReturnValue(true)
     armRulesMock.mockReturnValue({ armed: true })
@@ -144,6 +149,15 @@ describe('browser network tools IPC', () => {
       expect(removeHandlerMock).toHaveBeenCalledWith(channel)
       expect(handlerFor(channel)).toBeTypeOf('function')
     }
+  })
+
+  // Why: the manager only announces teardown now, so registration here is what still drops state.
+  // The single call also proves re-running the registrar cannot double-subscribe the handler.
+  it('subscribes the controller teardown handler to the guest teardown registry', () => {
+    notifyBrowserGuestTeardown('page-1')
+
+    expect(handleGuestDestroyedMock).toHaveBeenCalledTimes(1)
+    expect(handleGuestDestroyedMock).toHaveBeenCalledWith('page-1')
   })
 
   describe.each([

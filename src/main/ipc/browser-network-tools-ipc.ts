@@ -1,9 +1,11 @@
 import { ipcMain } from 'electron'
 import { isTrustedBrowserRenderer } from './browser-renderer-trust'
+import { onBrowserGuestTeardown } from '../browser/browser-guest-teardown-listeners'
 import {
   armBrowserNetworkRules,
   armedBrowserNetworkRuleIds,
   disarmBrowserNetworkRules,
+  handleBrowserNetworkGuestDestroyed,
   listBrowserNetworkRules,
   readBrowserNetworkLog,
   saveBrowserNetworkRules,
@@ -32,6 +34,9 @@ export function registerBrowserNetworkToolsHandlers(): void {
   ipcMain.removeHandler('browser:network:disarmRules')
   ipcMain.removeHandler('browser:network:armedRuleIds')
   ipcMain.removeHandler('browser:network:readLog')
+
+  // Why: the guest-lifecycle owner announces teardown instead of importing us, which would cycle.
+  onBrowserGuestTeardown(handleBrowserNetworkGuestDestroyed)
 
   ipcMain.handle('browser:network:listRules', (event): BrowserNetworkRule[] => {
     if (!isTrustedBrowserRenderer(event.sender)) {

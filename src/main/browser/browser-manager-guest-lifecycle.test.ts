@@ -12,8 +12,7 @@ const browserMocks = vi.hoisted(() => ({
   guestOpenDevToolsMock: vi.fn(),
   webContentsFromIdMock: vi.fn(),
   screenGetCursorScreenPointMock: vi.fn(() => ({ x: 0, y: 0 })),
-  openPopupWithOriginBarMock: vi.fn(),
-  handleBrowserNetworkGuestDestroyedMock: vi.fn()
+  openPopupWithOriginBarMock: vi.fn()
 }))
 
 vi.mock('electron', () => ({
@@ -40,11 +39,8 @@ vi.mock('./popup-origin-bar-window', () => ({
   openPopupWithOriginBar: browserMocks.openPopupWithOriginBarMock
 }))
 
-vi.mock('./browser-network-tools-controller', () => ({
-  handleBrowserNetworkGuestDestroyed: browserMocks.handleBrowserNetworkGuestDestroyedMock
-}))
-
 import { browserManager } from './browser-manager'
+import { onBrowserGuestTeardown } from './browser-guest-teardown-listeners'
 import {
   rendererWebContentsId,
   resetBrowserManagerMocks,
@@ -58,18 +54,24 @@ const {
   guestSetWindowOpenHandlerMock,
   guestOpenDevToolsMock,
   webContentsFromIdMock,
-  menuBuildFromTemplateMock,
-  handleBrowserNetworkGuestDestroyedMock
+  menuBuildFromTemplateMock
 } = browserMocks
 
 describe('browserManager', () => {
+  const teardownListener = vi.fn()
+  let stopListeningForTeardown: (() => void) | null = null
+
   beforeEach(() => {
     resetBrowserManagerMocks(browserMocks)
     resetBrowserManagerState()
-    handleBrowserNetworkGuestDestroyedMock.mockClear()
+    // Why: registered after the state reset so unregisterAll teardowns aren't counted here.
+    teardownListener.mockClear()
+    stopListeningForTeardown = onBrowserGuestTeardown(teardownListener)
   })
 
   afterEach(() => {
+    stopListeningForTeardown?.()
+    stopListeningForTeardown = null
     vi.useRealTimers()
   })
 
@@ -131,7 +133,7 @@ describe('browserManager', () => {
 
     expect(browserManager.hasRegisteredGuestForBrowserPage('browser-network')).toBe(false)
     expect(browserManager.resolveBrowserPageIdForGuestWebContentsId(guest.id)).toBeNull()
-    expect(handleBrowserNetworkGuestDestroyedMock).toHaveBeenCalledWith('browser-network')
+    expect(teardownListener).toHaveBeenCalledWith('browser-network')
   })
 
   it('keeps network tooling state across a guest process swap', () => {
@@ -166,7 +168,7 @@ describe('browserManager', () => {
     expect(browserManager.resolveBrowserPageIdForGuestWebContentsId(newGuest.id)).toBe(
       'browser-network'
     )
-    expect(handleBrowserNetworkGuestDestroyedMock).not.toHaveBeenCalled()
+    expect(teardownListener).not.toHaveBeenCalled()
   })
 
   it('blocks non-web guest navigations after attach', () => {

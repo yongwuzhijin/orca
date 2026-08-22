@@ -40,7 +40,7 @@ import {
   buildBrowserClickedLinkRoutingScript,
   buildBrowserIframeClickedLinkRoutingScript
 } from './browser-clicked-link-routing'
-import { handleBrowserNetworkGuestDestroyed } from './browser-network-tools-controller'
+import { notifyBrowserGuestTeardown } from './browser-guest-teardown-listeners'
 import { cleanElectronUserAgent } from './browser-session-ua'
 import { getBrowserSessionUserAgentMode } from './browser-session-user-agent-mode'
 import { googleAuthUserAgent, isGoogleAuthUrl } from './browser-google-auth-ua'
@@ -1256,8 +1256,8 @@ export class BrowserManager {
       this.pendingNavigationByGuestId.delete(wcId)
     }
     this.annotationViewportBridgeOpsByTabId.delete(browserTabId)
-    // Why: armed rules and the request log are never persisted, so nothing else drops them.
-    handleBrowserNetworkGuestDestroyed(browserTabId)
+    // Why: features keep unpersisted per-page state; announce teardown so they can drop it.
+    notifyBrowserGuestTeardown(browserTabId)
   }
 
   // Why: headless orca serve has no <webview> window; back pages with offscreen WebContents and skip the webview-only setup.
