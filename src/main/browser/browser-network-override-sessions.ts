@@ -26,8 +26,28 @@ export function createBrowserNetworkOverrideSessions(
 ): BrowserNetworkOverrideSessions {
   const { resolveWebContents, start } = deps
   const sessions = new Map<string, BrowserNetworkOverrideSession>()
+  const queues = new Map<string, Promise<void>>()
 
-  const close = (browserPageId: string): void => {
+  // Without this queue two overlapping syncs both miss the map across `await start` and the loser
+  // stays live but unreachable (lease held, interception armed), and a close during an in-flight
+  // start misses the session the start is about to store. The tail is always non-rejecting so one
+  // failure cannot poison later operations on the page.
+  const enqueue = <T>(browserPageId: string, operation: () => Promise<T>): Promise<T> => {
+    const result = (queues.get(browserPageId) ?? Promise.resolve()).then(operation)
+    const tail = result.then(
+      () => {},
+      () => {}
+    )
+    queues.set(browserPageId, tail)
+    void tail.then(() => {
+      if (queues.get(browserPageId) === tail) {
+        queues.delete(browserPageId)
+      }
+    })
+    return result
+  }
+
+  const closeNow = (browserPageId: string): void => {
     const session = sessions.get(browserPageId)
     if (!session) {
       return
@@ -36,13 +56,17 @@ export function createBrowserNetworkOverrideSessions(
     session.close()
   }
 
-  const sync = async (
+  const close = (browserPageId: string): void => {
+    void enqueue(browserPageId, async () => closeNow(browserPageId)).catch(() => {})
+  }
+
+  const syncNow = async (
     browserPageId: string,
     rules: BrowserNetworkRule[]
   ): Promise<BrowserNetworkOverrideSyncResult> => {
     if (overrideRulesOf(rules).length === 0) {
       // Interception is not free, so a page with no override pays nothing for one.
-      close(browserPageId)
+      closeNow(browserPageId)
       return { ok: true }
     }
     const existing = sessions.get(browserPageId)
@@ -52,7 +76,7 @@ export function createBrowserNetworkOverrideSessions(
         return { ok: true }
       } catch (error) {
         // Forget the broken session so the next sync builds a fresh one.
-        close(browserPageId)
+        closeNow(browserPageId)
         return { ok: false, message: error instanceof Error ? error.message : undefined }
       }
     }
@@ -67,6 +91,15 @@ export function createBrowserNetworkOverrideSessions(
       return { ok: false, message: error instanceof Error ? error.message : undefined }
     }
   }
+
+  const sync = (
+    browserPageId: string,
+    rules: BrowserNetworkRule[]
+  ): Promise<BrowserNetworkOverrideSyncResult> =>
+    enqueue(browserPageId, () => syncNow(browserPageId, rules)).catch((error: unknown) => ({
+      ok: false,
+      message: error instanceof Error ? error.message : undefined
+    }))
 
   return { sync, close }
 }

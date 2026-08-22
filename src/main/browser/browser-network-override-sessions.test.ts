@@ -14,6 +14,17 @@ function makeRule(patch: Partial<BrowserNetworkRule> = {}): BrowserNetworkRule {
   }
 }
 
+// close() is queued behind the page's in-flight work, so its effects land after a turn.
+const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0))
+
+function gate(): { wait: Promise<void>; release: () => void } {
+  let release = (): void => {}
+  const wait = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  return { wait, release }
+}
+
 describe('createBrowserNetworkOverrideSessions', () => {
   const update = vi.fn(async () => {})
   const close = vi.fn()
@@ -112,8 +123,57 @@ describe('createBrowserNetworkOverrideSessions', () => {
     const sessions = make()
     await sessions.sync('page-1', [makeRule()])
     sessions.close('page-1')
+    await flush()
     expect(close).toHaveBeenCalledTimes(1)
     sessions.close('page-1')
+    await flush()
     expect(close).toHaveBeenCalledTimes(1)
+  })
+
+  it('starts once when two syncs for a page overlap, updating the stored session', async () => {
+    const first = { update: vi.fn(async () => {}), close: vi.fn() }
+    const second = { update: vi.fn(async () => {}), close: vi.fn() }
+    const pending = [first, second]
+    const started = gate()
+    start.mockImplementation(async () => {
+      const session = pending.shift() ?? second
+      await started.wait
+      return session
+    })
+    const sessions = make()
+    const armed = sessions.sync('page-1', [makeRule()])
+    const rearmed = sessions.sync('page-1', [
+      makeRule({ match: { urlPattern: 'https://b.test/*' } })
+    ])
+    started.release()
+    expect(await armed).toEqual({ ok: true })
+    expect(await rearmed).toEqual({ ok: true })
+    expect(start).toHaveBeenCalledTimes(1)
+    expect(first.update).toHaveBeenCalledTimes(1)
+    // The one session that exists is the one the registry can still reach and close.
+    sessions.close('page-1')
+    await flush()
+    expect(first.close).toHaveBeenCalledTimes(1)
+    expect(second.close).not.toHaveBeenCalled()
+  })
+
+  it('closes a session that start delivers after close already ran', async () => {
+    const delivered = { update: vi.fn(async () => {}), close: vi.fn() }
+    const started = gate()
+    start.mockImplementation(async () => {
+      await started.wait
+      return delivered
+    })
+    const sessions = make()
+    const armed = sessions.sync('page-1', [makeRule()])
+    sessions.close('page-1')
+    started.release()
+    await armed
+    await flush()
+    expect(delivered.close).toHaveBeenCalledTimes(1)
+    // Nothing is left behind for a later close to find.
+    sessions.close('page-1')
+    await flush()
+    expect(delivered.close).toHaveBeenCalledTimes(1)
   })
 })
