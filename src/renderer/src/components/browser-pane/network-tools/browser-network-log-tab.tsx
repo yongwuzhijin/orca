@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
+import {
+  browserApiTestHeaderRowsFromRecord,
+  resolveBrowserApiTestTarget
+} from '../../../../../shared/browser-api-test-target'
 import type { BrowserNetworkLogEntry } from '../../../../../shared/browser-network-log-types'
+import { useBrowserNetworkToolsPanel } from './browser-network-tools-panel-state'
 
 const READ_LIMIT = 100
 const POLL_INTERVAL_MS = 1500
@@ -15,6 +20,7 @@ export function BrowserNetworkLogTab({
 }): React.JSX.Element {
   const [entries, setEntries] = useState<BrowserNetworkLogEntry[]>([])
   const [truncated, setTruncated] = useState(false)
+  const openApiTest = useBrowserNetworkToolsPanel((s) => s.openApiTest)
   // Why: bumped on teardown so a read issued for the previous page id cannot land on the new one.
   const generationRef = useRef(0)
 
@@ -86,6 +92,27 @@ export function BrowserNetworkLogTab({
           <span className="min-w-0 flex-1 truncate" title={entry.url}>
             {entry.url}
           </span>
+          {/* Only http(s) can be replayed; the sender rejects anything else. */}
+          {resolveBrowserApiTestTarget(entry.url) ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-5 w-5 shrink-0"
+              aria-label={translate(
+                'browser.networkTools.sendToApiTest',
+                'Send this request in the API tab'
+              )}
+              onClick={() =>
+                openApiTest(browserPageId, {
+                  method: entry.method,
+                  url: entry.url,
+                  headers: browserApiTestHeaderRowsFromRecord(entry.requestHeaders)
+                })
+              }
+            >
+              <Send className="h-3 w-3" />
+            </Button>
+          ) : null}
         </div>
       ))}
     </div>

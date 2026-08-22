@@ -65,3 +65,14 @@ export function buildBrowserApiTestHeaderRecord(
   }
   return record
 }
+
+export function browserApiTestHeaderRowsFromRecord(
+  record: Record<string, string> | undefined
+): BrowserApiTestHeader[] {
+  if (!record) {
+    return []
+  }
+  return Object.entries(record)
+    .filter(([name]) => !CONNECTION_LEVEL_HEADERS.has(name.toLowerCase()))
+    .map(([name, value]) => ({ name, value, enabled: true }))
+}

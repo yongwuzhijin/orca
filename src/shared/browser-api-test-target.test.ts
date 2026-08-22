@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  browserApiTestHeaderRowsFromRecord,
   browserApiTestMethodAllowsBody,
   buildBrowserApiTestHeaderRecord,
   normalizeBrowserApiTestMethod,
@@ -99,5 +100,44 @@ describe('buildBrowserApiTestHeaderRecord', () => {
         { name: 'X-A', value: 'second', enabled: true }
       ])
     ).toEqual({ 'X-A': 'second' })
+  })
+})
+
+describe('browserApiTestHeaderRowsFromRecord', () => {
+  it('turns a recorded header map into enabled editable rows', () => {
+    expect(
+      browserApiTestHeaderRowsFromRecord({ Accept: 'application/json', 'X-Trace': '7' })
+    ).toEqual([
+      { name: 'Accept', value: 'application/json', enabled: true },
+      { name: 'X-Trace', value: '7', enabled: true }
+    ])
+  })
+
+  // Why: net.request owns these, and buildBrowserApiTestHeaderRecord drops them anyway —
+  // seeding them into the editor would only give the user rows to delete.
+  it('drops connection-level headers regardless of case', () => {
+    expect(
+      browserApiTestHeaderRowsFromRecord({
+        Host: 'example.com',
+        'Content-Length': '12',
+        CONNECTION: 'keep-alive',
+        'transfer-encoding': 'chunked',
+        accept: '*/*'
+      })
+    ).toEqual([{ name: 'accept', value: '*/*', enabled: true }])
+  })
+
+  it('returns no rows for an absent record', () => {
+    expect(browserApiTestHeaderRowsFromRecord(undefined)).toEqual([])
+  })
+
+  // Why: seeding a logged request and sending it unedited is the whole point of the log button,
+  // so the two directions have to agree on which names survive.
+  it('round-trips a logged request back to the same header record', () => {
+    const logged = { Accept: 'application/json', Host: 'example.com', 'X-Trace': '7' }
+    expect(buildBrowserApiTestHeaderRecord(browserApiTestHeaderRowsFromRecord(logged))).toEqual({
+      Accept: 'application/json',
+      'X-Trace': '7'
+    })
   })
 })

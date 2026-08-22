@@ -7,6 +7,7 @@ import type {
   BrowserNetworkLogRead
 } from '../../../../../shared/browser-network-log-types'
 import { BrowserNetworkLogTab } from './browser-network-log-tab'
+import { useBrowserNetworkToolsPanel } from './browser-network-tools-panel-state'
 
 const POLL_MS = 1500
 
@@ -26,6 +27,8 @@ const networkReadLog = vi.fn(
 
 beforeEach(() => {
   networkReadLog.mockClear()
+  // The panel store is module state, so a prefill from one case would leak into the next.
+  useBrowserNetworkToolsPanel.getState().close()
   Object.assign(window, { api: { browser: { networkReadLog } } })
 })
 
@@ -142,5 +145,39 @@ describe('BrowserNetworkLogTab', () => {
     releaseA({ entries: [{ ...ENTRY, id: 9, statusCode: 418 }], truncated: false })
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(screen.queryByText('418')).toBeNull()
+  })
+
+  it('seeds the API tab with a logged request', async () => {
+    networkReadLog.mockResolvedValueOnce({
+      entries: [
+        {
+          ...ENTRY,
+          method: 'POST',
+          requestHeaders: { Accept: 'application/json', Host: 'api.example.com' }
+        }
+      ],
+      truncated: false
+    })
+    render(<BrowserNetworkLogTab browserPageId="page-a" />)
+    fireEvent.click(await screen.findByRole('button', { name: /API tab/ }))
+    const panel = useBrowserNetworkToolsPanel.getState()
+    expect(panel.openPageId).toBe('page-a')
+    expect(panel.tab).toBe('api')
+    expect(panel.apiPrefill).toEqual({
+      method: 'POST',
+      url: ENTRY.url,
+      // Host belongs to net.request, so it must not arrive as an editable row.
+      headers: [{ name: 'Accept', value: 'application/json', enabled: true }]
+    })
+  })
+
+  it('offers no send button for a request the sender cannot replay', async () => {
+    networkReadLog.mockResolvedValueOnce({
+      entries: [{ ...ENTRY, url: 'ws://api.example.com/socket' }],
+      truncated: false
+    })
+    render(<BrowserNetworkLogTab browserPageId="page-a" />)
+    await screen.findByText('xhr')
+    expect(screen.queryByRole('button', { name: /API tab/ })).toBeNull()
   })
 })
