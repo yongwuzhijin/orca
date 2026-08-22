@@ -63,7 +63,14 @@ describe('BrowserNetworkOverrideEditor', () => {
     expect(onChange).toHaveBeenCalledWith({ statusCode: 404, headers, body: '{}' })
   })
 
-  it('ignores a non-numeric status rather than writing NaN', () => {
+  // Why: main's sanitizer drops the whole override for a status outside 100-599 while the save
+  // still reports success, so committing one here loses the user's override on the next load.
+  it.each([
+    { label: 'below the range', value: '99' },
+    { label: 'above the range', value: '600' },
+    { label: 'a partial code typed en route to a valid one', value: '5' },
+    { label: 'digits with trailing junk', value: '404abc' }
+  ])('keeps $label out of the saved rule while leaving it typed', ({ value }) => {
     const onChange = vi.fn()
     render(
       <BrowserNetworkOverrideEditor
@@ -71,8 +78,31 @@ describe('BrowserNetworkOverrideEditor', () => {
         onChange={onChange}
       />
     )
-    fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'abc' } })
+    const status = screen.getByLabelText('Status') as HTMLInputElement
+
+    fireEvent.change(status, { target: { value } })
+
     expect(onChange).not.toHaveBeenCalled()
+    expect(status.value).toBe(value)
+    expect(status.getAttribute('aria-invalid')).toBe('true')
+  })
+
+  it('commits the status once the typed digits reach a valid code', () => {
+    const onChange = vi.fn()
+    render(
+      <BrowserNetworkOverrideEditor
+        override={{ statusCode: 200, headers: [], body: '{}' }}
+        onChange={onChange}
+      />
+    )
+    const status = screen.getByLabelText('Status')
+
+    for (const value of ['5', '50', '503']) {
+      fireEvent.change(status, { target: { value } })
+    }
+
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect(onChange).toHaveBeenCalledWith({ statusCode: 503, headers: [], body: '{}' })
   })
 
   it('edits the response body', () => {
