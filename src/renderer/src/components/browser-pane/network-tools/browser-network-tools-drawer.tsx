@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -10,15 +10,24 @@ import {
   type BrowserNetworkToolsTab
 } from './browser-network-tools-panel-state'
 
+// Why: JsonFormatterInput pulls @/lib/monaco-setup, which eagerly imports monaco-editor and its
+// workers — a static import would land all of that in every browser tab's bundle.
+const BrowserApiTestTab = lazy(async () => ({
+  default: (await import('./browser-api-test-tab')).BrowserApiTestTab
+}))
+
 type BrowserNetworkToolsDrawerProps = {
   browserPageId: string
   /** Non-null when the guest runs on a remote host, where webRequest is out of reach. */
   browserRuntimeEnvironmentId: string | null
+  /** Named in the API tab so the user knows whose cookies a test request will carry. */
+  sessionProfileId: string | null
 }
 
 export function BrowserNetworkToolsDrawer({
   browserPageId,
-  browserRuntimeEnvironmentId
+  browserRuntimeEnvironmentId,
+  sessionProfileId
 }: BrowserNetworkToolsDrawerProps): React.JSX.Element | null {
   const openPageId = useBrowserNetworkToolsPanel((s) => s.openPageId)
   const tab = useBrowserNetworkToolsPanel((s) => s.tab)
@@ -104,6 +113,9 @@ export function BrowserNetworkToolsDrawer({
               <TabsTrigger value="log" className="text-xs">
                 {translate('browser.networkTools.tabLog', 'Log')}
               </TabsTrigger>
+              <TabsTrigger value="api" className="text-xs">
+                {translate('browser.networkTools.tabApi', 'Test')}
+              </TabsTrigger>
             </TabsList>
             <div className="flex-1" />
             {closeButton}
@@ -113,6 +125,22 @@ export function BrowserNetworkToolsDrawer({
           </TabsContent>
           <TabsContent value="log" className="scrollbar-sleek min-h-0 overflow-auto p-2 text-xs">
             <BrowserNetworkLogTab browserPageId={browserPageId} />
+          </TabsContent>
+          {/* Why no overflow-auto: the tab lays itself out with flex-1 and Monaco needs a bounded
+              height, so scrolling belongs to the panes inside it. */}
+          <TabsContent value="api" className="flex min-h-0 p-2 text-xs">
+            <Suspense
+              fallback={
+                <span className="text-muted-foreground">
+                  {translate('browser.networkTools.apiLoading', 'Loading…')}
+                </span>
+              }
+            >
+              <BrowserApiTestTab
+                browserPageId={browserPageId}
+                sessionProfileId={sessionProfileId}
+              />
+            </Suspense>
           </TabsContent>
         </Tabs>
       )}
