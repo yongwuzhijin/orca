@@ -55,15 +55,10 @@ export function saveBrowserNetworkRules(rules: BrowserNetworkRule[]): boolean {
   // Why: an edit to an already-armed rule must take effect without a re-arm round trip.
   for (const browserPageId of armedRules.armedPageIds()) {
     const armedIds = new Set(armedRules.rulesFor(browserPageId).map((rule) => rule.id))
-    armedRules.arm(
-      browserPageId,
-      rules.filter((rule) => armedIds.has(rule.id))
-    )
+    const stillArmed = rules.filter((rule) => armedIds.has(rule.id))
+    armedRules.arm(browserPageId, stillArmed)
     // Fire and forget: sync never rejects, and a failed re-sync must not fail the save.
-    void overrideSessions.sync(
-      browserPageId,
-      rules.filter((rule) => armedIds.has(rule.id))
-    )
+    void overrideSessions.sync(browserPageId, stillArmed)
   }
   return true
 }
