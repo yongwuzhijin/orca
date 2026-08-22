@@ -2410,7 +2410,16 @@ function createBrowserApi(): NonNullable<Partial<PreloadApi>['browser']> {
       Promise.resolve({ armed: false, reason: 'no_guest' as const, armedRuleIds: [] }),
     networkDisarmRules: () => Promise.resolve(false),
     networkReadArmedRules: () => Promise.resolve({ armedRuleIds: [] }),
-    networkReadLog: () => Promise.resolve({ entries: [], truncated: false })
+    networkReadLog: () => Promise.resolve({ entries: [], truncated: false }),
+    // Why: webRequest and net.request are both main-process-only, so web mode has no transport.
+    networkSendRequest: () =>
+      Promise.resolve({
+        status: 'error' as const,
+        reason: 'no_guest' as const,
+        message: 'API testing is unavailable in the browser client.',
+        durationMs: 0
+      }),
+    networkCancelRequest: () => Promise.resolve(false)
   } as unknown as NonNullable<Partial<PreloadApi>['browser']>
 }
 

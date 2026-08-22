@@ -26,6 +26,10 @@ import type {
 import type { BrowserNetworkRule } from '../../shared/browser-network-rule'
 import type { BrowserNetworkLogRead } from '../../shared/browser-network-log-types'
 import type {
+  BrowserApiTestRequest,
+  BrowserApiTestResponse
+} from '../../shared/browser-api-test-types'
+import type {
   BrowserCertificateFailure,
   BrowserCertificateProceedResult,
   BrowserCookieImportResult,
@@ -140,6 +144,8 @@ export type BrowserApi = {
     browserPageId: string
     limit?: number
   }) => Promise<BrowserNetworkLogRead>
+  networkSendRequest: (args: { request: BrowserApiTestRequest }) => Promise<BrowserApiTestResponse>
+  networkCancelRequest: (args: { requestId: string }) => Promise<boolean>
 }
 
 export type DetectedBrowserProfileInfo = {

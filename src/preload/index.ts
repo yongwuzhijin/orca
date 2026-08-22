@@ -3075,7 +3075,13 @@ const api = {
       ipcRenderer.invoke('browser:network:armedRuleIds', args),
 
     networkReadLog: (args: { browserPageId: string; limit?: number }): Promise<unknown> =>
-      ipcRenderer.invoke('browser:network:readLog', args)
+      ipcRenderer.invoke('browser:network:readLog', args),
+
+    networkSendRequest: (args: { request: unknown }): Promise<unknown> =>
+      ipcRenderer.invoke('browser:network:sendRequest', args),
+
+    networkCancelRequest: (args: { requestId: string }): Promise<boolean> =>
+      ipcRenderer.invoke('browser:network:cancelRequest', args)
   },
 
   emulator: {
