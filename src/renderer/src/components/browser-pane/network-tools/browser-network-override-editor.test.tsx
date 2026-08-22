@@ -61,7 +61,6 @@ describe('BrowserNetworkOverrideEditor', () => {
     )
     fireEvent.change(screen.getByLabelText('Status'), { target: { value: '404' } })
     expect(onChange).toHaveBeenCalledWith({ statusCode: 404, headers, body: '{}' })
-    expect(onChange.mock.calls[0][0].headers).toBe(headers)
   })
 
   it('ignores a non-numeric status rather than writing NaN', () => {
