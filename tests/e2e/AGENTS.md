@@ -8,6 +8,16 @@ E2E tests read Zustand state via `window.__store`. That global is only assigned 
 - Fast iteration: `pnpm exec electron-vite build --mode e2e` once, then `SKIP_BUILD=1 pnpm run test:e2e …`.
 - If **every** E2E test times out at the `window.__store` line, do **not** assume the harness is broken. The `out/` build is almost certainly stale or was produced without `--mode e2e`. Rebuild with `--mode e2e` and retry before changing test code.
 
+## Pin `uiLanguage` Before Locating by Label Text
+
+The app follows the host's UI language, so `translate(key, 'English fallback')` returns the *translated* string in a running app — unlike unit tests, where the fallback comes back. Any locator built on English label text (`getByRole('button', { name: 'Send' })`, `getByLabel('Status')`) fails on a non-English machine. Pin the language during setup, before opening the UI under test:
+
+```ts
+await page.evaluate(() => window.__store?.getState().updateSettings({ uiLanguage: 'en' }))
+```
+
+This is a setup concern, not a reason to assert on test ids instead — role and label locators are still what prove the UI is usable.
+
 ## Prefer a Store-Slice Unit Test When the Logic Is Pure
 
 An E2E spec that calls `store.getState().someAction(...)` inside `page.evaluate` is a unit test paying the cost of an Electron launch (~1.5s) for no extra coverage. Before adding one, check `src/renderer/src/store/slices/*.test.ts` — most store-level behavior (tab moves, splits, reorders, merges, no-op guards) is already covered there with `createTestAppStore()`.
