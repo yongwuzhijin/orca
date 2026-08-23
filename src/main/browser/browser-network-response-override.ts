@@ -14,22 +14,26 @@ export type BrowserNetworkOverrideSession = {
   close: () => void
 }
 
-type CdpResponsePattern = { urlPattern: string; requestStage: 'Response' }
+// Why the Request stage and not Response: at the Response stage Chromium silently ignores
+// fulfillRequest's responseCode and responseHeaders, replacing only the body — so an override kept
+// the upstream status and leaked upstream headers. The Request stage synthesizes the whole response
+// and spares the network round trip the answer never uses.
+type CdpOverridePattern = { urlPattern: string; requestStage: 'Request' }
 
 export function overrideRulesOf(rules: BrowserNetworkRule[]): BrowserNetworkRule[] {
   return rules.filter((rule) => rule.enabled && !!rule.responseOverride)
 }
 
-function cdpPatterns(rules: BrowserNetworkRule[]): CdpResponsePattern[] {
+function cdpPatterns(rules: BrowserNetworkRule[]): CdpOverridePattern[] {
   const seen = new Set<string>()
-  const patterns: CdpResponsePattern[] = []
+  const patterns: CdpOverridePattern[] = []
   for (const rule of rules) {
     const urlPattern = toCdpUrlPattern(rule.match.urlPattern)
     if (seen.has(urlPattern)) {
       continue
     }
     seen.add(urlPattern)
-    patterns.push({ urlPattern, requestStage: 'Response' })
+    patterns.push({ urlPattern, requestStage: 'Request' })
   }
   return patterns
 }

@@ -78,7 +78,7 @@ describe('startBrowserNetworkOverrides', () => {
       makeRule({ match: { urlPattern: 'https://api.test/x?y=1' } })
     ])
     expect(sendCommand).toHaveBeenCalledWith('Fetch.enable', {
-      patterns: [{ urlPattern: 'https://api.test/x\\?y=1', requestStage: 'Response' }]
+      patterns: [{ urlPattern: 'https://api.test/x\\?y=1', requestStage: 'Request' }]
     })
   })
 
@@ -86,7 +86,7 @@ describe('startBrowserNetworkOverrides', () => {
     const { webContents, sendCommand } = makeWebContents()
     await startBrowserNetworkOverrides(webContents as never, [makeRule(), makeRule({ id: 'b' })])
     expect(sendCommand.mock.calls[0][1]).toEqual({
-      patterns: [{ urlPattern: 'https://api.test/*', requestStage: 'Response' }]
+      patterns: [{ urlPattern: 'https://api.test/*', requestStage: 'Request' }]
     })
   })
 
@@ -121,7 +121,7 @@ describe('startBrowserNetworkOverrides', () => {
     sendCommand.mockClear()
     await session.update([makeRule({ match: { urlPattern: 'https://other.test/*' } })])
     expect(sendCommand).toHaveBeenCalledWith('Fetch.enable', {
-      patterns: [{ urlPattern: 'https://other.test/*', requestStage: 'Response' }]
+      patterns: [{ urlPattern: 'https://other.test/*', requestStage: 'Request' }]
     })
   })
 

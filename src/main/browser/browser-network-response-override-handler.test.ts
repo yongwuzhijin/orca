@@ -116,7 +116,7 @@ describe('createBrowserNetworkResponseOverrideHandler', () => {
     })
     handler(...paused('https://other.test/x'))
     await vi.waitFor(() => expect(sendCommand).toHaveBeenCalled())
-    expect(sendCommand.mock.calls[0][0]).toBe('Fetch.continueResponse')
+    expect(sendCommand.mock.calls[0][0]).toBe('Fetch.continueRequest')
     expect(sendCommand.mock.calls[0][1]).toEqual({ requestId: 'req-1' })
   })
 
@@ -129,7 +129,7 @@ describe('createBrowserNetworkResponseOverrideHandler', () => {
     })
     handler(...paused('https://api.test/x'))
     await vi.waitFor(() =>
-      expect(sendCommand).toHaveBeenCalledWith('Fetch.continueResponse', { requestId: 'req-1' })
+      expect(sendCommand).toHaveBeenCalledWith('Fetch.continueRequest', { requestId: 'req-1' })
     )
   })
 
@@ -146,7 +146,7 @@ describe('createBrowserNetworkResponseOverrideHandler', () => {
     })
     handler(...paused('https://api.test/x'))
     await vi.waitFor(() => expect(sendCommand).toHaveBeenCalledTimes(2))
-    expect(sendCommand.mock.calls[1][0]).toBe('Fetch.continueResponse')
+    expect(sendCommand.mock.calls[1][0]).toBe('Fetch.continueRequest')
   })
 
   it('reports but swallows a continue failure', async () => {
@@ -179,7 +179,7 @@ describe('createBrowserNetworkResponseOverrideHandler', () => {
     })
     handler(null, 'Fetch.requestPaused', { requestId: 'req-1' })
     await vi.waitFor(() =>
-      expect(sendCommand).toHaveBeenCalledWith('Fetch.continueResponse', { requestId: 'req-1' })
+      expect(sendCommand).toHaveBeenCalledWith('Fetch.continueRequest', { requestId: 'req-1' })
     )
   })
 })

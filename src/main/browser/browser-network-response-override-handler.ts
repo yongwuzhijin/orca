@@ -37,13 +37,15 @@ export function findResponseOverrideRule(
   return null
 }
 
-async function continuePausedResponse(
+// Why continueRequest: overrides pause at the Request stage, and continueResponse is only valid for
+// a pause that already has a response.
+async function continuePausedRequest(
   dbg: WebContents['debugger'],
   requestId: string,
   onError?: (message: string) => void
 ): Promise<void> {
   try {
-    await sendDebuggerCommand(dbg, 'Fetch.continueResponse', { requestId })
+    await sendDebuggerCommand(dbg, 'Fetch.continueRequest', { requestId })
   } catch (error) {
     onError?.(error instanceof Error ? error.message : 'Failed to continue a paused request.')
   }
@@ -79,18 +81,18 @@ export function createBrowserNetworkResponseOverrideHandler(
     }
     const override = rule?.responseOverride
     if (!override) {
-      void continuePausedResponse(dbg, requestId, onError)
+      void continuePausedRequest(dbg, requestId, onError)
       return
     }
     let fulfill
     try {
       fulfill = buildCdpFulfillPayload(requestId, override)
     } catch {
-      void continuePausedResponse(dbg, requestId, onError)
+      void continuePausedRequest(dbg, requestId, onError)
       return
     }
     void sendDebuggerCommand(dbg, 'Fetch.fulfillRequest', fulfill).catch(() => {
-      void continuePausedResponse(dbg, requestId, onError)
+      void continuePausedRequest(dbg, requestId, onError)
     })
   }
 }
