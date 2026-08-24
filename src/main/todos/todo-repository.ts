@@ -141,8 +141,8 @@ export class TodoRepository {
     return rows.map(rowToTodoItem)
   }
 
-  // Why: only auto_pilot_enabled cards are dispatched unattended; the flag defaults
-  // to 0, so a card never runs without an explicit opt-in.
+  // Why: the orchestrator picks across all projects, so no project_id filter here.
+  // order_key is only a stable secondary; the service applies the full priority sort.
   listAutoPilotCandidates(): TodoItem[] {
     const rows = this.db
       .prepare(
