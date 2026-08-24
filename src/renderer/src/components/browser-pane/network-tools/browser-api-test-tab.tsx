@@ -5,12 +5,16 @@ import { translate } from '@/i18n/i18n'
 import { BrowserApiTestRequestForm } from './browser-api-test-request-form'
 import { BrowserApiTestResponseView } from './browser-api-test-response-view'
 import { useBrowserNetworkToolsPanel } from './browser-network-tools-panel-state'
+import {
+  applyBrowserApiTestQuery,
+  splitBrowserApiTestQuery
+} from '../../../../../shared/browser-api-test-query'
 import type {
-  BrowserApiTestHeader,
+  BrowserApiTestKeyValueRow,
   BrowserApiTestResponse
 } from '../../../../../shared/browser-api-test-types'
 
-function defaultHeaders(): BrowserApiTestHeader[] {
+function defaultHeaders(): BrowserApiTestKeyValueRow[] {
   return [{ name: 'accept', value: '*/*', enabled: true }]
 }
 
@@ -29,7 +33,8 @@ export function BrowserApiTestTab({
   const clearApiPrefill = useBrowserNetworkToolsPanel((s) => s.clearApiPrefill)
   const [method, setMethod] = useState('GET')
   const [url, setUrl] = useState('')
-  const [headers, setHeaders] = useState<BrowserApiTestHeader[]>(defaultHeaders)
+  const [params, setParams] = useState<BrowserApiTestKeyValueRow[]>([])
+  const [headers, setHeaders] = useState<BrowserApiTestKeyValueRow[]>(defaultHeaders)
   const [body, setBody] = useState('')
   const [response, setResponse] = useState<BrowserApiTestResponse | null>(null)
   const [sending, setSending] = useState(false)
@@ -44,7 +49,9 @@ export function BrowserApiTestTab({
       return
     }
     setMethod(prefill.method)
-    setUrl(prefill.url)
+    const split = splitBrowserApiTestQuery(prefill.url)
+    setUrl(split.url)
+    setParams(split.params)
     setHeaders(prefill.headers.length > 0 ? prefill.headers : defaultHeaders())
     // Why: a prefill describes a whole request, so a body typed for the previous one does not
     // belong to this URL.
@@ -53,13 +60,31 @@ export function BrowserApiTestTab({
     clearApiPrefill()
   }, [prefill, clearApiPrefill])
 
+  // Why here and not in the form: a paste that never lost focus leaves the query in the URL field,
+  // and lifting it out on send would race the send itself.
+  const commitUrlQuery = useCallback((): void => {
+    const split = splitBrowserApiTestQuery(url)
+    if (split.params.length === 0 && split.url === url) {
+      return
+    }
+    setUrl(split.url)
+    setParams((current) => [...current, ...split.params])
+  }, [url])
+
   const send = useCallback(async (): Promise<void> => {
     const requestId = createRequestId()
     pendingIdRef.current = requestId
     setSending(true)
     setResponse(null)
     const result = await window.api.browser.networkSendRequest({
-      request: { browserPageId, requestId, method, url, headers, body }
+      request: {
+        browserPageId,
+        requestId,
+        method,
+        url: applyBrowserApiTestQuery(url, params),
+        headers,
+        body
+      }
     })
     // Why: a second Send supersedes the first, so a late reply from the abandoned
     // request must not overwrite what is on screen now.
@@ -69,7 +94,7 @@ export function BrowserApiTestTab({
     pendingIdRef.current = null
     setSending(false)
     setResponse(result)
-  }, [browserPageId, method, url, headers, body])
+  }, [browserPageId, method, url, params, headers, body])
 
   // Why pendingIdRef survives: main always resolves the send, with an aborted result, and letting
   // that land is the user's confirmation. Only `sending` is released, so Send is usable again
@@ -110,10 +135,13 @@ export function BrowserApiTestTab({
         <BrowserApiTestRequestForm
           method={method}
           url={url}
+          params={params}
           headers={headers}
           body={body}
           onMethodChange={setMethod}
           onUrlChange={setUrl}
+          onUrlCommit={commitUrlQuery}
+          onParamsChange={setParams}
           onHeadersChange={setHeaders}
           onBodyChange={setBody}
         />

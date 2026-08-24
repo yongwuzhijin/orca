@@ -11,25 +11,39 @@ vi.mock('./browser-api-test-request-form', () => ({
   BrowserApiTestRequestForm: ({
     method,
     url,
+    params,
     headers,
     body,
     onMethodChange,
     onUrlChange,
+    onUrlCommit,
+    onParamsChange,
     onHeadersChange,
     onBodyChange
   }: {
     method: string
     url: string
+    params: BrowserApiTestHeader[]
     headers: BrowserApiTestHeader[]
     body: string
     onMethodChange: (next: string) => void
     onUrlChange: (next: string) => void
+    onUrlCommit: () => void
+    onParamsChange: (next: BrowserApiTestHeader[]) => void
     onHeadersChange: (next: BrowserApiTestHeader[]) => void
     onBodyChange: (next: string) => void
   }) => (
     <div>
       <span data-testid="form-state">{`${method} ${url} ${headers.length} ${body}`}</span>
-      <input aria-label="url-proxy" value={url} onChange={(e) => onUrlChange(e.target.value)} />
+      <span data-testid="param-state">
+        {params.map((row) => `${row.name}=${row.value}:${String(row.enabled)}`).join(',')}
+      </span>
+      <input
+        aria-label="url-proxy"
+        value={url}
+        onChange={(e) => onUrlChange(e.target.value)}
+        onBlur={onUrlCommit}
+      />
       <input aria-label="body-proxy" value={body} onChange={(e) => onBodyChange(e.target.value)} />
       <input
         aria-label="method-proxy"
@@ -40,6 +54,16 @@ vi.mock('./browser-api-test-request-form', () => ({
         type="button"
         aria-label="headers-proxy"
         onClick={() => onHeadersChange([{ name: 'x-added', value: '9', enabled: true }])}
+      />
+      <button
+        type="button"
+        aria-label="params-proxy"
+        onClick={() =>
+          onParamsChange([
+            { name: 'id', value: '7', enabled: true },
+            { name: 'debug', value: 'true', enabled: false }
+          ])
+        }
       />
     </div>
   )
@@ -153,6 +177,31 @@ describe('BrowserApiTestTab', () => {
       body: '{"a":1}',
       headers: [{ name: 'x-added', value: '9', enabled: true }]
     })
+  })
+
+  // Why this is the test that protects the feature: the params table is the only place a query can
+  // be edited, so a URL sent without it would look fine in the form and be wrong on the wire.
+  it('builds the sent url from the enabled param rows', async () => {
+    render(<BrowserApiTestTab browserPageId="page-a" sessionProfileId={null} />)
+    fireEvent.change(screen.getByLabelText('url-proxy'), { target: { value: 'https://a.test/x' } })
+    fireEvent.click(screen.getByLabelText('params-proxy'))
+    fireEvent.click(sendButton())
+
+    await screen.findByTestId('response')
+
+    expect(sentAt(0).url).toBe('https://a.test/x?id=7')
+  })
+
+  it('lifts a query typed into the url field into the param rows on blur', () => {
+    render(<BrowserApiTestTab browserPageId="page-a" sessionProfileId={null} />)
+    const url = screen.getByLabelText('url-proxy')
+    fireEvent.change(url, { target: { value: 'https://a.test/x?id=7&q=hello+world' } })
+    expect(screen.getByTestId('param-state').textContent).toBe('')
+
+    fireEvent.blur(url)
+
+    expect(screen.getByTestId('param-state').textContent).toBe('id=7:true,q=hello world:true')
+    expect((url as HTMLInputElement).value).toBe('https://a.test/x')
   })
 
   it('shows cancel only while a request is in flight and forwards its request id', async () => {
@@ -275,6 +324,24 @@ describe('BrowserApiTestTab', () => {
     expect(screen.getByTestId('form-state').textContent).toBe(
       'POST https://a.test/from-log 2 {"a":1}'
     )
+  })
+
+  // Why: a logged request carries its query in the URL, and leaving it there would make every
+  // param uneditable on exactly the requests the user reached for "Send from log" to poke at.
+  it('splits a prefilled url query into editable param rows', async () => {
+    useBrowserNetworkToolsPanel.setState({
+      apiPrefill: {
+        method: 'GET',
+        url: 'https://a.test/from-log?id=7&q=hello+world',
+        headers: []
+      }
+    })
+    render(<BrowserApiTestTab browserPageId="page-a" sessionProfileId={null} />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('param-state').textContent).toBe('id=7:true,q=hello world:true')
+    })
+    expect(screen.getByTestId('form-state').textContent).toBe('GET https://a.test/from-log 1 ')
   })
 
   // Why: a prefill describes a whole request, so a body left over from the last one would be

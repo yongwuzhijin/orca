@@ -14,11 +14,14 @@ export type BrowserApiTestMethod = (typeof BROWSER_API_TEST_METHODS)[number]
 export const BROWSER_API_TEST_MAX_BODY_BYTES = 2 * 1024 * 1024
 export const BROWSER_API_TEST_TIMEOUT_MS = 30_000
 
-export type BrowserApiTestHeader = {
+/** An editable row in the request form: a header, or a query param the URL is built from. */
+export type BrowserApiTestKeyValueRow = {
   name: string
   value: string
   enabled: boolean
 }
+
+export type BrowserApiTestHeader = BrowserApiTestKeyValueRow
 
 export type BrowserApiTestRequest = {
   browserPageId: string

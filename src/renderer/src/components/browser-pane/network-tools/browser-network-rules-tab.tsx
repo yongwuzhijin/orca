@@ -42,6 +42,9 @@ export function BrowserNetworkRulesTab({
         }
         setRules(saved)
         setArmedRuleIds(armed.armedRuleIds)
+        // Why: the checkbox is what arms a rule, so leaving an already-armed rule unchecked reads as
+        // the opposite of what the page is doing, and keeps Arm disabled until it is re-checked.
+        setSelected(armed.armedRuleIds)
         setLoaded(true)
       })
       .catch(() => {

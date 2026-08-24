@@ -147,6 +147,16 @@ describe('BrowserNetworkRulesTab', () => {
     expect(button('Disarm').disabled).toBe(false)
   })
 
+  // Why: the checkbox is what arms a rule, so an armed rule that reads as unchecked tells the user
+  // the opposite of what the page is doing — and leaves Arm disabled until they re-check it.
+  it('checks the rules that main reports as already armed', async () => {
+    api.networkReadArmedRules.mockResolvedValueOnce({ armedRuleIds: ['rule-1'] })
+    render(<BrowserNetworkRulesTab browserPageId="page-a" />)
+    const checkbox = await screen.findByLabelText('Arm staging auth')
+    expect(checkbox.getAttribute('aria-checked')).toBe('true')
+    expect(button('Arm').disabled).toBe(false)
+  })
+
   it('drops the deleted rule from the checked and armed ids', async () => {
     render(<BrowserNetworkRulesTab browserPageId="page-a" />)
     await screen.findByDisplayValue('staging auth')

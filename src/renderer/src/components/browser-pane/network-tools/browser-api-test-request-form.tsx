@@ -1,34 +1,63 @@
 import { JsonFormatterInput } from '@/components/json-formatter/JsonFormatterInput'
 import { Input } from '@/components/ui/input'
 import { translate } from '@/i18n/i18n'
-import { BrowserApiTestHeaderRows } from './browser-api-test-header-rows'
+import {
+  BrowserApiTestKeyValueRows,
+  type BrowserApiTestKeyValueLabels
+} from './browser-api-test-key-value-rows'
 import {
   browserApiTestMethodAllowsBody,
   normalizeBrowserApiTestMethod
 } from '../../../../../shared/browser-api-test-target'
 import {
   BROWSER_API_TEST_METHODS,
-  type BrowserApiTestHeader
+  type BrowserApiTestKeyValueRow
 } from '../../../../../shared/browser-api-test-types'
 
 type BrowserApiTestRequestFormProps = {
   method: string
   url: string
-  headers: BrowserApiTestHeader[]
+  params: BrowserApiTestKeyValueRow[]
+  headers: BrowserApiTestKeyValueRow[]
   body: string
   onMethodChange: (method: string) => void
   onUrlChange: (url: string) => void
-  onHeadersChange: (headers: BrowserApiTestHeader[]) => void
+  onUrlCommit: () => void
+  onParamsChange: (params: BrowserApiTestKeyValueRow[]) => void
+  onHeadersChange: (headers: BrowserApiTestKeyValueRow[]) => void
   onBodyChange: (body: string) => void
+}
+
+function paramLabels(): BrowserApiTestKeyValueLabels {
+  return {
+    name: translate('browser.networkTools.apiParamName', 'Parameter'),
+    value: translate('browser.networkTools.apiParamValue', 'Parameter value'),
+    enabled: translate('browser.networkTools.apiParamEnabled', 'Send this parameter'),
+    remove: translate('browser.networkTools.apiRemoveParam', 'Remove parameter'),
+    add: translate('browser.networkTools.apiAddParam', 'Add parameter')
+  }
+}
+
+function headerLabels(): BrowserApiTestKeyValueLabels {
+  return {
+    name: translate('browser.networkTools.headerName', 'Header'),
+    value: translate('browser.networkTools.headerValue', 'Value'),
+    enabled: translate('browser.networkTools.headerEnabled', 'Send this header'),
+    remove: translate('browser.networkTools.removeHeader', 'Remove header'),
+    add: translate('browser.networkTools.addHeader', 'Add header')
+  }
 }
 
 export function BrowserApiTestRequestForm({
   method,
   url,
+  params,
   headers,
   body,
   onMethodChange,
   onUrlChange,
+  onUrlCommit,
+  onParamsChange,
   onHeadersChange,
   onBodyChange
 }: BrowserApiTestRequestFormProps): React.JSX.Element {
@@ -61,9 +90,31 @@ export function BrowserApiTestRequestForm({
           )}
           value={url}
           onChange={(event) => onUrlChange(event.target.value)}
+          // Why on blur and not on change: lifting the query out mid-keystroke would move the
+          // caret out from under the `?` the user is still typing.
+          onBlur={onUrlCommit}
         />
       </div>
-      <BrowserApiTestHeaderRows rows={headers} onChange={onHeadersChange} />
+      <div className="flex flex-col gap-1">
+        <span className="text-[10px] text-muted-foreground">
+          {translate('browser.networkTools.apiParams', 'Query parameters')}
+        </span>
+        <BrowserApiTestKeyValueRows
+          rows={params}
+          labels={paramLabels()}
+          onChange={onParamsChange}
+        />
+      </div>
+      <div className="flex flex-col gap-1">
+        <span className="text-[10px] text-muted-foreground">
+          {translate('browser.networkTools.apiHeaders', 'Headers')}
+        </span>
+        <BrowserApiTestKeyValueRows
+          rows={headers}
+          labels={headerLabels()}
+          onChange={onHeadersChange}
+        />
+      </div>
       {allowsBody ? (
         <div className="flex min-h-0 flex-1 flex-col gap-1">
           <span className="text-[10px] text-muted-foreground">

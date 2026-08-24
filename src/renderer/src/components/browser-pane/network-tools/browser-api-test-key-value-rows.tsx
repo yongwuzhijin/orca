@@ -2,17 +2,26 @@ import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { translate } from '@/i18n/i18n'
-import type { BrowserApiTestHeader } from '../../../../../shared/browser-api-test-types'
+import type { BrowserApiTestKeyValueRow } from '../../../../../shared/browser-api-test-types'
 
-export function BrowserApiTestHeaderRows({
+export type BrowserApiTestKeyValueLabels = {
+  name: string
+  value: string
+  enabled: string
+  remove: string
+  add: string
+}
+
+export function BrowserApiTestKeyValueRows({
   rows,
+  labels,
   onChange
 }: {
-  rows: BrowserApiTestHeader[]
-  onChange: (rows: BrowserApiTestHeader[]) => void
+  rows: BrowserApiTestKeyValueRow[]
+  labels: BrowserApiTestKeyValueLabels
+  onChange: (rows: BrowserApiTestKeyValueRow[]) => void
 }): React.JSX.Element {
-  const patch = (index: number, next: Partial<BrowserApiTestHeader>): void => {
+  const patch = (index: number, next: Partial<BrowserApiTestKeyValueRow>): void => {
     onChange(rows.map((row, at) => (at === index ? { ...row, ...next } : row)))
   }
 
@@ -22,21 +31,21 @@ export function BrowserApiTestHeaderRows({
         // Why index: these rows have no stable identity and reordering is not a feature.
         <div key={index} className="flex items-center gap-1.5">
           <Checkbox
-            aria-label={translate('browser.networkTools.headerEnabled', 'Send this header')}
+            aria-label={labels.enabled}
             checked={row.enabled}
             onCheckedChange={(checked) => patch(index, { enabled: checked === true })}
           />
           <Input
             className="h-7 w-36 text-xs"
-            aria-label={translate('browser.networkTools.headerName', 'Header')}
-            placeholder={translate('browser.networkTools.headerName', 'Header')}
+            aria-label={labels.name}
+            placeholder={labels.name}
             value={row.name}
             onChange={(event) => patch(index, { name: event.target.value })}
           />
           <Input
             className="h-7 flex-1 text-xs"
-            aria-label={translate('browser.networkTools.headerValue', 'Value')}
-            placeholder={translate('browser.networkTools.headerValue', 'Value')}
+            aria-label={labels.value}
+            placeholder={labels.value}
             value={row.value}
             onChange={(event) => patch(index, { value: event.target.value })}
           />
@@ -44,7 +53,7 @@ export function BrowserApiTestHeaderRows({
             size="icon"
             variant="ghost"
             className="h-7 w-7"
-            aria-label={translate('browser.networkTools.removeHeader', 'Remove header')}
+            aria-label={labels.remove}
             onClick={() => onChange(rows.filter((_, at) => at !== index))}
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -58,7 +67,7 @@ export function BrowserApiTestHeaderRows({
         onClick={() => onChange([...rows, { name: '', value: '', enabled: true }])}
       >
         <Plus className="mr-1 h-3.5 w-3.5" />
-        {translate('browser.networkTools.addHeader', 'Add header')}
+        {labels.add}
       </Button>
     </div>
   )

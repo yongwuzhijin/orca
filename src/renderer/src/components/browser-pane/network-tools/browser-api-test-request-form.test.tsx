@@ -25,17 +25,21 @@ vi.mock('@/components/json-formatter/JsonFormatterInput', () => ({
   )
 }))
 
-vi.mock('./browser-api-test-header-rows', () => ({
-  BrowserApiTestHeaderRows: ({
+// Why keyed off `labels.add`: both call sites render the same component, so the test ids have to
+// come from the props to tell the params table apart from the headers table.
+vi.mock('./browser-api-test-key-value-rows', () => ({
+  BrowserApiTestKeyValueRows: ({
     rows,
+    labels,
     onChange
   }: {
     rows: BrowserApiTestHeader[]
+    labels: { add: string }
     onChange: (next: BrowserApiTestHeader[]) => void
   }) => (
     <button
       type="button"
-      data-testid="header-rows"
+      data-testid={labels.add === 'Add header' ? 'header-rows' : 'param-rows'}
       onClick={() => onChange([...rows, { name: 'x', value: 'y', enabled: true }])}
     >
       {rows.map((row) => row.name).join(',')}
@@ -51,12 +55,16 @@ afterEach(cleanup)
 function renderForm(overrides: Partial<Parameters<typeof BrowserApiTestRequestForm>[0]> = {}): {
   onMethodChange: ReturnType<typeof vi.fn>
   onUrlChange: ReturnType<typeof vi.fn>
+  onUrlCommit: ReturnType<typeof vi.fn>
+  onParamsChange: ReturnType<typeof vi.fn>
   onHeadersChange: ReturnType<typeof vi.fn>
   onBodyChange: ReturnType<typeof vi.fn>
 } {
   const handlers = {
     onMethodChange: vi.fn(),
     onUrlChange: vi.fn(),
+    onUrlCommit: vi.fn(),
+    onParamsChange: vi.fn(),
     onHeadersChange: vi.fn(),
     onBodyChange: vi.fn()
   }
@@ -64,6 +72,7 @@ function renderForm(overrides: Partial<Parameters<typeof BrowserApiTestRequestFo
     <BrowserApiTestRequestForm
       method="GET"
       url="https://example.com/api"
+      params={[{ name: 'id', value: '1', enabled: true }]}
       headers={[{ name: 'accept', value: '*/*', enabled: true }]}
       body=""
       {...handlers}
@@ -108,6 +117,33 @@ describe('BrowserApiTestRequestForm', () => {
     })
 
     expect(onUrlChange).toHaveBeenCalledWith('https://example.com/next')
+  })
+
+  // Why blur and not change: lifting the query out mid-keystroke would move the caret out from
+  // under the `?` the user is still typing.
+  it('asks for the url query to be lifted out only once the field loses focus', () => {
+    const { onUrlCommit } = renderForm()
+
+    fireEvent.change(screen.getByLabelText('Request URL'), {
+      target: { value: 'https://example.com/api?id=1' }
+    })
+    expect(onUrlCommit).not.toHaveBeenCalled()
+
+    fireEvent.blur(screen.getByLabelText('Request URL'))
+
+    expect(onUrlCommit).toHaveBeenCalledTimes(1)
+  })
+
+  it('passes the param rows through and forwards their edits', () => {
+    const { onParamsChange } = renderForm()
+
+    expect(screen.getByTestId('param-rows').textContent).toBe('id')
+    fireEvent.click(screen.getByTestId('param-rows'))
+
+    expect(onParamsChange).toHaveBeenCalledWith([
+      { name: 'id', value: '1', enabled: true },
+      { name: 'x', value: 'y', enabled: true }
+    ])
   })
 
   it('passes the header rows through and forwards their edits', () => {
