@@ -42,7 +42,7 @@ export function MarkupDrawButton({
 
   // Why: Electron <webview> clicks never reach the renderer document, so
   // Radix outside-click dismiss misses them. Window blur covers focus leaving
-  // the renderer into the guest (same pattern as BrowserImportHintButton).
+  // the renderer into the guest.
   useEffect(() => {
     if (!showHint) {
       return

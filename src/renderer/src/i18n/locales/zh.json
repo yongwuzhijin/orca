@@ -13650,18 +13650,6 @@
             "7baca7b1b8": "没有匹配项",
             "fc63f336aa": "{{value1}} 的 {{value0}}"
           },
-          "BrowserImportHintButton": {
-            "05e675fe96": "隐藏提示",
-            "77351d22f5": "浏览器设置",
-            "e0e125e074": "从文件...",
-            "0c6d254eca": "从 {{value0}}",
-            "244266c122": "导入…",
-            "e52a955e6f": "您始终可以在“设置”>“浏览器”中找到它。",
-            "4f5ffaa6a1": "导入浏览器数据",
-            "b24fef25be": "导入",
-            "02e89014c5": "从 {{value1}}{{value2}} 导入 {{value0}} cookie。",
-            "d40d584769": "已从文件导入 {{value0}} 个 Cookie。"
-          },
           "BrowserMobileDriverOverlay": {
             "a6914ee43f": "收回",
             "f4ecd61552": "该选项卡由您的手机控制。收回来在桌面上使用它。",
@@ -15255,7 +15243,6 @@
       "close": "关闭网络工具",
       "remoteUnavailable": "网络工具不适用于运行在远程主机上的标签页。",
       "armedIndicator": "网络规则正在改写该标签页的请求",
-      "armedBadge": "网络",
       "tabApi": "测试",
       "apiLoading": "加载中…",
       "apiMethod": "方法",

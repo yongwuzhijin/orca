@@ -64,7 +64,6 @@
       "close": "Close network tools",
       "remoteUnavailable": "Network tools are unavailable for tabs running on a remote host.",
       "armedIndicator": "Network rules are rewriting requests on this tab",
-      "armedBadge": "NET",
       "tabApi": "Test",
       "apiLoading": "Loading…",
       "apiMethod": "Method",
@@ -14934,18 +14933,6 @@
             "636a69cd66": "Find in page...",
             "7baca7b1b8": "No matches",
             "fc63f336aa": "{{value0}} of {{value1}}"
-          },
-          "BrowserImportHintButton": {
-            "05e675fe96": "Hide Hint",
-            "77351d22f5": "Browser Settings",
-            "e0e125e074": "From File…",
-            "0c6d254eca": "From {{value0}}",
-            "244266c122": "Import…",
-            "e52a955e6f": "You can always find this in Settings > Browser.",
-            "4f5ffaa6a1": "Import browser data",
-            "b24fef25be": "Import",
-            "02e89014c5": "Imported {{value0}} cookies from {{value1}}{{value2}}.",
-            "d40d584769": "Imported {{value0}} cookies from file."
           },
           "BrowserMobileDriverOverlay": {
             "a6914ee43f": "Take back",

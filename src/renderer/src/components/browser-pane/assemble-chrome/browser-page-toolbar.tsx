@@ -23,8 +23,8 @@ import { ArtifactPublishButton } from '@/components/artifacts/ArtifactPublishBut
 import { translate } from '@/i18n/i18n'
 import type { BrowserReloadTrigger } from '../navigate/browser-reload-action'
 import BrowserAddressBar from './BrowserAddressBar'
-import { BrowserImportHintButton } from './BrowserImportHintButton'
 import { BrowserToolbarMenu } from './BrowserToolbarMenu'
+import { BrowserNetworkToolsButton } from '../network-tools/browser-network-tools-button'
 import { MarkupDrawButton } from '../annotate/MarkupDrawButton'
 import { destroyPersistentWebview } from '../host-guest/webview-registry'
 import { readBrowserHtmlArtifactRequest } from '../describe-page/browser-artifact-upload'
@@ -198,8 +198,6 @@ export function BrowserPageToolbar({
         dismissSuggestionsRef={dismissAddressBarSuggestionsRef}
       />
 
-      <BrowserImportHintButton profileId={sessionProfileId} />
-
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="inline-flex">
@@ -285,6 +283,8 @@ export function BrowserPageToolbar({
           createRequest={() => readBrowserHtmlArtifactRequest(currentBrowserUrl)}
         />
       ) : null}
+
+      <BrowserNetworkToolsButton browserPageId={browserPageId} />
 
       <Button
         size="icon"

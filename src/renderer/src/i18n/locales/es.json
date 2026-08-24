@@ -13630,18 +13630,6 @@
             "7baca7b1b8": "No hay coincidencias",
             "fc63f336aa": "{{value0}} de {{value1}}"
           },
-          "BrowserImportHintButton": {
-            "05e675fe96": "Ocultar pista",
-            "77351d22f5": "Configuración del navegador",
-            "e0e125e074": "Desde archivo…",
-            "0c6d254eca": "Desde {{value0}}",
-            "244266c122": "Importar…",
-            "e52a955e6f": "Siempre puedes encontrar esto en Configuración > Navegador.",
-            "4f5ffaa6a1": "Importar datos del navegador",
-            "b24fef25be": "Importar",
-            "02e89014c5": "Se importaron {{value0}} cookies de {{value1}}{{value2}}.",
-            "d40d584769": "Se importaron {{value0}} cookies del archivo."
-          },
           "BrowserMobileDriverOverlay": {
             "a6914ee43f": "Devolver",
             "f4ecd61552": "Esta pestaña se controla desde su teléfono. Vuelva a usarlo en el escritorio.",
@@ -15235,7 +15223,6 @@
       "close": "Cerrar herramientas de red",
       "remoteUnavailable": "Las herramientas de red no están disponibles para pestañas que se ejecutan en un host remoto.",
       "armedIndicator": "Las reglas de red están reescribiendo las solicitudes de esta pestaña",
-      "armedBadge": "RED",
       "tabApi": "Prueba",
       "apiLoading": "Cargando…",
       "apiMethod": "Método",

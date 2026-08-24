@@ -2,7 +2,8 @@
 
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { BrowserNetworkArmedIndicator } from './browser-network-armed-indicator'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { BrowserNetworkToolsButton } from './browser-network-tools-button'
 import { useBrowserNetworkToolsPanel } from './browser-network-tools-panel-state'
 
 type ArmedRulesRead = { armedRuleIds: string[] }
@@ -21,56 +22,84 @@ beforeEach(() => {
 
 afterEach(cleanup)
 
-describe('BrowserNetworkArmedIndicator', () => {
-  it('stays invisible when nothing is armed', async () => {
-    const { container } = render(<BrowserNetworkArmedIndicator browserPageId="page-1" />)
+function renderButton(): void {
+  render(
+    <TooltipProvider>
+      <BrowserNetworkToolsButton browserPageId="page-1" />
+    </TooltipProvider>
+  )
+}
+
+function armedButton(): HTMLElement {
+  return screen.getByRole('button')
+}
+
+describe('BrowserNetworkToolsButton', () => {
+  it('stays unhighlighted when nothing is armed', async () => {
+    renderButton()
     await waitFor(() =>
       expect(networkReadArmedRules).toHaveBeenCalledWith({ browserPageId: 'page-1' })
     )
-    expect(container.textContent).toBe('')
+    expect(armedButton().getAttribute('data-armed')).toBeNull()
   })
 
-  it('shows the badge while a rule is armed so the rewriting is never invisible', async () => {
+  it('highlights while a rule is armed so the rewriting is never invisible', async () => {
     networkReadArmedRules.mockResolvedValueOnce({ armedRuleIds: ['rule-1'] })
-    render(<BrowserNetworkArmedIndicator browserPageId="page-1" />)
-    expect(await screen.findByText('NET')).toBeTruthy()
+    renderButton()
+    await waitFor(() => expect(armedButton().getAttribute('data-armed')).toBe('true'))
+    expect(armedButton().className).toContain('text-amber-600')
   })
 
   it('re-reads the arm state when the drawer opens', async () => {
-    render(<BrowserNetworkArmedIndicator browserPageId="page-1" />)
+    renderButton()
     await waitFor(() => expect(networkReadArmedRules).toHaveBeenCalledTimes(1))
     networkReadArmedRules.mockResolvedValueOnce({ armedRuleIds: ['rule-1'] })
-    useBrowserNetworkToolsPanel.getState().open('page-1')
+    act(() => {
+      useBrowserNetworkToolsPanel.getState().open('page-1')
+    })
     await waitFor(() => expect(networkReadArmedRules).toHaveBeenCalledTimes(2))
-    expect(await screen.findByText('NET')).toBeTruthy()
+    await waitFor(() => expect(armedButton().getAttribute('data-armed')).toBe('true'))
   })
 
-  it('hides the badge instead of crashing when the read fails', async () => {
+  it('drops the highlight instead of crashing when the read fails', async () => {
     networkReadArmedRules.mockRejectedValueOnce(new Error('ipc down'))
-    const { container } = render(<BrowserNetworkArmedIndicator browserPageId="page-1" />)
+    renderButton()
     await waitFor(() => expect(networkReadArmedRules).toHaveBeenCalled())
-    expect(container.textContent).toBe('')
+    expect(armedButton().getAttribute('data-armed')).toBeNull()
   })
 
-  it('describes why the badge is there so it is not a bare glyph', async () => {
+  it('names the armed state so the highlight is not the only signal', async () => {
     networkReadArmedRules.mockResolvedValueOnce({ armedRuleIds: ['rule-1'] })
-    render(<BrowserNetworkArmedIndicator browserPageId="page-1" />)
-    const badge = await screen.findByText('NET')
-    expect(badge.getAttribute('title')).toContain('rewriting requests')
+    renderButton()
+    await waitFor(() =>
+      expect(armedButton().getAttribute('aria-label')).toContain('rewriting requests')
+    )
   })
 
-  it('announces the badge to assistive tech', async () => {
-    networkReadArmedRules.mockResolvedValueOnce({ armedRuleIds: ['rule-1'] })
-    render(<BrowserNetworkArmedIndicator browserPageId="page-1" />)
-    const badge = await screen.findByText('NET')
-    expect(badge.getAttribute('role')).toBe('status')
+  it('falls back to the plain tools name while idle', async () => {
+    renderButton()
+    await waitFor(() => expect(networkReadArmedRules).toHaveBeenCalled())
+    expect(armedButton().getAttribute('aria-label')).toBe('Network tools')
+  })
+
+  it('toggles the drawer for its own page', async () => {
+    renderButton()
+    await waitFor(() => expect(networkReadArmedRules).toHaveBeenCalled())
+    act(() => {
+      armedButton().click()
+    })
+    expect(useBrowserNetworkToolsPanel.getState().openPageId).toBe('page-1')
+    act(() => {
+      armedButton().click()
+    })
+    expect(useBrowserNetworkToolsPanel.getState().openPageId).toBeNull()
   })
 
   it('drops a stale read that a newer one already superseded', async () => {
     const first = createDeferredArmedRulesRead()
     const second = createDeferredArmedRulesRead()
     networkReadArmedRules.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
-    const { container } = render(<BrowserNetworkArmedIndicator browserPageId="page-1" />)
+    renderButton()
     await waitFor(() => expect(networkReadArmedRules).toHaveBeenCalledTimes(1))
     act(() => {
       useBrowserNetworkToolsPanel.getState().open('page-1')
@@ -82,7 +111,7 @@ describe('BrowserNetworkArmedIndicator', () => {
     await act(async () => {
       first.resolve({ armedRuleIds: ['rule-1'] })
     })
-    expect(container.textContent).toBe('')
+    expect(armedButton().getAttribute('data-armed')).toBeNull()
   })
 })
 

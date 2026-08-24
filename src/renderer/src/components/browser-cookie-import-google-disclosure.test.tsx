@@ -14,13 +14,11 @@ const DISCLOSURE_DESCRIPTION = 'Sign in to Google directly in Orca.'
 
 vi.mock('@/components/ui/dropdown-menu', () => dropdownMenuStubs())
 vi.mock('../ui/dropdown-menu', () => dropdownMenuStubs())
-vi.mock('@/components/ui/popover', () => popoverStubs())
 vi.mock('@/store', () => ({ useAppStore: appStoreStub() }))
 vi.mock('../../store', () => ({ useAppStore: appStoreStub() }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 import { BrowserCookieImportDisclosure } from './BrowserCookieImportDisclosure'
-import { BrowserImportHintButton } from './browser-pane/assemble-chrome/BrowserImportHintButton'
 import { BrowserToolbarMenuDropdown } from './browser-pane/assemble-chrome/browser-toolbar-menu-dropdown'
 import { BrowserProfileRow } from './settings/BrowserProfileRow'
 import { BrowserUseCookieImportStep } from './settings/BrowserUseCookieImportStep'
@@ -70,11 +68,9 @@ describe('cookie-import Google disclosure footer', () => {
           worktreeId="wt-1"
           pageUrl="https://example.com"
           pageTitle="Example"
-          browserPageId="page-1"
         />
       )
     ],
-    ['browser toolbar hint', () => <BrowserImportHintButton profileId="default" />],
     [
       'Settings browser-use setup',
       () => (
@@ -156,15 +152,8 @@ function dropdownMenuStubs(): Record<string, unknown> {
   }
 }
 
-function popoverStubs(): Record<string, unknown> {
-  const passthrough = ({ children }: { children?: ReactNode }): ReactNode => children
-  const block = ({ children }: { children?: ReactNode }): ReactNode => <div>{children}</div>
-  return { Popover: passthrough, PopoverContent: block, PopoverTrigger: passthrough }
-}
-
 function appStoreStub(): unknown {
   const state = {
-    browserImportHintHidden: false,
     browserSessionImportState: null,
     detectedBrowsers: [
       {
@@ -179,10 +168,6 @@ function appStoreStub(): unknown {
     getKnownWorktreeById: vi.fn(() => null),
     importCookiesFromBrowser: vi.fn(),
     importCookiesToProfile: vi.fn(),
-    openSettingsTarget: vi.fn(),
-    openSettingsPage: vi.fn(),
-    persistedUIReady: true,
-    setBrowserImportHintHidden: vi.fn(),
     settingsSearchQuery: ''
   }
   const useAppStore = (selector?: (s: typeof state) => unknown): unknown =>

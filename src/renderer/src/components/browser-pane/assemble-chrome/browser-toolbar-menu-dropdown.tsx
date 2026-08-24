@@ -1,14 +1,4 @@
-import {
-  Bookmark,
-  Check,
-  Ellipsis,
-  Folder,
-  Import,
-  Monitor,
-  Network,
-  Plus,
-  Settings
-} from 'lucide-react'
+import { Bookmark, Check, Ellipsis, Folder, Import, Monitor, Plus, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -44,7 +34,6 @@ type DetectedBrowserEntry = {
   selectedProfile: string
 }
 import { BROWSER_VIEWPORT_PRESETS } from '../../../../../shared/browser-viewport-presets'
-import { useBrowserNetworkToolsPanel } from '../network-tools/browser-network-tools-panel-state'
 import { translate } from '@/i18n/i18n'
 
 type BrowserToolbarMenuDropdownProps = {
@@ -64,7 +53,6 @@ type BrowserToolbarMenuDropdownProps = {
   worktreeId: string
   pageUrl: string
   pageTitle: string
-  browserPageId: string
 }
 
 export function BrowserToolbarMenuDropdown({
@@ -83,8 +71,7 @@ export function BrowserToolbarMenuDropdown({
   onApplyViewportPreset,
   worktreeId,
   pageUrl,
-  pageTitle,
-  browserPageId
+  pageTitle
 }: BrowserToolbarMenuDropdownProps): React.JSX.Element {
   const quickLinkFolders = useAppStore((s) => s.settings?.browserQuickLinkFolders) ?? []
   const repoId = useAppStore((s) => s.getKnownWorktreeById(worktreeId)?.repoId ?? null)
@@ -250,16 +237,6 @@ export function BrowserToolbarMenuDropdown({
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
         </DropdownMenuSub>
-
-        <DropdownMenuItem
-          onSelect={() => {
-            onMenuOpenChange(false)
-            useBrowserNetworkToolsPanel.getState().toggle(browserPageId)
-          }}
-        >
-          <Network className="mr-2 size-3.5" />
-          {translate('browser.networkTools.title', 'Network tools')}
-        </DropdownMenuItem>
 
         <DropdownMenuSeparator />
 

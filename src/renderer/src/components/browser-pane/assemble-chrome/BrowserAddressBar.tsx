@@ -277,8 +277,7 @@ export default function BrowserAddressBar({
   // Why: Electron <webview> guests run in a separate process, so clicking the
   // page never dispatches pointerdown on the renderer document and Radix cannot
   // detect an outside dismiss. Window blur and focus moves into the guest (the
-  // host <webview> tag) close the dropdown the same way BrowserImportHintButton
-  // does for its popover.
+  // host <webview> tag) close the dropdown instead.
   useEffect(() => {
     if (!open) {
       return

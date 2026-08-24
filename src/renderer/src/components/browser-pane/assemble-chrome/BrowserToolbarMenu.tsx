@@ -3,13 +3,11 @@ import { toast } from 'sonner'
 import { emitBrowserCookieImportToast } from '@/lib/browser-cookie-import-toast'
 import { useAppStore } from '@/store'
 import { useMountedRef } from '@/hooks/useMountedRef'
-import { shouldShowBrowserImportHint } from './browser-import-hint-visibility'
 import type { BrowserViewportPresetId } from '../../../../../shared/browser-workspace-types'
 import {
   browserViewportPresetToOverride,
   getBrowserViewportPreset
 } from '../../../../../shared/browser-viewport-presets'
-import { BrowserNetworkArmedIndicator } from '../network-tools/browser-network-armed-indicator'
 import { BrowserToolbarMenuDropdown } from './browser-toolbar-menu-dropdown'
 import { BrowserToolbarProfileDialogs } from './browser-toolbar-profile-dialogs'
 import { translate } from '@/i18n/i18n'
@@ -49,15 +47,8 @@ export function BrowserToolbarMenu({
   const browserCookieTourStepActive = useAppStore(
     (s) => s.activeContextualTourId === 'browser' && s.activeContextualTourStepIndex === 2
   )
-  const browserImportHintHidden = useAppStore((s) => s.browserImportHintHidden)
-  const persistedUIReady = useAppStore((s) => s.persistedUIReady)
-  // The tour prefers the always-visible Import button; only force this overflow
-  // menu open to expose Import Cookies once that hint button is dismissed.
-  const importHintVisible = shouldShowBrowserImportHint({
-    persistedUIReady,
-    browserImportHintHidden
-  })
-  const shouldForceMenuOpen = browserCookieTourStepActive && isActive && !importHintVisible
+  // This overflow menu is the only Import Cookies surface, so the tour always opens it.
+  const shouldForceMenuOpen = browserCookieTourStepActive && isActive
 
   const applyViewportPreset = (nextId: BrowserViewportPresetId | null): void => {
     setBrowserPageViewportPreset(browserPageId, nextId)
@@ -77,8 +68,7 @@ export function BrowserToolbarMenu({
   const mountedRef = useMountedRef()
 
   useLayoutEffect(() => {
-    // Why: step 3 falls back to the Import Cookies row inside this menu, so open
-    // it only when the tour reaches that step and the hint button is hidden.
+    // Why: step 3 targets the Import Cookies row inside this menu, so it must be open.
     setMenuOpen(shouldForceMenuOpen)
   }, [shouldForceMenuOpen])
 
@@ -239,7 +229,6 @@ export function BrowserToolbarMenu({
 
   return (
     <>
-      <BrowserNetworkArmedIndicator browserPageId={browserPageId} />
       <BrowserToolbarMenuDropdown
         menuOpen={menuOpen}
         onMenuOpenChange={handleMenuOpenChange}
@@ -259,7 +248,6 @@ export function BrowserToolbarMenu({
         worktreeId={worktreeId}
         pageUrl={pageUrl}
         pageTitle={pageTitle}
-        browserPageId={browserPageId}
       />
 
       <BrowserToolbarProfileDialogs
