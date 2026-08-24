@@ -1,3 +1,4 @@
+import { orderKeyBetween } from '../../shared/todo/order-key'
 import Database from '../sqlite/sync-database'
 
 // Why: dedicated todo.db versioning mirrors OrchestrationDb so on-disk upgrades
@@ -99,8 +100,7 @@ export class TodoDatabase {
 
   // Why: transactional gate for future column additions. user_version is bumped
   // only on success so a mid-migration crash leaves the DB at the prior version;
-  // re-invocation short-circuits once current >= SCHEMA_VERSION. P1 has no
-  // historical steps yet — the skeleton keeps the upgrade path ready.
+  // re-invocation short-circuits once current >= SCHEMA_VERSION.
   private migrate(): void {
     const current = this.db.pragma('user_version', { simple: true }) as number
     if (current >= SCHEMA_VERSION) {
@@ -142,7 +142,7 @@ export class TodoDatabase {
       }
       // v6: 'backlog' folded into 'todo'; per-card solution-design opt-in.
       if (current < 6) {
-        this.db.exec("UPDATE todo_items SET status = 'todo' WHERE status = 'backlog'")
+        this.foldBacklogIntoTodo()
         if (!this.hasColumn('todo_items', 'design_stage_enabled')) {
           this.db.exec(
             'ALTER TABLE todo_items ADD COLUMN design_stage_enabled INTEGER NOT NULL DEFAULT 0'
@@ -154,6 +154,36 @@ export class TodoDatabase {
     } catch (err) {
       this.db.exec('ROLLBACK')
       throw err
+    }
+  }
+
+  // Why: order_key was scoped per (project, status), so backlog and todo each
+  // walked the same sequence from FIRST_ORDER_KEY. A bare status flip leaves exact
+  // ties that orderKeyBetween() rejects on the next drag, so re-append each moved
+  // card after the project's todo tail instead. Iterative by necessity — a
+  // correlated-subquery UPDATE would read the rows it is mutating.
+  private foldBacklogIntoTodo(): void {
+    const moved = this.db
+      .prepare(
+        `SELECT id, project_id FROM todo_items
+         WHERE status = 'backlog' ORDER BY project_id, order_key`
+      )
+      .all() as { id: string; project_id: string }[]
+    const rekey = this.db.prepare(
+      "UPDATE todo_items SET status = 'todo', order_key = ? WHERE id = ?"
+    )
+    const readTail = this.db.prepare(
+      `SELECT MAX(order_key) AS k FROM todo_items
+       WHERE project_id = ? AND status = 'todo'`
+    )
+    const tails = new Map<string, string | null>()
+    for (const row of moved) {
+      const tail = tails.has(row.project_id)
+        ? tails.get(row.project_id)!
+        : (readTail.get(row.project_id) as { k: string | null }).k
+      const key = orderKeyBetween(tail, null)
+      rekey.run(key, row.id)
+      tails.set(row.project_id, key)
     }
   }
 

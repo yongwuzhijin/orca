@@ -3,13 +3,17 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it } from 'vitest'
+import { orderKeyBetween } from '../../shared/todo/order-key'
 import { TodoDatabase, SCHEMA_VERSION } from './todo-database'
 
 describe('TodoDatabase', () => {
   let db: TodoDatabase | undefined
 
   afterEach(() => {
+    // Why: close() on an already-closed handle throws, so drop the reference —
+    // tests that close their own handle must not poison teardown.
     db?.close()
+    db = undefined
   })
 
   function createDb(): TodoDatabase {
@@ -82,6 +86,10 @@ describe('TodoDatabase', () => {
     expect(cols).toContain('workspace_project_id')
     expect(cols).toContain('workspace_name')
     expect(cols).toContain('preferred_agent')
+    // Why: without this, dropping the column from CREATE TABLE still passes the
+    // suite while every new install breaks on first insert — and ensureSchema has
+    // already stamped user_version = 6, so migrate() can never repair it.
+    expect(cols).toContain('design_stage_enabled')
   })
 
   it('adds workspace binding columns to an on-disk legacy v1 db when reopened', () => {
@@ -100,6 +108,8 @@ describe('TodoDatabase', () => {
       created_at TEXT NOT NULL, updated_at TEXT NOT NULL);`)
     raw.exec(`CREATE TABLE todo_templates (id TEXT PRIMARY KEY, name TEXT NOT NULL,
       body TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);`)
+    raw.exec(`INSERT INTO todo_items (id, identifier, project_id, title, status, order_key,
+      created_at, updated_at) VALUES ('l1', 'L-1', 'p1', 'staged', 'backlog', 'i', 'now', 'now');`)
     raw.exec('PRAGMA user_version = 1')
     raw.close()
 
@@ -111,6 +121,12 @@ describe('TodoDatabase', () => {
     expect(cols).toContain('workspace_project_id')
     expect(cols).toContain('workspace_name')
     expect(cols).toContain('preferred_agent')
+    // Why: a `current === 5` guard would leave this db stamped v6 with the column
+    // missing — unrecoverable. Pre-v5 dbs must take the v6 step too.
+    expect(cols).toContain('design_stage_enabled')
+    expect(db.raw.prepare('SELECT status FROM todo_items WHERE id = ?').get('l1')).toEqual({
+      status: 'todo'
+    })
     expect(version).toBe(6)
   })
 
@@ -147,6 +163,8 @@ describe('TodoDatabase', () => {
       created_at TEXT NOT NULL, updated_at TEXT NOT NULL, default_working_dir TEXT);`)
     raw.exec(`CREATE TABLE todo_templates (id TEXT PRIMARY KEY, name TEXT NOT NULL,
       body TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);`)
+    raw.exec(`INSERT INTO todo_items (id, identifier, project_id, title, status, order_key,
+      created_at, updated_at) VALUES ('v4a', 'V-1', 'p1', 'staged', 'backlog', 'i', 'now', 'now');`)
     raw.exec('PRAGMA user_version = 4')
     raw.close()
 
@@ -156,11 +174,19 @@ describe('TodoDatabase', () => {
     const version = db.raw.pragma('user_version', { simple: true }) as number
     expect(cols).toContain('auto_pilot_enabled')
     expect(cols).toContain('auto_pilot_max_turns')
+    // Why: pre-v5 dbs must also take the v6 step, else they land stamped v6 with
+    // design_stage_enabled missing and no path back.
+    expect(cols).toContain('design_stage_enabled')
+    expect(db.raw.prepare('SELECT status FROM todo_items WHERE id = ?').get('v4a')).toEqual({
+      status: 'todo'
+    })
     expect(version).toBe(6)
   })
 
-  it('migrates v5 to v6: backfills backlog rows and adds design_stage_enabled', () => {
-    const file = join(mkdtempSync(join(tmpdir(), 'orca-todo-mig-v6-')), 'todo.db')
+  // Returns the path to an on-disk v5 db whose todo_items holds `itemValues`
+  // (a VALUES tail for id, identifier, project_id, title, status, order_key).
+  function createV5DbFile(prefix: string, itemValues: string): string {
+    const file = join(mkdtempSync(join(tmpdir(), prefix)), 'todo.db')
     const raw = new DatabaseSync(file)
     raw.exec(`
       CREATE TABLE todo_projects (
@@ -199,12 +225,20 @@ describe('TodoDatabase', () => {
       INSERT INTO todo_projects (id, name, identifier_prefix, next_sequence, created_at, updated_at)
         VALUES ('p1', 'Proj', 'P', 3, 'now', 'now');
       INSERT INTO todo_items (id, identifier, project_id, title, status, order_key, created_at, updated_at)
-        VALUES ('a', 'P-1', 'p1', 'staged', 'backlog', 'a0', 'now', 'now'),
-               ('b', 'P-2', 'p1', 'ready', 'todo', 'a1', 'now', 'now'),
-               ('c', 'P-3', 'p1', 'shipped', 'done', 'a2', 'now', 'now');
+        VALUES ${itemValues};
     `)
     raw.exec('PRAGMA user_version = 5')
     raw.close()
+    return file
+  }
+
+  it('migrates v5 to v6: backfills backlog rows and adds design_stage_enabled', () => {
+    const file = createV5DbFile(
+      'orca-todo-mig-v6-',
+      `('a', 'P-1', 'p1', 'staged', 'backlog', 'a0', 'now', 'now'),
+       ('b', 'P-2', 'p1', 'ready', 'todo', 'a1', 'now', 'now'),
+       ('c', 'P-3', 'p1', 'shipped', 'done', 'a2', 'now', 'now')`
+    )
 
     db = new TodoDatabase(file)
 
@@ -226,5 +260,36 @@ describe('TodoDatabase', () => {
     expect(
       db.raw.prepare('SELECT COUNT(*) AS n FROM todo_items WHERE status = ?').get('todo')
     ).toEqual({ n: 2 })
+  })
+
+  it('rekeys folded backlog rows so order_key stays unique within a project', () => {
+    // Why: order_key was scoped per (project, status), so backlog and todo each
+    // walked the same sequence from FIRST_ORDER_KEY. A bare status flip leaves
+    // exact ties, and the next drag calls orderKeyBetween(k, k), which throws.
+    const file = createV5DbFile(
+      'orca-todo-mig-v6-keys-',
+      `('a', 'P-1', 'p1', 'staged', 'backlog', 'i', 'now', 'now'),
+       ('b', 'P-2', 'p1', 'ready', 'todo', 'i', 'now', 'now'),
+       ('c', 'P-3', 'p2', 'other project', 'backlog', 'i', 'now', 'now')`
+    )
+
+    db = new TodoDatabase(file)
+
+    const p1 = db.raw
+      .prepare(
+        `SELECT id, status, order_key FROM todo_items
+         WHERE project_id = 'p1' ORDER BY order_key`
+      )
+      .all() as { id: string; status: string; order_key: string }[]
+    expect(p1.map((r) => r.status)).toEqual(['todo', 'todo'])
+    // Pre-existing todo card keeps its place; the ex-backlog card appends after it.
+    expect(p1.map((r) => r.id)).toEqual(['b', 'a'])
+    expect(p1[0].order_key).not.toBe(p1[1].order_key)
+    expect(() => orderKeyBetween(p1[0].order_key, p1[1].order_key)).not.toThrow()
+
+    // Per-project scoping: p2's only card needs no rekey away from 'i'.
+    expect(db.raw.prepare("SELECT status, order_key FROM todo_items WHERE id = 'c'").get()).toEqual(
+      { status: 'todo', order_key: 'i' }
+    )
   })
 })
