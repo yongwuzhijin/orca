@@ -5,13 +5,14 @@
 # the exact hosts that need it most. deb/rpm both run this after unpacking.
 #
 # The shim resolves the real app by walking up from its own location, so a
-# symlink works. We discover the install dir instead of hardcoding /opt/Orca
-# because electron-builder's directory name can vary by productName sanitization.
+# symlink works. We discover the install dir instead of hardcoding one path
+# because electron-builder's directory name can vary by productName sanitization,
+# and /opt/Orca still appears on hosts installed before the DmonWork rename.
 set -e
 
 link="/usr/bin/orca-ide"
 
-for dir in /opt/Orca /opt/orca-ide /opt/orca; do
+for dir in /opt/DmonWork /opt/Orca /opt/orca-ide /opt/orca; do
   sandbox="$dir/chrome-sandbox"
   if [ -f "$sandbox" ]; then
     # Why: packaged Linux installs must leave Chromium's sandbox helper usable

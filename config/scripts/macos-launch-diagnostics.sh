@@ -66,7 +66,7 @@ TIMESTAMP="$(date -u '+%Y%m%dT%H%M%SZ')"
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/orca-launch-diagnostics.XXXXXXXX")"
 OUT_DIR="$WORK_DIR/output"
 MOUNT_DIR="$WORK_DIR/mount"
-APP_DIR="$WORK_DIR/Orca.app"
+APP_DIR="$WORK_DIR/DmonWork.app"
 DMG_PATH="$WORK_DIR/$ASSET"
 mkdir -p "$OUT_DIR" "$MOUNT_DIR"
 
@@ -121,20 +121,20 @@ write_environment_report() {
     echo "## shell"
     echo "$SHELL"
     echo
-    echo "## current Orca processes before diagnostics"
-    pgrep -fl 'Orca|orca' || true
+    echo "## current DmonWork processes before diagnostics"
+    pgrep -fl 'DmonWork|Orca|orca' || true
   } >"$OUT_DIR/environment.txt"
 }
 
 ensure_no_existing_orca() {
   local existing
-  existing="$(pgrep -x Orca || true)"
+  existing="$(pgrep -x DmonWork || true)"
   if [[ -z "$existing" ]]; then
     return 0
   fi
 
   {
-    echo "An Orca process is already running. Close Orca and run this script again."
+    echo "A DmonWork process is already running. Close DmonWork and run this script again."
     echo
     ps -p "$(printf '%s' "$existing" | paste -sd, -)" -o pid=,ppid=,command= || true
   } | tee "$OUT_DIR/existing-orca-process.txt" >&2
@@ -187,7 +187,7 @@ write_app_report() {
 
 start_log_stream() {
   local file="$1"
-  local predicate='process == "Orca" OR eventMessage CONTAINS[c] "Orca" OR eventMessage CONTAINS[c] "com.stablyai.orca"'
+  local predicate='process == "DmonWork" OR eventMessage CONTAINS[c] "DmonWork" OR eventMessage CONTAINS[c] "com.yongwuzhijin.dmonwork"'
   if command -v log >/dev/null 2>&1; then
     command log stream --style compact --predicate "$predicate" >"$file" 2>&1 &
     echo "$!"
@@ -205,7 +205,7 @@ stop_log_stream() {
 }
 
 latest_orca_pid_for_app() {
-  pgrep -nf "$APP_DIR/Contents/MacOS/Orca" || true
+  pgrep -nf "$APP_DIR/Contents/MacOS/DmonWork" || true
 }
 
 sample_process_once() {
@@ -325,7 +325,7 @@ run_direct_exec_probe() {
     ORCA_STARTUP_DIAGNOSTICS=trace \
     ORCA_STARTUP_DIAGNOSTICS_TRACE_LIMIT=30000 \
     ORCA_STARTUP_DIAGNOSTICS_FILE="$bootstrap_file" \
-    "$APP_DIR/Contents/MacOS/Orca" >"$stdout_file" 2>"$stderr_file" &
+    "$APP_DIR/Contents/MacOS/DmonWork" >"$stdout_file" 2>"$stderr_file" &
   local runner_pid="$!"
   wait_for_probe "$runner_pid" "$label"
   echo "ended_utc=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >>"$OUT_DIR/$label.meta"
@@ -333,7 +333,7 @@ run_direct_exec_probe() {
 }
 
 write_system_log_snapshot() {
-  local predicate='process == "Orca" OR eventMessage CONTAINS[c] "Orca" OR eventMessage CONTAINS[c] "com.stablyai.orca"'
+  local predicate='process == "DmonWork" OR eventMessage CONTAINS[c] "DmonWork" OR eventMessage CONTAINS[c] "com.yongwuzhijin.dmonwork"'
   if command -v log >/dev/null 2>&1; then
     diag_log "capturing recent unified log snapshot"
     command log show --style syslog --last 10m --predicate "$predicate" >"$OUT_DIR/system-log-last-10m.log" 2>&1 || true

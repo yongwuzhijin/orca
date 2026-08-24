@@ -7,7 +7,7 @@ cask "orca@rc" do
 
   url "https://github.com/stablyai/orca/releases/download/v#{version}/orca-macos-#{arch}.dmg",
       verified: "github.com/stablyai/orca/"
-  name "Orca RC"
+  name "DmonWork RC"
   desc "IDE for orchestrating AI coding agents across terminals and worktrees"
   homepage "https://onorca.dev/"
 
@@ -27,26 +27,34 @@ cask "orca@rc" do
     end
   end
 
-  # Why: RC installs should follow Orca's prerelease-aware updater instead of
+  # Why: RC installs should follow the app's prerelease-aware updater instead of
   # waiting for Homebrew metadata churn between frequent release candidates.
   auto_updates true
   conflicts_with cask: "orca"
   depends_on macos: :big_sur
 
-  app "Orca.app"
+  app "DmonWork.app"
 
   # Why: expose the bundled `orca` CLI on PATH at install time (Homebrew symlinks
   # this into its already-on-PATH bin dir). Without it, the CLI is only registered
   # by the in-app "Install CLI" action, which a headless host can never trigger —
   # so `orca serve` on a server would be unreachable from the shell. The shim
   # resolves the real app by walking symlinks, so the Homebrew symlink works.
-  binary "#{appdir}/Orca.app/Contents/Resources/bin/orca"
+  binary "#{appdir}/DmonWork.app/Contents/Resources/bin/orca"
 
-  # Why: Orca writes user data under ~/.orca (worktrees, agent state) and
+  # Why: the app writes user data under ~/.orca (worktrees, agent state) and
   # Electron's standard userData directories. Zap removes everything the app
-  # creates during normal use so `brew uninstall --zap` is a clean slate.
+  # creates during normal use so `brew uninstall --zap` is a clean slate. The
+  # com.stablyai.orca / Orca entries are the pre-rename identity, kept so a zap
+  # still cleans up after installs that predate the DmonWork rename.
   zap trash: [
     "~/.orca",
+    "~/Library/Application Support/DmonWork",
+    "~/Library/Caches/com.yongwuzhijin.dmonwork",
+    "~/Library/Caches/com.yongwuzhijin.dmonwork.ShipIt",
+    "~/Library/HTTPStorages/com.yongwuzhijin.dmonwork",
+    "~/Library/Preferences/com.yongwuzhijin.dmonwork.plist",
+    "~/Library/Saved Application State/com.yongwuzhijin.dmonwork.savedState",
     "~/Library/Application Support/Orca",
     "~/Library/Caches/com.stablyai.orca",
     "~/Library/Caches/com.stablyai.orca.ShipIt",

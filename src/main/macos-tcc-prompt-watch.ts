@@ -6,10 +6,10 @@ import type { Readable } from 'node:stream'
 export type LogStreamChild = ChildProcessByStdio<null, Readable, Readable>
 
 /**
- * Counts the macOS TCC consent dialogs that name Orca as the responsible
+ * Counts the macOS TCC consent dialogs that name this app as the responsible
  * process (#9756). Terminal children — agent CLIs and anything else the user
- * runs — perform the access, but TCC walks the responsibility chain back to
- * Orca and puts Orca's name on the dialog, so users read it as Orca snooping.
+ * runs — perform the access, but TCC walks the responsibility chain back to us
+ * and puts our name on the dialog, so users read it as the app snooping.
  *
  * tccd emits one `AUTHREQ_PROMPTING` line per dialog it actually displays,
  * carrying the service and both identities, so this never has to correlate
@@ -19,12 +19,12 @@ export type LogStreamChild = ChildProcessByStdio<null, Readable, Readable>
 
 /** Why: terminals run from the detached helper, which TCC can hold responsible independently. */
 const ORCA_RESPONSIBLE_IDENTIFIERS = new Set([
-  'com.stablyai.orca',
-  'com.stablyai.orca.helper',
-  'com.stablyai.orca.dev',
-  'com.stablyai.orca.dev.helper',
-  'com.stablyai.orca.local',
-  'com.stablyai.orca.local.helper'
+  'com.yongwuzhijin.dmonwork',
+  'com.yongwuzhijin.dmonwork.helper',
+  'com.yongwuzhijin.dmonwork.dev',
+  'com.yongwuzhijin.dmonwork.dev.helper',
+  'com.yongwuzhijin.dmonwork.local',
+  'com.yongwuzhijin.dmonwork.local.helper'
 ])
 
 /** Why: the prompt classes #9756 is about — other-apps' data plus the protected home folders agents sweep. */
