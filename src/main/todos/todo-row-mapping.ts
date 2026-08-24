@@ -48,6 +48,7 @@ export type TodoItemRow = {
   preferred_agent: string | null
   auto_pilot_enabled: number
   auto_pilot_max_turns: number | null
+  design_stage_enabled: number
 }
 
 export function rowToProject(row: TodoProjectRow): TodoProject {
@@ -110,6 +111,7 @@ export function rowToTodoItem(row: TodoItemRow): TodoItem {
     preferredAgent:
       row.preferred_agent && isAcpEngine(row.preferred_agent) ? row.preferred_agent : null,
     autoPilotEnabled: row.auto_pilot_enabled === 1,
-    autoPilotMaxTurns: row.auto_pilot_max_turns
+    autoPilotMaxTurns: row.auto_pilot_max_turns,
+    designStageEnabled: row.design_stage_enabled === 1
   }
 }

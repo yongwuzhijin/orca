@@ -37,7 +37,8 @@ function mkItem(id: string, status: TodoStatus, scheduledDate: string | null): T
     workspaceName: null,
     preferredAgent: null,
     autoPilotEnabled: false,
-    autoPilotMaxTurns: null
+    autoPilotMaxTurns: null,
+    designStageEnabled: false
   }
 }
 

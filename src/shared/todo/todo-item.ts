@@ -30,6 +30,8 @@ export type TodoItem = {
   autoPilotEnabled: boolean
   /** Per-task continuation turn cap; null falls back to the global default. */
   autoPilotMaxTurns: number | null
+  /** Whether starting this task routes it through the solution_design stage. Default false. */
+  designStageEnabled: boolean
 }
 
 export type CreateTodoItemInput = {
@@ -47,6 +49,7 @@ export type CreateTodoItemInput = {
   preferredAgent?: AcpEngine | null
   autoPilotEnabled?: boolean
   autoPilotMaxTurns?: number | null
+  designStageEnabled?: boolean
 }
 
 export type UpdateTodoItemPatch = {
@@ -63,4 +66,5 @@ export type UpdateTodoItemPatch = {
   preferredAgent?: AcpEngine | null
   autoPilotEnabled?: boolean
   autoPilotMaxTurns?: number | null
+  designStageEnabled?: boolean
 }

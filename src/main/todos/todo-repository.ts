@@ -11,13 +11,12 @@ import type {
   TodoProject,
   UpdateTodoProjectInput
 } from '../../shared/todo/todo-project'
-import { isTerminalTodoStatus, type TodoStatus } from '../../shared/todo/todo-status'
+import type { TodoStatus } from '../../shared/todo/todo-status'
 import type {
   CreateTodoTemplateInput,
   TodoTemplate,
   UpdateTodoTemplateInput
 } from '../../shared/todo/todo-template'
-import { orderKeyBetween } from '../../shared/todo/order-key'
 import type { TodoDatabase } from './todo-database'
 import {
   createTodoProject,
@@ -27,31 +26,16 @@ import {
   renameTodoProject,
   updateTodoProject
 } from './todo-project-store'
-import { DEFAULT_TODO_PROJECT_ID } from '../../shared/todo/todo-default-project'
+import { deriveTodoItemTimestamps, insertTodoItem } from './todo-item-store'
 import {
   rowToTemplate,
   rowToTodoItem,
   type TodoItemRow,
-  type TodoProjectRow,
   type TodoTemplateRow
 } from './todo-row-mapping'
 
 function nowIso(): string {
   return new Date().toISOString()
-}
-
-// startedAt/completedAt are derived from status, not set directly by callers:
-// completedAt tracks the first (and only, until reopened) terminal entry;
-// startedAt is a one-way stamp set when work first enters in_progress.
-function deriveTimestamps(
-  newStatus: TodoStatus,
-  previousStartedAt: string | null,
-  previousCompletedAt: string | null,
-  timestamp: string
-): { startedAt: string | null; completedAt: string | null } {
-  const completedAt = isTerminalTodoStatus(newStatus) ? (previousCompletedAt ?? timestamp) : null
-  const startedAt = previousStartedAt ?? (newStatus === 'in_progress' ? timestamp : null)
-  return { startedAt, completedAt }
 }
 
 export class TodoRepository {
@@ -160,93 +144,7 @@ export class TodoRepository {
   }
 
   createItem(input: CreateTodoItemInput): TodoItem {
-    // Why: UI locks creates to todo-default; ensure here so create still works
-    // if listProjects never ran (e.g. main/renderer skew after HMR).
-    if (input.projectId === DEFAULT_TODO_PROJECT_ID) {
-      ensureDefaultTodoProject(this.db)
-    }
-    const timestamp = nowIso()
-    const id = randomUUID()
-    const status: TodoStatus = input.status ?? 'todo'
-    const priority = input.priority ?? 'none'
-    const description = input.description ?? ''
-    const labels = input.labels ?? []
-    const scheduledDate = input.scheduledDate ?? null
-    const estimate = input.estimate ?? null
-    const templateId = input.templateId ?? null
-    const workspaceProjectId = input.workspaceProjectId ?? null
-    const workspaceName = input.workspaceName?.trim() ? input.workspaceName.trim() : null
-    const preferredAgent = input.preferredAgent ?? null
-    const autoPilotEnabled = input.autoPilotEnabled ?? false
-    const autoPilotMaxTurns = input.autoPilotMaxTurns ?? null
-    const { startedAt, completedAt } = deriveTimestamps(status, null, null, timestamp)
-
-    this.db.exec('BEGIN')
-    try {
-      const project = this.db
-        .prepare('SELECT * FROM todo_projects WHERE id = ?')
-        .get(input.projectId) as TodoProjectRow | undefined
-      if (!project) {
-        throw new Error(`TodoRepository: project not found: ${input.projectId}`)
-      }
-      const sequence = project.next_sequence
-      const identifier = `${project.identifier_prefix}-${sequence}`
-
-      this.db
-        .prepare('UPDATE todo_projects SET next_sequence = ?, updated_at = ? WHERE id = ?')
-        .run(sequence + 1, timestamp, input.projectId)
-
-      // Append to the tail of the target column: place after the current max
-      // order_key among same-project + same-status items.
-      const tail = this.db
-        .prepare(
-          'SELECT MAX(order_key) AS max_key FROM todo_items WHERE project_id = ? AND status = ?'
-        )
-        .get(input.projectId, status) as { max_key: string | null } | undefined
-      const orderKey = orderKeyBetween(tail?.max_key ?? null, null)
-
-      this.db
-        .prepare(
-          `INSERT INTO todo_items (
-            id, identifier, project_id, title, description, status, priority,
-            scheduled_date, estimate, labels, template_id, order_key,
-            created_at, updated_at, started_at, completed_at, session_id,
-            workspace_project_id, workspace_name, preferred_agent, auto_pilot_enabled, auto_pilot_max_turns
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        )
-        .run(
-          id,
-          identifier,
-          input.projectId,
-          input.title,
-          description,
-          status,
-          priority,
-          scheduledDate,
-          estimate,
-          JSON.stringify(labels),
-          templateId,
-          orderKey,
-          timestamp,
-          timestamp,
-          startedAt,
-          completedAt,
-          // New items start with no ACP session; setSessionId links one later.
-          null,
-          workspaceProjectId,
-          workspaceName,
-          preferredAgent,
-          autoPilotEnabled ? 1 : 0,
-          autoPilotMaxTurns
-        )
-
-      this.db.exec('COMMIT')
-    } catch (err) {
-      this.db.exec('ROLLBACK')
-      throw err
-    }
-
-    return this.requireItem(id)
+    return this.requireItem(insertTodoItem(this.db, input))
   }
 
   updateItem(id: string, patch: UpdateTodoItemPatch): TodoItem {
@@ -276,12 +174,14 @@ export class TodoRepository {
       patch.autoPilotEnabled !== undefined ? patch.autoPilotEnabled : current.autoPilotEnabled
     const autoPilotMaxTurns =
       patch.autoPilotMaxTurns !== undefined ? patch.autoPilotMaxTurns : current.autoPilotMaxTurns
+    const designStageEnabled =
+      patch.designStageEnabled !== undefined ? patch.designStageEnabled : current.designStageEnabled
 
     // Only re-derive lifecycle stamps when the status actually changes; a plain
     // field edit must not disturb startedAt/completedAt.
     const timestamps =
       patch.status !== undefined
-        ? deriveTimestamps(status, current.startedAt, current.completedAt, timestamp)
+        ? deriveTodoItemTimestamps(status, current.startedAt, current.completedAt, timestamp)
         : { startedAt: current.startedAt, completedAt: current.completedAt }
 
     this.db
@@ -290,7 +190,7 @@ export class TodoRepository {
           title = ?, description = ?, status = ?, priority = ?,
           scheduled_date = ?, estimate = ?, labels = ?, template_id = ?,
           workspace_project_id = ?, workspace_name = ?, preferred_agent = ?,
-          auto_pilot_enabled = ?, auto_pilot_max_turns = ?,
+          auto_pilot_enabled = ?, auto_pilot_max_turns = ?, design_stage_enabled = ?,
           updated_at = ?, started_at = ?, completed_at = ?
         WHERE id = ?`
       )
@@ -308,6 +208,7 @@ export class TodoRepository {
         preferredAgent,
         autoPilotEnabled ? 1 : 0,
         autoPilotMaxTurns,
+        designStageEnabled ? 1 : 0,
         timestamp,
         timestamps.startedAt,
         timestamps.completedAt,
@@ -320,7 +221,12 @@ export class TodoRepository {
   moveItem(id: string, status: TodoStatus, orderKey: string): TodoItem {
     const current = this.requireItem(id)
     const timestamp = nowIso()
-    const timestamps = deriveTimestamps(status, current.startedAt, current.completedAt, timestamp)
+    const timestamps = deriveTodoItemTimestamps(
+      status,
+      current.startedAt,
+      current.completedAt,
+      timestamp
+    )
 
     this.db
       .prepare(

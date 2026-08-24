@@ -303,6 +303,37 @@ describe('TodoRepository', () => {
     })
   })
 
+  describe('items — design stage opt-in', () => {
+    it('defaults designStageEnabled to false and round-trips a patch', () => {
+      const repo = createRepo()
+      const project = makeProject(repo)
+      const item = repo.createItem({ projectId: project.id, title: 'Design me' })
+      expect(item.status).toBe('todo')
+      expect(item.designStageEnabled).toBe(false)
+
+      const enabled = repo.updateItem(item.id, { designStageEnabled: true })
+      expect(enabled.designStageEnabled).toBe(true)
+      expect(repo.getItem(item.id)?.designStageEnabled).toBe(true)
+
+      // Why: an unrelated patch must not silently reset the flag.
+      const renamed = repo.updateItem(item.id, { title: 'Still design me' })
+      expect(renamed.designStageEnabled).toBe(true)
+
+      expect(repo.updateItem(item.id, { designStageEnabled: false }).designStageEnabled).toBe(false)
+    })
+
+    it('honours designStageEnabled at creation time', () => {
+      const repo = createRepo()
+      const project = makeProject(repo)
+      const item = repo.createItem({
+        projectId: project.id,
+        title: 'Pre-flagged',
+        designStageEnabled: true
+      })
+      expect(repo.getItem(item.id)?.designStageEnabled).toBe(true)
+    })
+  })
+
   describe('templates CRUD', () => {
     it('creates, lists, updates and deletes templates', () => {
       const repo = createRepo()

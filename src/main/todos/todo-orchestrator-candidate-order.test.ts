@@ -26,6 +26,7 @@ function item(over: Partial<TodoItem>): TodoItem {
     sessionId: null,
     autoPilotEnabled: true,
     autoPilotMaxTurns: null,
+    designStageEnabled: false,
     ...over
   }
 }

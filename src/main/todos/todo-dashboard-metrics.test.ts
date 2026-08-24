@@ -29,6 +29,7 @@ function done(overrides: Partial<TodoItem> = {}): TodoItem {
     preferredAgent: null,
     autoPilotEnabled: false,
     autoPilotMaxTurns: null,
+    designStageEnabled: false,
     ...overrides
   }
 }

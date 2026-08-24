@@ -44,7 +44,8 @@ function mkItem(id: string, status: TodoItem['status']): TodoItem {
     workspaceName: null,
     preferredAgent: null,
     autoPilotEnabled: false,
-    autoPilotMaxTurns: null
+    autoPilotMaxTurns: null,
+    designStageEnabled: false
   }
 }
 

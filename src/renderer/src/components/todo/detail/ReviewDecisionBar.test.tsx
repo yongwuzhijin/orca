@@ -42,7 +42,8 @@ function mkItem(): TodoItem {
     workspaceName: null,
     preferredAgent: null,
     autoPilotEnabled: false,
-    autoPilotMaxTurns: null
+    autoPilotMaxTurns: null,
+    designStageEnabled: false
   }
 }
 
