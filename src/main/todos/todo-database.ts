@@ -6,7 +6,9 @@ import Database from '../sqlite/sync-database'
 // v3 adds todo_projects.default_working_dir, the project-level default cwd.
 // v4 adds workspace binding fields on todo_items for create-task → start-session.
 // v5 adds auto_pilot_enabled / auto_pilot_max_turns on todo_items for the orchestrator.
-export const SCHEMA_VERSION = 5
+// v6 folds the redundant 'backlog' status into 'todo' and adds
+// design_stage_enabled, the per-card opt-in for the solution-design stage.
+export const SCHEMA_VERSION = 6
 
 export class TodoDatabase {
   private db: Database.Database
@@ -55,7 +57,7 @@ export class TodoDatabase {
         project_id TEXT NOT NULL REFERENCES todo_projects(id) ON DELETE CASCADE,
         title TEXT NOT NULL,
         description TEXT NOT NULL DEFAULT '',
-        status TEXT NOT NULL DEFAULT 'backlog',
+        status TEXT NOT NULL DEFAULT 'todo',
         priority TEXT NOT NULL DEFAULT 'none',
         scheduled_date TEXT,
         estimate INTEGER,
@@ -71,7 +73,8 @@ export class TodoDatabase {
         workspace_name TEXT,
         preferred_agent TEXT,
         auto_pilot_enabled INTEGER NOT NULL DEFAULT 0,
-        auto_pilot_max_turns INTEGER
+        auto_pilot_max_turns INTEGER,
+        design_stage_enabled INTEGER NOT NULL DEFAULT 0
       );
 
       CREATE INDEX IF NOT EXISTS idx_todo_items_project_status
@@ -135,6 +138,15 @@ export class TodoDatabase {
         }
         if (!this.hasColumn('todo_items', 'auto_pilot_max_turns')) {
           this.db.exec('ALTER TABLE todo_items ADD COLUMN auto_pilot_max_turns INTEGER')
+        }
+      }
+      // v6: 'backlog' folded into 'todo'; per-card solution-design opt-in.
+      if (current < 6) {
+        this.db.exec("UPDATE todo_items SET status = 'todo' WHERE status = 'backlog'")
+        if (!this.hasColumn('todo_items', 'design_stage_enabled')) {
+          this.db.exec(
+            'ALTER TABLE todo_items ADD COLUMN design_stage_enabled INTEGER NOT NULL DEFAULT 0'
+          )
         }
       }
       this.db.pragma(`user_version = ${SCHEMA_VERSION}`)

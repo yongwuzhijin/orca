@@ -35,7 +35,7 @@ describe('TodoDatabase', () => {
   it('sets user_version to SCHEMA_VERSION', () => {
     const d = createDb()
     const version = d.raw.pragma('user_version', { simple: true }) as number
-    expect(SCHEMA_VERSION).toBe(5)
+    expect(SCHEMA_VERSION).toBe(6)
     expect(version).toBe(SCHEMA_VERSION)
   })
 
@@ -74,9 +74,9 @@ describe('TodoDatabase', () => {
     expect(row.next_sequence).toBe(1)
   })
 
-  it('ships schema version 5 with workspace binding columns on a fresh db', () => {
+  it('ships schema version 6 with workspace binding columns on a fresh db', () => {
     const d = createDb()
-    expect(SCHEMA_VERSION).toBe(5)
+    expect(SCHEMA_VERSION).toBe(6)
     const cols = (d.raw.pragma('table_info(todo_items)') as { name: string }[]).map((c) => c.name)
     expect(cols).toContain('session_id')
     expect(cols).toContain('workspace_project_id')
@@ -111,14 +111,14 @@ describe('TodoDatabase', () => {
     expect(cols).toContain('workspace_project_id')
     expect(cols).toContain('workspace_name')
     expect(cols).toContain('preferred_agent')
-    expect(version).toBe(5)
+    expect(version).toBe(6)
   })
 
   it('migrates todo_projects with default_working_dir (v3, P2b)', () => {
     const d = createDb()
     const cols = d.raw.pragma('table_info(todo_projects)') as { name: string }[]
     expect(cols.some((c) => c.name === 'default_working_dir')).toBe(true)
-    expect(d.raw.pragma('user_version', { simple: true })).toBe(5)
+    expect(d.raw.pragma('user_version', { simple: true })).toBe(6)
   })
 
   it('exposes auto_pilot columns on a fresh db', () => {
@@ -156,6 +156,75 @@ describe('TodoDatabase', () => {
     const version = db.raw.pragma('user_version', { simple: true }) as number
     expect(cols).toContain('auto_pilot_enabled')
     expect(cols).toContain('auto_pilot_max_turns')
-    expect(version).toBe(5)
+    expect(version).toBe(6)
+  })
+
+  it('migrates v5 to v6: backfills backlog rows and adds design_stage_enabled', () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'orca-todo-mig-v6-')), 'todo.db')
+    const raw = new DatabaseSync(file)
+    raw.exec(`
+      CREATE TABLE todo_projects (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        identifier_prefix TEXT NOT NULL,
+        next_sequence INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        default_working_dir TEXT
+      );
+      CREATE TABLE todo_items (
+        id TEXT PRIMARY KEY,
+        identifier TEXT NOT NULL,
+        project_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'backlog',
+        priority TEXT NOT NULL DEFAULT 'none',
+        scheduled_date TEXT,
+        estimate INTEGER,
+        labels TEXT NOT NULL DEFAULT '[]',
+        template_id TEXT,
+        order_key TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        started_at TEXT,
+        completed_at TEXT,
+        session_id TEXT,
+        workspace_project_id TEXT,
+        workspace_name TEXT,
+        preferred_agent TEXT,
+        auto_pilot_enabled INTEGER NOT NULL DEFAULT 0,
+        auto_pilot_max_turns INTEGER
+      );
+      INSERT INTO todo_projects (id, name, identifier_prefix, next_sequence, created_at, updated_at)
+        VALUES ('p1', 'Proj', 'P', 3, 'now', 'now');
+      INSERT INTO todo_items (id, identifier, project_id, title, status, order_key, created_at, updated_at)
+        VALUES ('a', 'P-1', 'p1', 'staged', 'backlog', 'a0', 'now', 'now'),
+               ('b', 'P-2', 'p1', 'ready', 'todo', 'a1', 'now', 'now'),
+               ('c', 'P-3', 'p1', 'shipped', 'done', 'a2', 'now', 'now');
+    `)
+    raw.exec('PRAGMA user_version = 5')
+    raw.close()
+
+    db = new TodoDatabase(file)
+
+    expect(db.raw.pragma('user_version', { simple: true })).toBe(6)
+    const cols = (db.raw.pragma('table_info(todo_items)') as { name: string }[]).map((c) => c.name)
+    expect(cols).toContain('design_stage_enabled')
+    expect(
+      db.raw.prepare('SELECT id, status, design_stage_enabled FROM todo_items ORDER BY id').all()
+    ).toEqual([
+      { id: 'a', status: 'todo', design_stage_enabled: 0 },
+      { id: 'b', status: 'todo', design_stage_enabled: 0 },
+      { id: 'c', status: 'done', design_stage_enabled: 0 }
+    ])
+
+    // Why: re-opening must be a no-op — migrate() short-circuits on user_version.
+    db.close()
+    db = new TodoDatabase(file)
+    expect(db.raw.pragma('user_version', { simple: true })).toBe(6)
+    expect(
+      db.raw.prepare('SELECT COUNT(*) AS n FROM todo_items WHERE status = ?').get('todo')
+    ).toEqual({ n: 2 })
   })
 })
