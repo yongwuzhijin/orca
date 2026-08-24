@@ -230,6 +230,45 @@ describe('mobile pairing userData path stability', () => {
     expect(existsSync(join(canonicalDir, E2EE_KEYPAIR_FILENAME))).toBe(false)
   })
 
+  it('migrates pairing files forward from the pre-rename productName directory', async () => {
+    // The DmonWork rename moved userData off `Orca`, so the source is a sibling
+    // directory rather than the late app.getPath('userData') the other cases cover.
+    appState.userData = canonicalDir
+    const {
+      initDataPath,
+      getLegacyProductNameUserDataPath,
+      migrateMobilePairingDataToCanonicalUserDataPath
+    } = await import('../persistence')
+    initDataPath()
+
+    const legacyDir = getLegacyProductNameUserDataPath()
+    expect(legacyDir).toBe(join(root, 'Orca'))
+    mkdirSync(legacyDir, { recursive: true })
+    const legacyDevices = JSON.stringify([
+      {
+        deviceId: 'orca-phone',
+        name: 'iPhone',
+        token: 'orca-token',
+        scope: 'mobile',
+        pairedAt: 1,
+        lastSeenAt: 2
+      }
+    ])
+    const legacyKeypair = JSON.stringify({
+      v: 1,
+      publicKeyB64: Buffer.from(new Uint8Array(32).fill(5)).toString('base64'),
+      secretKeyB64: Buffer.from(new Uint8Array(32).fill(6)).toString('base64')
+    })
+    writeFileSync(join(legacyDir, DEVICE_REGISTRY_FILENAME), legacyDevices)
+    writeFileSync(join(legacyDir, E2EE_KEYPAIR_FILENAME), legacyKeypair)
+
+    migrateMobilePairingDataToCanonicalUserDataPath(legacyDir)
+
+    expect(readFileSync(join(canonicalDir, E2EE_KEYPAIR_FILENAME), 'utf-8')).toBe(legacyKeypair)
+    const { DeviceRegistry } = await import('./device-registry')
+    expect(new DeviceRegistry(canonicalDir).getDevice('orca-phone')?.token).toBe('orca-token')
+  })
+
   it('a previously paired device is still found after a restart on the canonical path', async () => {
     // First launch: pair a device while userData resolves to the canonical path.
     appState.userData = canonicalDir

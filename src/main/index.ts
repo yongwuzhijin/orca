@@ -9,6 +9,7 @@ import {
   Store,
   initDataPath,
   getCanonicalUserDataPath,
+  getLegacyProductNameUserDataPath,
   migrateMobilePairingDataToCanonicalUserDataPath
 } from './persistence'
 import { initSessionParseCachePersistence } from './ai-vault/session-parse-cache-persistence'
@@ -3088,6 +3089,10 @@ void app.whenReady().then(async () => {
   }
   // Why: existing installs may have pairing creds under the late app.getPath('userData'); copy them forward before switching to the canonical path.
   migrateMobilePairingDataToCanonicalUserDataPath(app.getPath('userData'))
+  // Why: the DmonWork rename moved userData off 'Orca'. Packaged-only so a dev build never adopts the paired phones of the installed app.
+  if (app.isPackaged) {
+    migrateMobilePairingDataToCanonicalUserDataPath(getLegacyProductNameUserDataPath())
+  }
   runtimeRpc = new OrcaRuntimeRpcServer({
     runtime,
     // Why: mobile pairing needs the stable pre-setName() path (getCanonicalUserDataPath), not a late app.getPath('userData') that drops paired devices across restarts.

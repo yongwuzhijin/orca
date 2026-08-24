@@ -1,6 +1,7 @@
 export { Store, type PtyBindingSourceExpectation } from './persistence/loading-store/store'
 export {
   getCanonicalUserDataPath,
+  getLegacyProductNameUserDataPath,
   initDataPath,
   migrateMobilePairingDataToCanonicalUserDataPath
 } from './persistence/loading-store/user-data-path'

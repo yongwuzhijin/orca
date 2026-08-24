@@ -64,6 +64,16 @@ export function getCanonicalUserDataPath(): string {
 }
 
 /**
+ * The userData directory packaged builds used before the DmonWork rename.
+ *
+ * Electron derives userData from the product name, so the rename orphaned it. Paired-device
+ * credentials still live there, and without this the phones a user already paired go silent.
+ */
+export function getLegacyProductNameUserDataPath(): string {
+  return join(dirname(getCanonicalUserDataPath()), 'Orca')
+}
+
+/**
  * Copy legacy mobile pairing credentials into the canonical userData directory.
  *
  * Copies the registry and E2EE keypair forward as a pair so an update doesn't force a re-pair or mix devices with the wrong key.
