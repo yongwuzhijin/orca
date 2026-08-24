@@ -15226,6 +15226,8 @@
       "refresh": "새로 고침",
       "logTruncated": "최신 요청 100개만 표시합니다.",
       "logDuration": "{{value}}밀리초",
+      "logFilter": "요청 필터",
+      "logFilterEmpty": "이 필터와 일치하는 요청이 없습니다.",
       "logEmpty": "이 탭에 기록된 요청이 아직 없습니다. 페이지를 새로 고치면 트래픽을 수집합니다.",
       "title": "네트워크 도구",
       "resizeHandle": "네트워크 도구 크기 조정",

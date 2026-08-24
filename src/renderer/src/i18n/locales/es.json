@@ -15215,6 +15215,8 @@
       "refresh": "Actualizar",
       "logTruncated": "Mostrando las 100 solicitudes más recientes.",
       "logDuration": "{{value}} ms",
+      "logFilter": "Filtrar solicitudes",
+      "logFilterEmpty": "Ninguna solicitud coincide con este filtro.",
       "logEmpty": "Aún no hay solicitudes registradas en esta pestaña. Vuelve a cargar la página para capturar el tráfico.",
       "title": "Herramientas de red",
       "resizeHandle": "Redimensionar herramientas de red",

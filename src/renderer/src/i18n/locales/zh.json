@@ -15235,6 +15235,8 @@
       "refresh": "刷新",
       "logTruncated": "仅显示最新 100 条请求。",
       "logDuration": "{{value}} 毫秒",
+      "logFilter": "筛选请求",
+      "logFilterEmpty": "没有请求匹配该筛选条件。",
       "logEmpty": "该标签页暂无请求记录。重新加载页面即可捕获流量。",
       "title": "网络工具",
       "resizeHandle": "调整网络工具高度",

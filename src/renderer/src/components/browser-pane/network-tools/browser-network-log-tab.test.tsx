@@ -34,6 +34,10 @@ beforeEach(() => {
 
 afterEach(cleanup)
 
+function filterInput(): HTMLElement {
+  return screen.getByRole('searchbox')
+}
+
 describe('BrowserNetworkLogTab', () => {
   it('renders a row per request with status and duration', async () => {
     render(<BrowserNetworkLogTab browserPageId="page-a" />)
@@ -169,6 +173,44 @@ describe('BrowserNetworkLogTab', () => {
       // Host belongs to net.request, so it must not arrive as an editable row.
       headers: [{ name: 'Accept', value: 'application/json', enabled: true }]
     })
+  })
+
+  it('keeps only the rows whose URL contains the typed text', async () => {
+    networkReadLog.mockResolvedValueOnce({
+      entries: [
+        { ...ENTRY, id: 10, url: 'https://api.example.com/items' },
+        { ...ENTRY, id: 11, url: 'https://cdn.example.com/logo.png' }
+      ],
+      truncated: false
+    })
+    render(<BrowserNetworkLogTab browserPageId="page-a" />)
+    await screen.findByTitle('https://cdn.example.com/logo.png')
+    fireEvent.change(filterInput(), { target: { value: 'cdn' } })
+    expect(screen.getByTitle('https://cdn.example.com/logo.png')).toBeTruthy()
+    expect(screen.queryByTitle('https://api.example.com/items')).toBeNull()
+  })
+
+  it('matches the method so a bare verb narrows the list', async () => {
+    networkReadLog.mockResolvedValueOnce({
+      entries: [
+        { ...ENTRY, id: 12, method: 'POST', url: 'https://api.example.com/create' },
+        { ...ENTRY, id: 13, method: 'GET', url: 'https://api.example.com/read' }
+      ],
+      truncated: false
+    })
+    render(<BrowserNetworkLogTab browserPageId="page-a" />)
+    await screen.findByTitle('https://api.example.com/read')
+    fireEvent.change(filterInput(), { target: { value: 'post' } })
+    expect(screen.getByTitle('https://api.example.com/create')).toBeTruthy()
+    expect(screen.queryByTitle('https://api.example.com/read')).toBeNull()
+  })
+
+  it('distinguishes a filtered-out list from a log that captured nothing', async () => {
+    render(<BrowserNetworkLogTab browserPageId="page-a" />)
+    await screen.findByText('200')
+    fireEvent.change(filterInput(), { target: { value: 'nothing-matches-this' } })
+    expect(screen.getByText(/No requests match/)).toBeTruthy()
+    expect(screen.queryByText(/No requests recorded/)).toBeNull()
   })
 
   it('offers no send button for a request the sender cannot replay', async () => {

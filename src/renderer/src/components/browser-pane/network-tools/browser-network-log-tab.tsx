@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { RefreshCw, Send } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { RefreshCw, Search, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import {
@@ -20,6 +21,7 @@ export function BrowserNetworkLogTab({
 }): React.JSX.Element {
   const [entries, setEntries] = useState<BrowserNetworkLogEntry[]>([])
   const [truncated, setTruncated] = useState(false)
+  const [filter, setFilter] = useState('')
   const openApiTest = useBrowserNetworkToolsPanel((s) => s.openApiTest)
   // Why: bumped on teardown so a read issued for the previous page id cannot land on the new one.
   const generationRef = useRef(0)
@@ -49,6 +51,22 @@ export function BrowserNetworkLogTab({
     }
   }, [refresh])
 
+  const needle = filter.trim().toLowerCase()
+  const visible = useMemo(
+    () =>
+      needle === ''
+        ? entries
+        : // Method is matched alongside the URL so a bare verb like "post" narrows the list.
+          entries.filter(
+            (entry) =>
+              entry.url.toLowerCase().includes(needle) ||
+              entry.method.toLowerCase().includes(needle)
+          ),
+    [entries, needle]
+  )
+
+  const filterLabel = translate('browser.networkTools.logFilter', 'Filter requests')
+
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-2">
@@ -56,6 +74,17 @@ export function BrowserNetworkLogTab({
           <RefreshCw className="mr-1 h-3 w-3" />
           {translate('browser.networkTools.refresh', 'Refresh')}
         </Button>
+        <div className="relative w-56">
+          <Search className="pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+            aria-label={filterLabel}
+            placeholder={filterLabel}
+            className="h-7 pl-7 text-xs"
+          />
+        </div>
         {truncated ? (
           <span className="text-[11px] text-muted-foreground">
             {translate('browser.networkTools.logTruncated', 'Showing the newest 100 requests.')}
@@ -70,7 +99,12 @@ export function BrowserNetworkLogTab({
           )}
         </p>
       ) : null}
-      {entries.map((entry) => (
+      {entries.length > 0 && visible.length === 0 ? (
+        <p className="text-muted-foreground">
+          {translate('browser.networkTools.logFilterEmpty', 'No requests match this filter.')}
+        </p>
+      ) : null}
+      {visible.map((entry) => (
         <div key={entry.id} className="flex items-center gap-2 font-mono text-[11px]">
           <span className="w-12 shrink-0 text-muted-foreground">{entry.method}</span>
           <span
