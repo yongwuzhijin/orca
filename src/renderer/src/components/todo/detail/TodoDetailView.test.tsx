@@ -106,14 +106,14 @@ describe('TodoDetailView', () => {
     expect(mockState.closeTodoDetail).toHaveBeenCalledTimes(1)
   })
 
-  it('shows Start task in the header for backlog and todo only', () => {
-    items = [mkItem({ status: 'backlog' })]
+  it('shows Start task in the header for todo only', () => {
+    items = [mkItem({ status: 'todo' })]
     const { rerender } = render(<TodoDetailView itemId="t1" />)
     expect(screen.getByRole('button', { name: /start task/i })).toBeInTheDocument()
 
-    items = [mkItem({ status: 'todo' })]
+    items = [mkItem({ status: 'solution_design' })]
     rerender(<TodoDetailView itemId="t1" />)
-    expect(screen.getByRole('button', { name: /start task/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /start task/i })).not.toBeInTheDocument()
 
     items = [mkItem({ status: 'in_progress' })]
     rerender(<TodoDetailView itemId="t1" />)

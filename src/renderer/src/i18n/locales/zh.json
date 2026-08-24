@@ -14560,8 +14560,8 @@
       },
       "todo": {
         "status": {
-          "backlog": "待办池",
           "todo": "待办",
+          "solution_design": "方案设计",
           "in_progress": "进行中",
           "rework": "返工",
           "human_review": "人工评审",

@@ -77,10 +77,10 @@ describe('TodoColumn today filter', () => {
   })
 
   it('shows all items and no toggle for a non-todo column', () => {
-    const meta = getTodoStatusMeta('backlog')
+    const meta = getTodoStatusMeta('solution_design')
     renderColumn(meta, [
-      mkItem('unscheduled', 'backlog', null),
-      mkItem('future', 'backlog', '2999-01-01')
+      mkItem('unscheduled', 'solution_design', null),
+      mkItem('future', 'solution_design', '2999-01-01')
     ])
     expect(screen.getByText('Item unscheduled')).toBeInTheDocument()
     expect(screen.getByText('Item future')).toBeInTheDocument()

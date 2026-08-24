@@ -1,6 +1,6 @@
 export type TodoStatus =
-  | 'backlog'
   | 'todo'
+  | 'solution_design'
   | 'in_progress'
   | 'rework'
   | 'human_review'
@@ -10,8 +10,8 @@ export type TodoStatus =
   | 'duplicate'
 
 export const TODO_STATUSES: readonly TodoStatus[] = [
-  'backlog',
   'todo',
+  'solution_design',
   'in_progress',
   'rework',
   'human_review',

@@ -100,7 +100,7 @@ export function TodoCreateDialog({
   const createTodoItem = useAppStore((s) => s.createTodoItem)
   const [title, setTitle] = React.useState('')
   const [description, setDescription] = React.useState('')
-  const [status, setStatus] = React.useState<TodoStatus>(initialStatus ?? 'backlog')
+  const [status, setStatus] = React.useState<TodoStatus>(initialStatus ?? 'todo')
   const [priority, setPriority] = React.useState<TodoPriority>('none')
   const [scheduledDate, setScheduledDate] = React.useState('')
   const [templateId, setTemplateId] = React.useState<string | null>(null)

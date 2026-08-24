@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { isTerminalTodoStatus, TODO_STATUSES } from '../../../../shared/todo/todo-status'
+import {
+  isTerminalTodoStatus,
+  TODO_STATUSES,
+  type TodoStatus
+} from '../../../../shared/todo/todo-status'
 
 import {
   getTodoStatusMeta,
@@ -23,13 +27,27 @@ describe('TODO_STATUS_CATALOG', () => {
       expect(meta.terminal).toBe(isTerminalTodoStatus(meta.id))
     }
   })
+
+  it('has no backlog status and places solution_design between todo and in_progress', () => {
+    expect(TODO_STATUSES).not.toContain('backlog' as TodoStatus)
+    expect(TODO_STATUSES.slice(0, 3)).toEqual(['todo', 'solution_design', 'in_progress'])
+
+    const todo = getTodoStatusMeta('todo')
+    expect(todo.order).toBe(1)
+
+    const design = getTodoStatusMeta('solution_design')
+    expect(design.order).toBe(2)
+    expect(design.defaultVisibleColumn).toBe(true)
+    expect(design.terminal).toBe(false)
+    expect(design.labelKey).toBe('auto.components.todo.status.solution_design')
+  })
 })
 
 describe('getVisibleTodoStatuses', () => {
   it('returns the default board columns in order', () => {
     expect(getVisibleTodoStatuses().map((meta) => meta.id)).toEqual([
-      'backlog',
       'todo',
+      'solution_design',
       'in_progress',
       'human_review',
       'done'

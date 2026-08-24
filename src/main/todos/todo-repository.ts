@@ -141,9 +141,8 @@ export class TodoRepository {
     return rows.map(rowToTodoItem)
   }
 
-  // Why: the orchestrator picks across all projects — status must be 'todo'
-  // (backlog is not ready) and eligible. order_key is only a stable secondary;
-  // the service applies the full priority sort.
+  // Why: only auto_pilot_enabled cards are dispatched unattended; the flag defaults
+  // to 0, so a card never runs without an explicit opt-in.
   listAutoPilotCandidates(): TodoItem[] {
     const rows = this.db
       .prepare(
@@ -168,7 +167,7 @@ export class TodoRepository {
     }
     const timestamp = nowIso()
     const id = randomUUID()
-    const status: TodoStatus = input.status ?? 'backlog'
+    const status: TodoStatus = input.status ?? 'todo'
     const priority = input.priority ?? 'none'
     const description = input.description ?? ''
     const labels = input.labels ?? []

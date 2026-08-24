@@ -2,8 +2,8 @@ import {
   Ban,
   Circle,
   CircleCheckBig,
-  CircleDashed,
   Copy,
+  DraftingCompass,
   Eye,
   GitMerge,
   Loader,
@@ -36,18 +36,6 @@ export type TodoStatusMeta = {
 // colorToken / lane* values reuse classes already used by the workspace board.
 export const TODO_STATUS_CATALOG: readonly TodoStatusMeta[] = [
   {
-    id: 'backlog',
-    labelKey: 'auto.components.todo.status.backlog',
-    fallbackLabel: 'Backlog',
-    colorToken: 'text-muted-foreground',
-    laneBorder: 'border-t-muted-foreground/45',
-    laneTint: 'bg-background/55',
-    icon: CircleDashed,
-    defaultVisibleColumn: true,
-    terminal: false,
-    order: 1
-  },
-  {
     id: 'todo',
     labelKey: 'auto.components.todo.status.todo',
     fallbackLabel: 'Todo',
@@ -55,6 +43,18 @@ export const TODO_STATUS_CATALOG: readonly TodoStatusMeta[] = [
     laneBorder: 'border-t-muted-foreground/45',
     laneTint: 'bg-background/55',
     icon: Circle,
+    defaultVisibleColumn: true,
+    terminal: false,
+    order: 1
+  },
+  {
+    id: 'solution_design',
+    labelKey: 'auto.components.todo.status.solution_design',
+    fallbackLabel: 'Solution Design',
+    colorToken: 'text-violet-600 dark:text-violet-300',
+    laneBorder: 'border-t-violet-500/70',
+    laneTint: 'bg-violet-500/[0.04]',
+    icon: DraftingCompass,
     defaultVisibleColumn: true,
     terminal: false,
     order: 2

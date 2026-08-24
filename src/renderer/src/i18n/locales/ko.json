@@ -14551,8 +14551,8 @@
       },
       "todo": {
         "status": {
-          "backlog": "Backlog",
           "todo": "Todo",
+          "solution_design": "솔루션 설계",
           "in_progress": "In Progress",
           "rework": "Rework",
           "human_review": "Human Review",

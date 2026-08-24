@@ -131,7 +131,7 @@ describe('TodoRepository', () => {
       const repo = createRepo()
       const project = makeProject(repo)
       const item = repo.createItem({ projectId: project.id, title: 'A' })
-      expect(item.status).toBe('backlog')
+      expect(item.status).toBe('todo')
       expect(item.priority).toBe('none')
       expect(item.description).toBe('')
       expect(item.labels).toEqual([])
@@ -294,8 +294,8 @@ describe('TodoRepository', () => {
       repo.createItem({ projectId: project.id, title: 'todo-no-flag', status: 'todo' })
       repo.createItem({
         projectId: project.id,
-        title: 'backlog-flag',
-        status: 'backlog',
+        title: 'design-flag',
+        status: 'solution_design',
         autoPilotEnabled: true
       })
       const candidates = repo.listAutoPilotCandidates()

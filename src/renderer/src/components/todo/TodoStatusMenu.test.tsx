@@ -8,10 +8,10 @@ afterEach(cleanup)
 
 describe('TodoStatusOptionList', () => {
   it('renders all nine statuses in order', () => {
-    render(<TodoStatusOptionList value="backlog" onChange={() => {}} />)
+    render(<TodoStatusOptionList value="todo" onChange={() => {}} />)
     const labels = [
-      'Backlog',
       'Todo',
+      'Solution Design',
       'In Progress',
       'Rework',
       'Human Review',
@@ -26,7 +26,7 @@ describe('TodoStatusOptionList', () => {
   })
 
   it('shows order numbers 1..9', () => {
-    render(<TodoStatusOptionList value="backlog" onChange={() => {}} />)
+    render(<TodoStatusOptionList value="todo" onChange={() => {}} />)
     for (let n = 1; n <= 9; n++) {
       expect(screen.getByText(String(n))).toBeInTheDocument()
     }

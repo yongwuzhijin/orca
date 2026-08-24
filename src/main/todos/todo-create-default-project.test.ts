@@ -17,7 +17,7 @@ describe('createItem vs locked default project', () => {
       projectId: DEFAULT_TODO_PROJECT_ID,
       title: '生成CLAUDE.md',
       preferredAgent: 'claude',
-      status: 'backlog',
+      status: 'todo',
       scheduledDate: '2026-07-14'
     })
     expect(item.identifier).toBe('TODO-1')

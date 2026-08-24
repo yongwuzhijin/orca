@@ -59,7 +59,7 @@ export function TodoDetailView({ itemId }: TodoDetailViewProps): React.JSX.Eleme
         </Button>
         <span className="text-xs text-muted-foreground">{item.identifier}</span>
         <div className="flex-1" />
-        {item.status === 'backlog' || item.status === 'todo' ? (
+        {item.status === 'todo' ? (
           <Button size="sm" onClick={() => setEnterOpen(true)}>
             {translate('auto.components.todo.detail.TodoDetailView.startTask', 'Start task')}
           </Button>

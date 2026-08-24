@@ -56,8 +56,8 @@ describe('TodoBoard', () => {
       onOpenItem: () => {},
       onCreate: () => {}
     })
-    expect(screen.getByText('Backlog')).toBeInTheDocument()
     expect(screen.getByText('Todo')).toBeInTheDocument()
+    expect(screen.getByText('Solution Design')).toBeInTheDocument()
     expect(screen.getByText('In Progress')).toBeInTheDocument()
     expect(screen.getByText('Human Review')).toBeInTheDocument()
     expect(screen.getByText('Done')).toBeInTheDocument()
@@ -76,9 +76,9 @@ describe('TodoBoard', () => {
   it('creates from a column header with that column status preselected', () => {
     const onCreate = vi.fn()
     renderBoard({ items: [], onMove: vi.fn(), onOpenItem: vi.fn(), onCreate })
-    const addButtons = screen.getAllByRole('button', { name: /new task in backlog/i })
+    const addButtons = screen.getAllByRole('button', { name: /new task in solution design/i })
     expect(addButtons.length).toBeGreaterThanOrEqual(1)
     fireEvent.click(addButtons[0])
-    expect(onCreate).toHaveBeenCalledWith('backlog')
+    expect(onCreate).toHaveBeenCalledWith('solution_design')
   })
 })
