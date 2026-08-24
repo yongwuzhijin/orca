@@ -33,8 +33,6 @@ const SETTINGS_NAV_TARGETS = [
   'voice',
   'shortcuts',
   'stats',
-  // Fork: custom quick-links settings pane
-  'quick-links',
   'ssh',
   'experimental',
   'plugins',

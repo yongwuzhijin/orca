@@ -9,7 +9,6 @@ import {
   BarChart3,
   Bell,
   Blocks,
-  Bookmark,
   Bot,
   Bug,
   Cable,
@@ -79,7 +78,6 @@ import { getDeveloperPermissionsPaneSearchEntries } from '@/components/settings/
 import { getAdvancedPaneSearchEntries } from '@/components/settings/advanced-search'
 import { getShortcutsPaneSearchEntries } from '@/components/settings/shortcuts-search'
 import { getStatsPaneSearchEntries } from '@/components/stats/stats-search'
-import { getBrowserQuickLinksPaneSearchEntries } from '@/components/settings/browser-quick-links-search'
 import { getExperimentalPaneSearchEntries } from '@/components/settings/experimental-search'
 import { getPluginsPaneSearchEntries } from '@/components/settings/plugins-search'
 import { getRepositoryPaneSearchEntries } from '@/components/settings/repository-search'
@@ -429,8 +427,8 @@ export function buildSettingsNavigationMetadata({
             id: 'browser',
             title: translate('auto.hooks.useSettingsNavigationMetadata.8c197f74a1', 'Browser'),
             description: translate(
-              'auto.hooks.useSettingsNavigationMetadata.e815fd01bd',
-              'Home page, link routing, and session cookies.'
+              'auto.hooks.useSettingsNavigationMetadata.browserDescriptionWithQuickLinks',
+              'Home page, link routing, session cookies, and quick links.'
             ),
             icon: Globe,
             searchEntries: getBrowserPaneCombinedSearchEntries(),
@@ -541,20 +539,6 @@ export function buildSettingsNavigationMetadata({
       ),
       icon: BarChart3,
       searchEntries: getStatsPaneSearchEntries(),
-      group: 'interface'
-    },
-    {
-      id: 'quick-links',
-      title: translate(
-        'auto.hooks.useSettingsNavigationMetadata.browserQuickLinks',
-        'Browser Quick Links'
-      ),
-      description: translate(
-        'auto.hooks.useSettingsNavigationMetadata.browserQuickLinksDescription',
-        'Global browser shortcuts shown in the Bookmarks sidebar, organized into folders.'
-      ),
-      icon: Bookmark,
-      searchEntries: getBrowserQuickLinksPaneSearchEntries(),
       group: 'interface'
     },
     ...(showDesktopOnlySettings

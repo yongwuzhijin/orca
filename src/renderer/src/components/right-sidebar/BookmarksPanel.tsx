@@ -115,7 +115,7 @@ export default function BookmarksPanel(): React.JSX.Element {
   }
 
   const openQuickLinksSettings = (): void => {
-    openSettingsTarget({ pane: 'quick-links', repoId: null })
+    openSettingsTarget({ pane: 'browser', repoId: null })
     openSettingsPage()
   }
 
@@ -261,7 +261,7 @@ export default function BookmarksPanel(): React.JSX.Element {
                   <BookmarkEmptyHint
                     text={translate(
                       'auto.components.right.sidebar.BookmarksPanel.emptyQuickLinks',
-                      'Global shortcuts managed from Settings → Browser Quick Links.'
+                      'Global shortcuts managed from Settings → Browser.'
                     )}
                   />
                 ) : (

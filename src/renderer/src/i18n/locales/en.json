@@ -1019,8 +1019,7 @@
         "shareSkillsTitle": "Share Skills",
         "shareSkillsDescription": "Share your skills with an unlisted link. Anyone who has it can install them.",
         "floatingWorkspaceWebDescription": "Global terminal and markdown tabs.",
-        "browserQuickLinks": "Browser Quick Links",
-        "browserQuickLinksDescription": "Global browser shortcuts shown in the Bookmarks sidebar, organized into folders."
+        "browserDescriptionWithQuickLinks": "Home page, link routing, session cookies, and quick links."
       },
       "useAppMenuPaste": {
         "pasteTooLarge": "Paste is too large."
@@ -7928,8 +7927,7 @@
           "linearTitle": "Linear",
           "linearDescription": "How Linear works in Orca, setup checklist, agent skill, and example prompts.",
           "tasksDescription": "Connect providers, install the Linear skill, and choose what appears in Tasks.",
-          "browserQuickLinksTitle": "Browser Quick Links",
-          "browserQuickLinksDescription": "Global browser shortcuts shown in the Bookmarks sidebar, organized into folders."
+          "browserDescriptionWithQuickLinks": "Home page, link routing, session cookies, and quick links."
         },
         "SettingsFormControls": {
           "42a4d15a30": "No matching fonts.",
@@ -12918,7 +12916,7 @@
             "emptyProjectLinks": "Project-wide links stay available across branches and workspaces.",
             "quickLinks": "Quick Links",
             "manageQuickLinks": "Manage quick links in Settings",
-            "emptyQuickLinks": "Global shortcuts managed from Settings → Browser Quick Links.",
+            "emptyQuickLinks": "Global shortcuts managed from Settings → Browser.",
             "editLink": "Edit Link",
             "addProjectLinkTitle": "Add Project Link",
             "addDocTitle": "Add Branch Doc Link",

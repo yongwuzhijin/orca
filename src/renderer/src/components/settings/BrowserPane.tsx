@@ -5,7 +5,9 @@ import { matchesSettingsSearch } from './settings-search'
 import { getBrowserPaneSearchEntries } from './browser-search'
 import { getBrowserLinkRoutingDescription } from './browser-link-routing-copy'
 import { getBrowserUsePaneSearchEntries } from './browser-use-search'
+import { getBrowserQuickLinksPaneSearchEntries } from './browser-quick-links-search'
 import { getBrowserPaneCombinedSearchEntries } from './browser-pane-search'
+import { BrowserQuickLinksPane } from './BrowserQuickLinksPane'
 import { BrowserHomePageSetting } from './BrowserHomePageSetting'
 import { BrowserDefaultZoomSetting } from './BrowserDefaultZoomSetting'
 import { BrowserUseSetup } from './BrowserUsePane'
@@ -111,6 +113,7 @@ export function BrowserPane({
   const showLocalhostLabels = matchesSettingsSearch(searchQuery, [getBrowserPaneSearchEntries()[6]])
   const showCookies = matchesSettingsSearch(searchQuery, [getBrowserPaneSearchEntries()[7]])
   const showBrowserUse = matchesSettingsSearch(searchQuery, getBrowserUsePaneSearchEntries())
+  const showQuickLinks = matchesSettingsSearch(searchQuery, getBrowserQuickLinksPaneSearchEntries())
   const isMac = isMacUserAgent()
   const linkRoutingDescription = getBrowserLinkRoutingDescription(
     { isMac },
@@ -287,6 +290,10 @@ export function BrowserPane({
           onSelectDefaultProfile={() => setDefaultBrowserSessionProfileId(null)}
           onSelectProfile={setDefaultBrowserSessionProfileId}
         />
+      ) : null}
+
+      {showQuickLinks ? (
+        <BrowserQuickLinksPane settings={settings} updateSettings={updateSettings} />
       ) : null}
 
       <BrowserNewProfileDialog open={newProfileDialogOpen} onOpenChange={setNewProfileDialogOpen} />

@@ -828,8 +828,7 @@
         "tasksDescription": "제공업체를 연결하고 Linear 스킬을 설치한 다음 작업에 표시할 항목을 선택하세요.",
         "automationsTitle": "자동화",
         "automationsDescription": "에이전트 작업을 예약하고 사이드바에 자동화 표시 여부를 선택합니다.",
-        "browserQuickLinks": "브라우저 바로가기 링크",
-        "browserQuickLinksDescription": "북마크 사이드바에 표시되는 전역 브라우저 바로가기이며 폴더로 정리할 수 있습니다.",
+        "browserDescriptionWithQuickLinks": "홈페이지, 링크 라우팅, 세션 쿠키 및 바로가기 링크.",
         "artifactsTitle": "Artifacts",
         "artifactsDescription": "HTML 및 Markdown 파일을 팀과 공유하고 공개 링크를 관리합니다."
       },
@@ -6970,8 +6969,7 @@
           "linearTitle": "Linear",
           "linearDescription": "Orca에서 Linear가 작동하는 방식, 설정 체크리스트, 에이전트 스킬, 프롬프트 예시입니다.",
           "tasksDescription": "제공업체를 연결하고 Linear 스킬을 설치한 다음 작업에 표시할 항목을 선택하세요.",
-          "browserQuickLinksTitle": "브라우저 바로가기 링크",
-          "browserQuickLinksDescription": "북마크 사이드바에 표시되는 전역 브라우저 바로가기이며 폴더로 정리할 수 있습니다."
+          "browserDescriptionWithQuickLinks": "홈페이지, 링크 라우팅, 세션 쿠키 및 바로가기 링크."
         },
         "SettingsFormControls": {
           "42a4d15a30": "일치하는 글꼴이 없습니다.",
@@ -11665,7 +11663,7 @@
             "emptyProjectLinks": "프로젝트 범위 링크는 브랜치나 워크스페이스를 전환해도 유지됩니다.",
             "quickLinks": "바로가기 링크",
             "manageQuickLinks": "설정에서 바로가기 링크 관리",
-            "emptyQuickLinks": "전역 바로가기는 설정 → 브라우저 바로가기 링크에서 관리합니다.",
+            "emptyQuickLinks": "전역 바로가기는 설정 → 브라우저에서 관리합니다.",
             "editLink": "링크 편집",
             "addProjectLinkTitle": "프로젝트 링크 추가",
             "addDocTitle": "브랜치 문서 링크 추가",

@@ -826,8 +826,7 @@
         "pluginsTitle": "Plugins",
         "pluginsDescription": "Instala y administra plugins experimentales de Orca.",
         "tasksDescription": "Conecta proveedores, instala la habilidad de Linear y elige qué aparece en Tareas.",
-        "browserQuickLinks": "Enlaces rápidos del navegador",
-        "browserQuickLinksDescription": "Accesos directos globales del navegador que se muestran en la barra lateral de marcadores, organizados en carpetas.",
+        "browserDescriptionWithQuickLinks": "Página de inicio, enrutamiento de enlaces, cookies de sesión y enlaces rápidos.",
         "artifactsTitle": "Artifacts",
         "artifactsDescription": "Comparte archivos HTML y Markdown con tu equipo y gestiona sus enlaces públicos.",
         "automationsTitle": "Automatizaciones",
@@ -6985,8 +6984,7 @@
           "linearTitle": "Linear",
           "linearDescription": "Cómo funciona Linear en Orca, lista de configuración, habilidad del agente y ejemplos de prompts.",
           "tasksDescription": "Conecta proveedores, instala la habilidad de Linear y elige qué aparece en Tareas.",
-          "browserQuickLinksTitle": "Enlaces rápidos del navegador",
-          "browserQuickLinksDescription": "Accesos directos globales del navegador que se muestran en la barra lateral de marcadores, organizados en carpetas."
+          "browserDescriptionWithQuickLinks": "Página de inicio, enrutamiento de enlaces, cookies de sesión y enlaces rápidos."
         },
         "SettingsFormControls": {
           "42a4d15a30": "No hay fuentes coincidentes.",
@@ -11665,7 +11663,7 @@
             "emptyProjectLinks": "Los enlaces a nivel de proyecto siguen disponibles al cambiar de rama o espacio de trabajo.",
             "quickLinks": "Enlaces rápidos",
             "manageQuickLinks": "Gestionar enlaces rápidos en Ajustes",
-            "emptyQuickLinks": "Los accesos directos globales se gestionan en Ajustes → Enlaces rápidos del navegador.",
+            "emptyQuickLinks": "Los accesos directos globales se gestionan en Ajustes → Navegador.",
             "editLink": "Editar enlace",
             "addProjectLinkTitle": "Añadir enlace del proyecto",
             "addDocTitle": "Añadir enlace de documento de rama",

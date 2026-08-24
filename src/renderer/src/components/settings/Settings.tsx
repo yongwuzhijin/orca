@@ -67,7 +67,6 @@ import { StatsPane } from '../stats/StatsPane'
 import { IntegrationsPane } from './IntegrationsPane'
 import { TasksPane } from './TasksPane'
 import { QuickCommandsPane } from './QuickCommandsPane'
-import { BrowserQuickLinksPane } from './BrowserQuickLinksPane'
 import { DeveloperPermissionsPane } from './DeveloperPermissionsPane'
 import { ComputerUsePane } from './ComputerUsePane'
 import { MobileSettingsPane } from './MobileSettingsPane'
@@ -1576,8 +1575,8 @@ function Settings(): React.JSX.Element {
                     id="browser"
                     title={translate('auto.components.settings.Settings.c46215ea03', 'Browser')}
                     description={translate(
-                      'auto.components.settings.Settings.ad9788036f',
-                      'Home page, link routing, and session cookies.'
+                      'auto.components.settings.Settings.browserDescriptionWithQuickLinks',
+                      'Home page, link routing, session cookies, and quick links.'
                     )}
                     searchEntries={getSectionSearchEntries('browser')}
                   >
@@ -1718,23 +1717,6 @@ function Settings(): React.JSX.Element {
                   searchEntries={getSectionSearchEntries('stats')}
                 >
                   {isSectionMounted('stats') ? <StatsPane /> : null}
-                </SettingsSection>
-
-                <SettingsSection
-                  id="quick-links"
-                  title={translate(
-                    'auto.components.settings.Settings.browserQuickLinksTitle',
-                    'Browser Quick Links'
-                  )}
-                  description={translate(
-                    'auto.components.settings.Settings.browserQuickLinksDescription',
-                    'Global browser shortcuts shown in the Bookmarks sidebar, organized into folders.'
-                  )}
-                  searchEntries={getSectionSearchEntries('quick-links')}
-                >
-                  {isSectionMounted('quick-links') ? (
-                    <BrowserQuickLinksPane settings={settings} updateSettings={updateSettings} />
-                  ) : null}
                 </SettingsSection>
 
                 <SettingsSection

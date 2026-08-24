@@ -826,8 +826,7 @@
         "pluginsTitle": "插件",
         "pluginsDescription": "安装和管理实验性 Orca 插件。",
         "tasksDescription": "连接提供商、安装 Linear 技能并选择要在任务中显示的内容。",
-        "browserQuickLinks": "浏览器快捷方式",
-        "browserQuickLinksDescription": "显示在书签侧边栏中的全局浏览器快捷方式，可按文件夹整理。",
+        "browserDescriptionWithQuickLinks": "主页、链接路由、会话 cookie 和快捷方式。",
         "artifactsTitle": "Artifacts",
         "artifactsDescription": "与团队共享 HTML 和 Markdown 文件，并管理它们的公开链接。",
         "automationsTitle": "自动化",
@@ -6982,8 +6981,7 @@
           "linearTitle": "Linear",
           "linearDescription": "Linear 在 Orca 中的工作方式、设置清单、智能体技能和提示词示例。",
           "tasksDescription": "连接提供商、安装 Linear 技能并选择要在任务中显示的内容。",
-          "browserQuickLinksTitle": "浏览器快捷方式",
-          "browserQuickLinksDescription": "显示在书签侧边栏中的全局浏览器快捷方式，可按文件夹整理。"
+          "browserDescriptionWithQuickLinks": "主页、链接路由、会话 cookie 和快捷方式。"
         },
         "SettingsFormControls": {
           "42a4d15a30": "没有匹配的字体。",
@@ -11685,7 +11683,7 @@
             "emptyProjectLinks": "项目级链接在切换分支或工作区后依然可用。",
             "quickLinks": "快捷链接",
             "manageQuickLinks": "在设置中管理快捷链接",
-            "emptyQuickLinks": "全局快捷方式在「设置 → 浏览器快捷方式」中管理。",
+            "emptyQuickLinks": "全局快捷方式在「设置 → 浏览器」中管理。",
             "editLink": "编辑链接",
             "addProjectLinkTitle": "添加项目链接",
             "addDocTitle": "添加分支文档链接",
