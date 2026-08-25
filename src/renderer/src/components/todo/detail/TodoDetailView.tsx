@@ -14,6 +14,7 @@ import { TodoDetailOverview } from './TodoDetailOverview'
 import { InProgressPanel } from './InProgressPanel'
 import { EnterInProgressDialog } from './EnterInProgressDialog'
 import { HumanReviewPanel } from './HumanReviewPanel'
+import { SolutionDesignPanel } from './SolutionDesignPanel'
 import { MergingPanel } from './MergingPanel'
 import { ReviewDecisionBar } from './ReviewDecisionBar'
 
@@ -72,6 +73,8 @@ export function TodoDetailView({ itemId }: TodoDetailViewProps): React.JSX.Eleme
           <div className="min-h-0 flex-1 overflow-hidden">
             {item.status === 'in_progress' ? (
               <InProgressPanel item={item} />
+            ) : item.status === 'solution_design' ? (
+              <SolutionDesignPanel item={item} />
             ) : item.status === 'human_review' ? (
               <HumanReviewPanel item={item} />
             ) : item.status === 'merging' ? (

@@ -25,6 +25,9 @@ vi.mock('./InProgressPanel', () => ({
 vi.mock('./HumanReviewPanel', () => ({
   HumanReviewPanel: () => <div>human-review-panel</div>
 }))
+vi.mock('./SolutionDesignPanel', () => ({
+  SolutionDesignPanel: () => <div>solution-design-panel</div>
+}))
 vi.mock('./MergingPanel', () => ({
   MergingPanel: () => <div>merging-panel</div>
 }))
@@ -93,6 +96,12 @@ describe('TodoDetailView', () => {
     items = [mkItem({ status: 'human_review' })]
     render(<TodoDetailView itemId="t1" />)
     expect(screen.getByText('human-review-panel')).toBeInTheDocument()
+  })
+
+  it('renders the SolutionDesignPanel for solution_design', () => {
+    items = [mkItem({ status: 'solution_design' })]
+    render(<TodoDetailView itemId="t1" />)
+    expect(screen.getByText('solution-design-panel')).toBeInTheDocument()
   })
 
   it('renders the MergingPanel for merging', () => {
