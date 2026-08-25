@@ -22,6 +22,7 @@ import { HermesHookService, hermesHookService } from '../hermes/hook-service'
 import { DevinHookService, devinHookService } from '../devin/hook-service'
 import { KimiHookService, kimiHookService } from '../kimi/hook-service'
 import { openClaudeHookService } from '../openclaude/hook-service'
+import { qoderHookService } from '../qoder/hook-service'
 import { MANAGED_AGENT_HOOK_INSTALLERS } from './managed-agent-hook-controls'
 import {
   installRemoteManagedAgentHooks,
@@ -703,7 +704,8 @@ describe('remote hook service installers', () => {
       ['copilot', copilotHookService],
       ['hermes', hermesHookService],
       ['devin', devinHookService],
-      ['kimi', kimiHookService]
+      ['kimi', kimiHookService],
+      ['qoder', qoderHookService]
     ])
 
     // Guard against a service silently missing from the map above as new agents land.

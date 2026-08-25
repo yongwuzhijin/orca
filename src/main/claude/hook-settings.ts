@@ -16,8 +16,8 @@ import {
 import { wrapRuntimeHomeHookCommand } from '../agent-hooks/runtime-home-hook-command'
 
 export type ClaudeCompatibleHookSettings = {
-  configDirName: '.claude' | '.openclaude'
-  scriptBaseName: 'claude-hook' | 'openclaude-hook'
+  configDirName: '.claude' | '.openclaude' | '.qoder'
+  scriptBaseName: 'claude-hook' | 'openclaude-hook' | 'qoder-hook'
   usesWindowsPowerShellLauncher: boolean
 }
 
@@ -30,6 +30,16 @@ export const CLAUDE_HOOK_SETTINGS: ClaudeCompatibleHookSettings = {
 export const OPENCLAUDE_HOOK_SETTINGS: ClaudeCompatibleHookSettings = {
   configDirName: '.openclaude',
   scriptBaseName: 'openclaude-hook',
+  usesWindowsPowerShellLauncher: false
+}
+
+// Why: verified against qodercli v1.1.3 — ~/.qoder/settings.json uses Claude's
+// exact hook event names and `{matcher, hooks:[{type:'command',command,timeout}]}`
+// shape, so the Claude applier/remover works unchanged. No PowerShell launcher:
+// that is a Claude-Code-on-Windows quirk, not part of the settings contract.
+export const QODER_HOOK_SETTINGS: ClaudeCompatibleHookSettings = {
+  configDirName: '.qoder',
+  scriptBaseName: 'qoder-hook',
   usesWindowsPowerShellLauncher: false
 }
 
