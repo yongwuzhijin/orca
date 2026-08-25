@@ -7,6 +7,11 @@ import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import type { TodoItem } from '../../../../../shared/todo/todo-item'
+import { DEFAULT_TODO_DESIGN_STAGE_SKILL } from '../../../../../shared/constants'
+import {
+  buildDesignHandoffPrompt,
+  buildDesignStagePrompt
+} from '../../../../../shared/todo/todo-design-prompt'
 
 const mockState = {
   updateTodoItem: vi.fn().mockResolvedValue(undefined),
@@ -30,7 +35,8 @@ const mockState = {
       updatedAt: 1
     }
   ],
-  settings: null,
+  settings: null as { todoDesignStageSkill: string } | null,
+  worktreesByRepo: {} as Record<string, unknown[]>,
   sshTargetLabels: new Map(),
   sshConnectionStates: new Map(),
   runtimeEnvironments: [],
@@ -58,6 +64,7 @@ const { EnterInProgressDialog, buildBasePrompt, composePrompt } =
 afterEach(() => {
   cleanup()
   mockState.todoProjects[0].defaultWorkingDir = '/repo'
+  mockState.settings = null
   vi.clearAllMocks()
 })
 
@@ -90,10 +97,13 @@ function mkItem(overrides: Partial<TodoItem> = {}): TodoItem {
   }
 }
 
-function renderDialog(item: TodoItem = mkItem()): void {
+function renderDialog(
+  item: TodoItem = mkItem(),
+  props: { mode?: 'todo' | 'from-design'; designDocNames?: readonly string[] } = {}
+): void {
   render(
     <TooltipProvider>
-      <EnterInProgressDialog item={item} onClose={vi.fn()} />
+      <EnterInProgressDialog item={item} onClose={vi.fn()} {...props} />
     </TooltipProvider>
   )
 }
@@ -157,6 +167,62 @@ describe('EnterInProgressDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: /start/i }))
     expect(mockState.executeTask).toHaveBeenCalledWith(
       expect.objectContaining({ autoPilot: undefined })
+    )
+  })
+})
+
+describe('EnterInProgressDialog design stage', () => {
+  it('sends the card to solution_design with the design prompt when checked', async () => {
+    const item = mkItem({ workspaceProjectId: 'wp-1' })
+    renderDialog(item)
+    await userEvent.click(screen.getByTestId('enter-design-stage'))
+    await userEvent.click(screen.getByRole('button', { name: /start/i }))
+    expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', {
+      status: 'solution_design',
+      designStageEnabled: true
+    })
+    expect(mockState.executeTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: buildDesignStagePrompt(item, DEFAULT_TODO_DESIGN_STAGE_SKILL)
+      })
+    )
+  })
+
+  it('starts implementation directly with the base prompt when unchecked', async () => {
+    const item = mkItem({ workspaceProjectId: 'wp-1' })
+    renderDialog(item)
+    await userEvent.click(screen.getByRole('button', { name: /start/i }))
+    expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', {
+      status: 'in_progress',
+      designStageEnabled: false
+    })
+    expect(mockState.executeTask).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: buildBasePrompt(item) })
+    )
+  })
+
+  it('disables the design stage when no skill is configured', async () => {
+    mockState.settings = { todoDesignStageSkill: '' }
+    renderDialog(mkItem({ workspaceProjectId: 'wp-1', designStageEnabled: true }))
+    expect(screen.getByTestId('enter-design-stage')).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: /start/i }))
+    expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', {
+      status: 'in_progress',
+      designStageEnabled: false
+    })
+  })
+
+  it('hands off to implementation with the design docs in from-design mode', async () => {
+    const item = mkItem({ workspaceProjectId: 'wp-1', designStageEnabled: true })
+    renderDialog(item, { mode: 'from-design', designDocNames: ['plan.md'] })
+    expect(screen.queryByTestId('enter-design-stage')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: /start/i }))
+    expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', {
+      status: 'in_progress',
+      designStageEnabled: false
+    })
+    expect(mockState.executeTask).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: buildDesignHandoffPrompt(item, ['plan.md']) })
     )
   })
 })

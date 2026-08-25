@@ -14671,7 +14671,9 @@
             "start": "开始",
             "cwdPlaceholder": "/path/to/repo",
             "autoPilot": "AutoPilot（自主推进）",
-            "maxTurns": "最大轮次"
+            "maxTurns": "最大轮次",
+            "designStage": "先做方案设计",
+            "designStageUnset": "请先在设置中配置方案设计技能"
           },
           "TodoDetailView": {
             "startTask": "开始任务",

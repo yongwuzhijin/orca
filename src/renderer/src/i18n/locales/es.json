@@ -14643,7 +14643,9 @@
             "start": "Start",
             "cwdPlaceholder": "/path/to/repo",
             "autoPilot": "AutoPilot (avanzar de forma autónoma)",
-            "maxTurns": "Turnos máximos"
+            "maxTurns": "Turnos máximos",
+            "designStage": "Diseñar la solución primero",
+            "designStageUnset": "Configura una habilidad de diseño de solución en Ajustes para activar esta etapa"
           },
           "TodoDetailView": {
             "startTask": "Iniciar tarea",

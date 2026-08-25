@@ -16174,7 +16174,9 @@
             "start": "Start",
             "cwdPlaceholder": "/path/to/repo",
             "autoPilot": "AutoPilot (advance autonomously)",
-            "maxTurns": "Max turns"
+            "maxTurns": "Max turns",
+            "designStage": "Design the solution first",
+            "designStageUnset": "Set a solution design skill in Settings to enable this stage"
           },
           "TodoDetailView": {
             "startTask": "Start task",

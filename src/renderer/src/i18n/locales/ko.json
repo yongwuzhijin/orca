@@ -14654,7 +14654,9 @@
             "start": "Start",
             "cwdPlaceholder": "/path/to/repo",
             "autoPilot": "AutoPilot(자동 진행)",
-            "maxTurns": "최대 턴 수"
+            "maxTurns": "최대 턴 수",
+            "designStage": "먼저 솔루션을 설계",
+            "designStageUnset": "설정에서 솔루션 설계 스킬을 지정하세요"
           },
           "TodoDetailView": {
             "startTask": "작업 시작",

@@ -6,12 +6,18 @@ import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
 import { ACP_ENGINES, isAcpEngine, type AcpEngine } from '../../../../../shared/acp/acp-session'
 import type { TodoItem } from '../../../../../shared/todo/todo-item'
+import type { TodoStatus } from '../../../../../shared/todo/todo-status'
 import {
   resolveWorkspaceProjectCwd,
   TodoWorkspaceProjectPicker
 } from '../TodoWorkspaceProjectPicker'
 
 import { buildBasePrompt, composePrompt } from '../../../../../shared/todo/todo-base-prompt'
+import {
+  buildDesignHandoffPrompt,
+  buildDesignStagePrompt
+} from '../../../../../shared/todo/todo-design-prompt'
+import { DEFAULT_TODO_DESIGN_STAGE_SKILL } from '../../../../../shared/constants'
 
 export { buildBasePrompt, composePrompt }
 
@@ -24,17 +30,25 @@ function resolveInitialEngine(item: TodoItem): AcpEngine {
 type EnterInProgressDialogProps = {
   item: TodoItem
   onClose: () => void
+  // 'from-design' starts the implementation that follows an approved design, so the stage is over.
+  mode?: 'todo' | 'from-design'
+  designDocNames?: readonly string[]
 }
 
 export function EnterInProgressDialog({
   item,
-  onClose
+  onClose,
+  mode = 'todo',
+  designDocNames
 }: EnterInProgressDialogProps): React.JSX.Element {
   const updateTodoItem = useAppStore((s) => s.updateTodoItem)
   const executeTask = useAppStore((s) => s.executeTask)
   const openTodoDetail = useAppStore((s) => s.openTodoDetail)
   const project = useAppStore((s) => s.todoProjects.find((p) => p.id === item.projectId))
   const projectHostSetups = useAppStore((s) => s.projectHostSetups)
+  const designStageSkill = useAppStore(
+    (s) => s.settings?.todoDesignStageSkill ?? DEFAULT_TODO_DESIGN_STAGE_SKILL
+  )
 
   const [engine, setEngine] = React.useState<AcpEngine>(() => resolveInitialEngine(item))
   const [workspaceProjectId, setWorkspaceProjectId] = React.useState<string | null>(
@@ -43,13 +57,22 @@ export function EnterInProgressDialog({
   const [extra, setExtra] = React.useState('')
   const [autoPilotOn, setAutoPilotOn] = React.useState(true)
   const [maxTurns, setMaxTurns] = React.useState(10)
+  const [designStage, setDesignStage] = React.useState(item.designStageEnabled)
 
   const cwd = resolveWorkspaceProjectCwd(
     workspaceProjectId,
     projectHostSetups,
     project?.defaultWorkingDir
   )
-  const base = buildBasePrompt(item)
+  const designStageAvailable = designStageSkill.length > 0
+  const useDesignStage = mode !== 'from-design' && designStage && designStageAvailable
+  // Why: one value for both the preview and the dispatch, so the user never sees a different prompt.
+  const base =
+    mode === 'from-design'
+      ? buildDesignHandoffPrompt(item, designDocNames ?? [])
+      : useDesignStage
+        ? buildDesignStagePrompt(item, designStageSkill)
+        : buildBasePrompt(item)
   const canStart = cwd.trim().length > 0
 
   const confirm = async (): Promise<void> => {
@@ -60,7 +83,8 @@ export function EnterInProgressDialog({
     if (workspaceProjectId !== item.workspaceProjectId) {
       await updateTodoItem(item.id, { workspaceProjectId })
     }
-    await updateTodoItem(item.id, { status: 'in_progress' })
+    const nextStatus: TodoStatus = useDesignStage ? 'solution_design' : 'in_progress'
+    await updateTodoItem(item.id, { status: nextStatus, designStageEnabled: useDesignStage })
     await executeTask({
       taskId: item.id,
       engine,
@@ -169,6 +193,34 @@ export function EnterInProgressDialog({
               </div>
             ) : null}
           </div>
+
+          {mode === 'from-design' ? null : (
+            <div className="flex items-center gap-3">
+              <input
+                id="enter-design-stage"
+                data-testid="enter-design-stage"
+                type="checkbox"
+                className="size-4"
+                checked={designStage && designStageAvailable}
+                disabled={!designStageAvailable}
+                onChange={(e) => setDesignStage(e.target.checked)}
+              />
+              <Label htmlFor="enter-design-stage" className="cursor-pointer">
+                {translate(
+                  'auto.components.todo.detail.EnterInProgressDialog.designStage',
+                  'Design the solution first'
+                )}
+              </Label>
+              {designStageAvailable ? null : (
+                <span className="text-xs text-muted-foreground">
+                  {translate(
+                    'auto.components.todo.detail.EnterInProgressDialog.designStageUnset',
+                    'Set a solution design skill in Settings to enable this stage'
+                  )}
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="outline" onClick={onClose}>
