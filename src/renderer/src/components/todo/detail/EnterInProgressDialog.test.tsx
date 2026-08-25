@@ -7,7 +7,6 @@ import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import type { TodoItem } from '../../../../../shared/todo/todo-item'
-import { DEFAULT_TODO_DESIGN_STAGE_SKILL } from '../../../../../shared/constants'
 import {
   buildDesignHandoffPrompt,
   buildDesignStagePrompt
@@ -174,6 +173,8 @@ describe('EnterInProgressDialog', () => {
 describe('EnterInProgressDialog design stage', () => {
   it('sends the card to solution_design with the design prompt when checked', async () => {
     const item = mkItem({ workspaceProjectId: 'wp-1' })
+    // Deliberately not DEFAULT_TODO_DESIGN_STAGE_SKILL, so a hardcoded default cannot pass.
+    mockState.settings = { todoDesignStageSkill: '/design-skill' }
     renderDialog(item)
     await userEvent.click(screen.getByTestId('enter-design-stage'))
     await userEvent.click(screen.getByRole('button', { name: /start/i }))
@@ -183,7 +184,7 @@ describe('EnterInProgressDialog design stage', () => {
     })
     expect(mockState.executeTask).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: buildDesignStagePrompt(item, DEFAULT_TODO_DESIGN_STAGE_SKILL)
+        prompt: buildDesignStagePrompt(item, '/design-skill')
       })
     )
   })
@@ -205,6 +206,7 @@ describe('EnterInProgressDialog design stage', () => {
     mockState.settings = { todoDesignStageSkill: '' }
     renderDialog(mkItem({ workspaceProjectId: 'wp-1', designStageEnabled: true }))
     expect(screen.getByTestId('enter-design-stage')).toBeDisabled()
+    expect(screen.getByTestId('enter-design-stage')).not.toBeChecked()
     await userEvent.click(screen.getByRole('button', { name: /start/i }))
     expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', {
       status: 'in_progress',
