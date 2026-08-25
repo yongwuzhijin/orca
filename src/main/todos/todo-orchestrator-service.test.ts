@@ -284,19 +284,20 @@ describe('TodoOrchestratorService.tick', () => {
         sessionId: 's'
       })
     )
+    // Deliberately not DEFAULT_TODO_DESIGN_STAGE_SKILL, so a hardcoded default cannot pass.
     const { service, updateStatus } = makeService({
       candidates: [candidate],
       dispatch,
-      designStageSkill: '/ddd-requirements-analysis'
+      designStageSkill: '/custom-design-skill'
     })
     await service.tick()
     await flush()
     expect(updateStatus).toHaveBeenCalledWith('t1', 'solution_design')
     expect(dispatch.mock.calls[0][0].prompt).toBe(
-      buildDesignStagePrompt(candidate, '/ddd-requirements-analysis')
+      buildDesignStagePrompt(candidate, '/custom-design-skill')
     )
-    // Why: the skill must be free to run multi-turn; only the human_review flip is suppressed.
-    expect(dispatch.mock.calls[0][0].autoPilot).toBeDefined()
+    // Why: the skill must be free to run multi-turn, so the turn budget is untouched.
+    expect(dispatch.mock.calls[0][0].autoPilot).toEqual({ maxTurns: 10 })
   })
 
   it('dispatches a plain card to in_progress with the base prompt', async () => {
@@ -309,7 +310,7 @@ describe('TodoOrchestratorService.tick', () => {
     const { service, updateStatus } = makeService({
       candidates: [candidate],
       dispatch,
-      designStageSkill: '/ddd-requirements-analysis'
+      designStageSkill: '/custom-design-skill'
     })
     await service.tick()
     await flush()
