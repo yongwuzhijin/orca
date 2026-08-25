@@ -14719,6 +14719,10 @@
             "repo": "Repository",
             "strategy": "Fast-forward if possible, otherwise a merge commit.",
             "merge": "Merge"
+          },
+          "designDocs": {
+            "empty": "설계 문서가 아직 없습니다. 스킬이 작성하면 여기에 표시됩니다.",
+            "refresh": "새로 고침"
           }
         },
         "dashboard": {

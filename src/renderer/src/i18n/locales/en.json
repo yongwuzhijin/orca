@@ -16239,6 +16239,10 @@
             "repo": "Repository",
             "strategy": "Fast-forward if possible, otherwise a merge commit.",
             "merge": "Merge"
+          },
+          "designDocs": {
+            "empty": "No design documents yet. They appear here once the skill writes them.",
+            "refresh": "Refresh"
           }
         },
         "dashboard": {

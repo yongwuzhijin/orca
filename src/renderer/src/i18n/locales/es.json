@@ -14708,6 +14708,10 @@
             "repo": "Repository",
             "strategy": "Fast-forward if possible, otherwise a merge commit.",
             "merge": "Merge"
+          },
+          "designDocs": {
+            "empty": "Aún no hay documentos de diseño. Aparecerán aquí cuando la habilidad los escriba.",
+            "refresh": "Actualizar"
           }
         },
         "dashboard": {
