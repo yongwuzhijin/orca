@@ -10337,6 +10337,10 @@
           "allowPublishingDescription": "将 HTML 和 Markdown 文件发布为任何拿到链接的人都能打开的链接。已有链接会一直保留，直到你在 Artifacts 中删除它们。",
           "howToDescriptionDisabled": "请先在上方启用 Artifacts 共享，才能将 HTML 或 Markdown 文件发布为公开链接。",
           "allowPublishingSearchDescription": "允许 Orca 将 HTML 和 Markdown 文件发布为公开链接。"
+        },
+        "todoDesignStageSkill": {
+          "label": "方案设计技能",
+          "description": "任务进入方案设计阶段时，作为前缀加到提示词开头。留空则关闭该阶段。"
         }
       },
       "right": {

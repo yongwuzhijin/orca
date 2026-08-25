@@ -10317,6 +10317,10 @@
           "allowPublishingDescription": "HTML 및 Markdown 파일을 URL이 있는 누구나 열 수 있는 링크로 게시합니다. 기존 링크는 Artifacts에서 삭제할 때까지 유지됩니다.",
           "howToDescriptionDisabled": "HTML 또는 Markdown 파일을 공개 링크로 게시하려면 위에서 아티팩트 공유를 사용하도록 설정하세요.",
           "allowPublishingSearchDescription": "Orca가 HTML 및 Markdown 파일을 공개 링크로 게시할 수 있도록 허용합니다."
+        },
+        "todoDesignStageSkill": {
+          "label": "솔루션 설계 스킬",
+          "description": "작업이 솔루션 설계 단계로 들어갈 때 프롬프트 앞에 추가됩니다. 비워 두면 이 단계를 사용하지 않습니다."
         }
       },
       "right": {

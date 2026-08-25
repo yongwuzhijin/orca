@@ -10317,6 +10317,10 @@
           "allowPublishingDescription": "Publica archivos HTML y Markdown como enlaces que cualquier persona con la URL puede abrir. Los enlaces existentes se mantienen hasta que los elimines desde Artifacts.",
           "howToDescriptionDisabled": "Habilita el uso compartido de artefactos más arriba para publicar archivos HTML o Markdown como enlaces públicos.",
           "allowPublishingSearchDescription": "Permite que Orca publique archivos HTML y Markdown como enlaces públicos."
+        },
+        "todoDesignStageSkill": {
+          "label": "Habilidad de diseño de solución",
+          "description": "Se añade al inicio del prompt cuando una tarea entra en la etapa de diseño de solución. Déjalo vacío para desactivar la etapa."
         }
       },
       "right": {

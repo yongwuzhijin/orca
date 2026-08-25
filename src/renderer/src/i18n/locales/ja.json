@@ -10317,6 +10317,10 @@
           "allowPublishingDescription": "HTML と Markdown ファイルを、URL を知っている人なら誰でも開けるリンクとして公開します。既存のリンクは Artifacts から削除するまで残ります。",
           "howToDescriptionDisabled": "HTML または Markdown ファイルを公開リンクとして公開するには、上でアーティファクト共有を有効にしてください。",
           "allowPublishingSearchDescription": "Orca が HTML と Markdown ファイルを公開リンクとして発行することを許可します。"
+        },
+        "todoDesignStageSkill": {
+          "label": "ソリューション設計スキル",
+          "description": "タスクがソリューション設計段階に入るとき、プロンプトの先頭に追加されます。空欄にするとこの段階を無効化します。"
         }
       },
       "right": {

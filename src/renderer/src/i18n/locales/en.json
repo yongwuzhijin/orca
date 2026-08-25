@@ -11437,6 +11437,10 @@
           "newFolderTitle": "New Folder",
           "folderNameLabel": "Name",
           "urlPlaceholder": "https://example.com"
+        },
+        "todoDesignStageSkill": {
+          "label": "Solution design skill",
+          "description": "Prepended to the prompt when a task enters the solution design stage. Leave empty to disable the stage."
         }
       },
       "right": {

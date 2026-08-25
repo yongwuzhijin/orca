@@ -20,6 +20,7 @@ import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { cn } from '@/lib/utils'
 import { AgentAwakeSetting } from './AgentAwakeSetting'
+import { TodoDesignStageSkillSetting } from './TodoDesignStageSkillSetting'
 import { TodoOrchestratorSetting } from './TodoOrchestratorSetting'
 import { AgentCacheTimerSection } from './AgentCacheTimerSection'
 import { AgentRuntimeSetting } from './AgentRuntimeSetting'
@@ -903,6 +904,11 @@ export function AgentsPane({
       ) : null}
 
       <TodoOrchestratorSetting settings={settings} updateSettings={updateSettings} />
+
+      <TodoDesignStageSkillSetting
+        value={settings.todoDesignStageSkill ?? ''}
+        onChange={(next) => void updateSettings({ todoDesignStageSkill: next })}
+      />
 
       <AgentCacheTimerSection settings={settings} updateSettings={updateSettings} />
 
