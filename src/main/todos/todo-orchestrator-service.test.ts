@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import type { TodoItem } from '../../shared/todo/todo-item'
 import type { TodoStatus } from '../../shared/todo/todo-status'
 import type { TodoOrchestratorConfig } from '../../shared/todo/todo-orchestrator-config'
+import { buildBasePrompt } from '../../shared/todo/todo-base-prompt'
+import { buildDesignStagePrompt } from '../../shared/todo/todo-design-prompt'
 import {
   TodoOrchestratorService,
   type OrchestratorDeps,
@@ -71,6 +73,7 @@ function makeService(opts: {
   resolveCwd?: (item: TodoItem) => string | null
   dispatch?: OrchestratorDeps['dispatch']
   getConfig?: () => TodoOrchestratorConfig
+  designStageSkill?: string
 }): {
   service: TodoOrchestratorService
   updateStatus: ReturnType<typeof vi.fn>
@@ -90,7 +93,8 @@ function makeService(opts: {
       vi.fn<(input: OrchestratorDispatchInput) => Promise<{ sessionId: string }>>(async () => ({
         sessionId: 's'
       })),
-    getConfig: opts.getConfig ?? (() => cfg())
+    getConfig: opts.getConfig ?? (() => cfg()),
+    getDesignStageSkill: () => opts.designStageSkill ?? ''
   }
   return { service: new TodoOrchestratorService(deps), updateStatus, statuses }
 }
@@ -256,7 +260,8 @@ describe('TodoOrchestratorService.tick', () => {
       updateStatus,
       resolveCwd: () => '/repo',
       dispatch: fn,
-      getConfig: () => cfg({ maxConcurrent: 1 })
+      getConfig: () => cfg({ maxConcurrent: 1 }),
+      getDesignStageSkill: () => ''
     })
     await service.tick() // throw before dispatch → slot must be released, no dispatch
     expect(fn).not.toHaveBeenCalled()
@@ -264,5 +269,69 @@ describe('TodoOrchestratorService.tick', () => {
     // proving the reservation was freed.
     await service.tick()
     expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  it('dispatches a design-stage card to solution_design with the skill prompt', async () => {
+    const candidate = item({
+      id: 't1',
+      identifier: 'ORCA-7',
+      title: 'Design it',
+      description: 'Needs a plan first.',
+      designStageEnabled: true
+    })
+    const dispatch = vi.fn<(input: OrchestratorDispatchInput) => Promise<{ sessionId: string }>>(
+      async () => ({
+        sessionId: 's'
+      })
+    )
+    const { service, updateStatus } = makeService({
+      candidates: [candidate],
+      dispatch,
+      designStageSkill: '/ddd-requirements-analysis'
+    })
+    await service.tick()
+    await flush()
+    expect(updateStatus).toHaveBeenCalledWith('t1', 'solution_design')
+    expect(dispatch.mock.calls[0][0].prompt).toBe(
+      buildDesignStagePrompt(candidate, '/ddd-requirements-analysis')
+    )
+    // Why: the skill must be free to run multi-turn; only the human_review flip is suppressed.
+    expect(dispatch.mock.calls[0][0].autoPilot).toBeDefined()
+  })
+
+  it('dispatches a plain card to in_progress with the base prompt', async () => {
+    const candidate = item({ id: 't2', designStageEnabled: false })
+    const dispatch = vi.fn<(input: OrchestratorDispatchInput) => Promise<{ sessionId: string }>>(
+      async () => ({
+        sessionId: 's'
+      })
+    )
+    const { service, updateStatus } = makeService({
+      candidates: [candidate],
+      dispatch,
+      designStageSkill: '/ddd-requirements-analysis'
+    })
+    await service.tick()
+    await flush()
+    expect(updateStatus).toHaveBeenCalledWith('t2', 'in_progress')
+    expect(dispatch.mock.calls[0][0].prompt).toBe(buildBasePrompt(candidate))
+  })
+
+  it('skips the design stage when no skill is configured', async () => {
+    const candidate = item({ id: 't3', designStageEnabled: true })
+    const dispatch = vi.fn<(input: OrchestratorDispatchInput) => Promise<{ sessionId: string }>>(
+      async () => ({
+        sessionId: 's'
+      })
+    )
+    const { service, updateStatus } = makeService({
+      candidates: [candidate],
+      dispatch,
+      designStageSkill: '  '
+    })
+    await service.tick()
+    await flush()
+    expect(updateStatus).toHaveBeenCalledWith('t3', 'in_progress')
+    expect(dispatch.mock.calls[0][0].prompt).toBe(buildBasePrompt(candidate))
   })
 })

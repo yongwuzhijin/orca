@@ -1062,6 +1062,7 @@ import {
 import { readIssueCommand, writeIssueCommand } from '../issue-command-file'
 import {
   DEFAULT_REPO_BADGE_COLOR,
+  DEFAULT_TODO_DESIGN_STAGE_SKILL,
   FLOATING_TERMINAL_WORKTREE_ID,
   getDefaultVoiceSettings
 } from '../../shared/constants'
@@ -1375,6 +1376,7 @@ type RuntimeStore = {
     terminalHiddenDeliveryGate?: GlobalSettings['terminalHiddenDeliveryGate']
     terminalModelQueryAuthority?: GlobalSettings['terminalModelQueryAuthority']
     todoOrchestrator?: GlobalSettings['todoOrchestrator']
+    todoDesignStageSkill?: GlobalSettings['todoDesignStageSkill']
   }
   // Why: narrow to `unknown` return so test mocks can return void without
   // a cast. The runtime never reads the return value — the persisted value
@@ -4330,7 +4332,9 @@ export class OrcaRuntimeService {
         },
         dispatch: (input) => kernel.executeRouter.executeEnginePrompt(input),
         getConfig: () =>
-          this.store?.getSettings().todoOrchestrator ?? DEFAULT_TODO_ORCHESTRATOR_CONFIG
+          this.store?.getSettings().todoOrchestrator ?? DEFAULT_TODO_ORCHESTRATOR_CONFIG,
+        getDesignStageSkill: () =>
+          this.store?.getSettings().todoDesignStageSkill ?? DEFAULT_TODO_DESIGN_STAGE_SKILL
       })
     }
     return this._todoOrchestratorService

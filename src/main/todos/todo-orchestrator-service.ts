@@ -4,6 +4,7 @@ import type { AcpEngine } from '../../shared/acp/acp-session'
 import { ACP_ENGINES } from '../../shared/acp/acp-session'
 import type { TodoOrchestratorConfig } from '../../shared/todo/todo-orchestrator-config'
 import { buildBasePrompt } from '../../shared/todo/todo-base-prompt'
+import { buildDesignStagePrompt } from '../../shared/todo/todo-design-prompt'
 import { sortAutoPilotCandidates } from './todo-orchestrator-candidate-order'
 
 export type OrchestratorDispatchInput = {
@@ -20,6 +21,7 @@ export type OrchestratorDeps = {
   resolveCwd: (item: TodoItem) => string | null
   dispatch: (input: OrchestratorDispatchInput) => Promise<{ sessionId: string }>
   getConfig: () => TodoOrchestratorConfig
+  getDesignStageSkill: () => string
 }
 
 export class TodoOrchestratorService {
@@ -91,12 +93,17 @@ export class TodoOrchestratorService {
         // throw from updateStatus (e.g. the row was deleted mid-tick) must free the
         // reservation, or the slot leaks permanently and maxConcurrent erodes to 0.
         try {
-          this.deps.updateStatus(candidate.id, 'in_progress')
+          const skill = this.deps.getDesignStageSkill().trim()
+          // Why: an unconfigured skill would park the card in a stage that does nothing.
+          const useDesignStage = candidate.designStageEnabled && skill.length > 0
+          this.deps.updateStatus(candidate.id, useDesignStage ? 'solution_design' : 'in_progress')
           void this.deps
             .dispatch({
               taskId: candidate.id,
               engine,
-              prompt: buildBasePrompt(candidate),
+              prompt: useDesignStage
+                ? buildDesignStagePrompt(candidate, skill)
+                : buildBasePrompt(candidate),
               cwd,
               autoPilot: { maxTurns: candidate.autoPilotMaxTurns ?? cfg.defaultMaxTurns }
             })
