@@ -4,27 +4,23 @@ import '@testing-library/jest-dom/vitest'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { DesignDocPane } from './DesignDocPane'
 import type { DesignDocFiles } from './use-design-doc-files'
 
-let mockNames: string[] = []
-let mockLoading = false
 const readFile = vi.fn()
 
-const { DesignDocPane } = await import('./DesignDocPane')
-
-function mkDocFiles(): DesignDocFiles {
+function mkDocFiles(overrides: Partial<DesignDocFiles> = {}): DesignDocFiles {
   return {
     dirPath: '/repo/.orca/design/ORCA-12',
-    names: mockNames,
-    loading: mockLoading,
-    refresh: vi.fn()
+    names: [],
+    loading: false,
+    refresh: vi.fn(),
+    ...overrides
   }
 }
 
 describe('DesignDocPane', () => {
   beforeEach(() => {
-    mockNames = []
-    mockLoading = false
     readFile.mockResolvedValue({ content: '', isBinary: false })
     ;(window as unknown as { api: unknown }).api = { fs: { readFile } }
   })
@@ -42,18 +38,15 @@ describe('DesignDocPane', () => {
   })
 
   it('holds the empty copy back while the directory read is still in flight', () => {
-    mockLoading = true
-
-    render(<DesignDocPane docFiles={mkDocFiles()} />)
+    render(<DesignDocPane docFiles={mkDocFiles({ loading: true })} />)
 
     expect(screen.queryByText(/no design documents yet/i)).not.toBeInTheDocument()
   })
 
   it('reads and renders the first document on the workspace host', async () => {
-    mockNames = ['api.md', 'overview.md']
     readFile.mockResolvedValue({ content: '# Overview\n\nThe plan.', isBinary: false })
 
-    render(<DesignDocPane docFiles={mkDocFiles()} />)
+    render(<DesignDocPane docFiles={mkDocFiles({ names: ['api.md', 'overview.md'] })} />)
 
     expect(await screen.findByText('Overview')).toBeInTheDocument()
     expect(readFile).toHaveBeenCalledTimes(1)
@@ -64,7 +57,6 @@ describe('DesignDocPane', () => {
   })
 
   it('switches documents when another file is picked', async () => {
-    mockNames = ['api.md', 'overview.md']
     readFile.mockImplementation(({ filePath }: { filePath: string }) =>
       Promise.resolve({
         content: filePath.endsWith('overview.md') ? '# Overview' : '# API',
@@ -72,7 +64,7 @@ describe('DesignDocPane', () => {
       })
     )
 
-    render(<DesignDocPane docFiles={mkDocFiles()} />)
+    render(<DesignDocPane docFiles={mkDocFiles({ names: ['api.md', 'overview.md'] })} />)
     expect(await screen.findByText('API')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'overview.md' }))
@@ -82,7 +74,6 @@ describe('DesignDocPane', () => {
 
   // Why: a remote relay returns base64 for a .md it judges binary, which must not reach the renderer.
   it('renders nothing for a document the host reports as binary', async () => {
-    mockNames = ['notes.md', 'overview.md']
     readFile.mockImplementation(({ filePath }: { filePath: string }) =>
       Promise.resolve(
         filePath.endsWith('notes.md')
@@ -91,7 +82,7 @@ describe('DesignDocPane', () => {
       )
     )
 
-    render(<DesignDocPane docFiles={mkDocFiles()} />)
+    render(<DesignDocPane docFiles={mkDocFiles({ names: ['notes.md', 'overview.md'] })} />)
     expect(await screen.findByText('Notes')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'overview.md' }))

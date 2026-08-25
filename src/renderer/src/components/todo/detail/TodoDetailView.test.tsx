@@ -27,9 +27,11 @@ vi.mock('./HumanReviewPanel', () => ({
 }))
 // Why: a fresh names array per hook call, so a second useDesignDocFiles instance is visible.
 let designDocCalls = 0
+const designDocEnabled = vi.fn()
 vi.mock('./use-design-doc-files', () => ({
-  useDesignDocFiles: () => {
+  useDesignDocFiles: (_item: unknown, enabled: boolean) => {
     designDocCalls += 1
+    designDocEnabled(enabled)
     return {
       dirPath: '/repo/.orca/design/P-1',
       connectionId: undefined,
@@ -211,6 +213,18 @@ describe('TodoDetailView', () => {
     expect(panel.docFiles.names).toEqual(['doc-1.md'])
     expect(button.docFiles).toBe(panel.docFiles)
     expect(designDocCalls).toBe(1)
+  })
+
+  // Why: hoisting the hook above the stage switch would otherwise list the design directory
+  // for every card — a per-turn SSH round-trip for a directory that does not exist.
+  it('asks for the design documents only while the card is in the design stage', () => {
+    items = [mkItem({ status: 'in_progress' })]
+    const { rerender } = render(<TodoDetailView itemId="t1" />)
+    expect(designDocEnabled).toHaveBeenLastCalledWith(false)
+
+    items = [mkItem({ status: 'solution_design' })]
+    rerender(<TodoDetailView itemId="t1" />)
+    expect(designDocEnabled).toHaveBeenLastCalledWith(true)
   })
 
   it('shows Reject/Approve under scheduled date only for human_review', () => {

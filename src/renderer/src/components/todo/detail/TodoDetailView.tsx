@@ -45,7 +45,7 @@ function TodoDetailBody({ item }: { item: TodoItem }): React.JSX.Element {
   const closeTodoDetail = useAppStore((s) => s.closeTodoDetail)
   const [enterOpen, setEnterOpen] = React.useState(false)
   // Why: one list for the pane and the handoff button, so they cannot disagree about the docs.
-  const docFiles = useDesignDocFiles(item)
+  const docFiles = useDesignDocFiles(item, item.status === 'solution_design')
 
   const onStatusChange = (next: TodoStatus): void => {
     // Spec §5: entering in_progress is intercepted to launch the session dialog.

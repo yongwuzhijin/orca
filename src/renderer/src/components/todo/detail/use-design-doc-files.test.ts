@@ -7,8 +7,9 @@ const readDir = vi.fn()
 
 const mockState = {
   todoProjects: [{ id: 'p1', defaultWorkingDir: '/local/fallback' }],
-  activeSessionByTask: {} as Record<string, string | undefined>,
+  activeSessionByTask: {} as Record<string, string | null>,
   sessionStatusBySession: {} as Record<string, string | undefined>,
+  autoPilotByTask: {} as Record<string, { turn: number; maxTurns: number } | null>,
   projectHostSetups: [
     {
       id: 'setup-1',
@@ -66,6 +67,7 @@ describe('useDesignDocFiles', () => {
     readDir.mockResolvedValue([])
     mockState.activeSessionByTask = {}
     mockState.sessionStatusBySession = {}
+    mockState.autoPilotByTask = {}
     ;(window as unknown as { api: unknown }).api = { fs: { readDir } }
   })
 
@@ -76,7 +78,7 @@ describe('useDesignDocFiles', () => {
   })
 
   it('reads the design directory on the workspace host, passing its connectionId', async () => {
-    const { result } = renderHook(() => useDesignDocFiles(mkItem()))
+    const { result } = renderHook(() => useDesignDocFiles(mkItem(), true))
 
     await waitFor(() => expect(result.current.loading).toBe(false))
 
@@ -91,7 +93,7 @@ describe('useDesignDocFiles', () => {
   it('treats a failed read as an empty document list', async () => {
     readDir.mockRejectedValue(new Error('ENOENT'))
 
-    const { result } = renderHook(() => useDesignDocFiles(mkItem()))
+    const { result } = renderHook(() => useDesignDocFiles(mkItem(), true))
 
     await waitFor(() => expect(result.current.loading).toBe(false))
 
@@ -105,13 +107,13 @@ describe('useDesignDocFiles', () => {
       { name: 'notes.txt', isDirectory: false, isSymlink: false }
     ])
 
-    const { result } = renderHook(() => useDesignDocFiles(mkItem()))
+    const { result } = renderHook(() => useDesignDocFiles(mkItem(), true))
 
     await waitFor(() => expect(result.current.names).toEqual(['overview.md']))
   })
 
   it('picks up documents written after the first read when refreshed', async () => {
-    const { result } = renderHook(() => useDesignDocFiles(mkItem()))
+    const { result } = renderHook(() => useDesignDocFiles(mkItem(), true))
 
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.names).toEqual([])
@@ -123,10 +125,14 @@ describe('useDesignDocFiles', () => {
     expect(readDir).toHaveBeenCalledTimes(2)
   })
 
-  it('re-lists the directory when the design session reaches a turn boundary', async () => {
+  // Why: the design stage always runs under AutoPilot, so session status alone only moves at
+  // run start and run end — documents written on turn 2 of 10 would stay invisible for the
+  // rest of the run.
+  it('re-lists the directory on every AutoPilot turn, not just at run start and end', async () => {
     mockState.activeSessionByTask = { t1: 's1' }
     mockState.sessionStatusBySession = { s1: 'running' }
-    const { result, rerender } = renderHook((item: TodoItem) => useDesignDocFiles(item), {
+    mockState.autoPilotByTask = { t1: { turn: 1, maxTurns: 10 } }
+    const { result, rerender } = renderHook((item: TodoItem) => useDesignDocFiles(item, true), {
       initialProps: mkItem()
     })
 
@@ -134,7 +140,25 @@ describe('useDesignDocFiles', () => {
     expect(readDir).toHaveBeenCalledTimes(1)
 
     readDir.mockResolvedValue([{ name: 'design.md', isDirectory: false, isSymlink: false }])
-    mockState.sessionStatusBySession = { s1: 'idle' }
+    mockState.autoPilotByTask = { t1: { turn: 2, maxTurns: 10 } }
+    rerender(mkItem())
+
+    await waitFor(() => expect(result.current.names).toEqual(['design.md']))
+    expect(readDir).toHaveBeenCalledTimes(2)
+  })
+
+  it('re-lists the directory when the design session reaches a turn boundary', async () => {
+    mockState.activeSessionByTask = { t1: 's1' }
+    mockState.sessionStatusBySession = { s1: 'running' }
+    const { result, rerender } = renderHook((item: TodoItem) => useDesignDocFiles(item, true), {
+      initialProps: mkItem()
+    })
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(readDir).toHaveBeenCalledTimes(1)
+
+    readDir.mockResolvedValue([{ name: 'design.md', isDirectory: false, isSymlink: false }])
+    mockState.sessionStatusBySession = { s1: 'complete' }
     rerender(mkItem())
 
     await waitFor(() => expect(result.current.names).toEqual(['design.md']))
@@ -144,7 +168,7 @@ describe('useDesignDocFiles', () => {
   it('leaves the list alone on re-renders that are not a turn boundary', async () => {
     mockState.activeSessionByTask = { t1: 's1' }
     mockState.sessionStatusBySession = { s1: 'running' }
-    const { result, rerender } = renderHook((item: TodoItem) => useDesignDocFiles(item), {
+    const { result, rerender } = renderHook((item: TodoItem) => useDesignDocFiles(item, true), {
       initialProps: mkItem()
     })
 
@@ -154,6 +178,25 @@ describe('useDesignDocFiles', () => {
     })
 
     expect(readDir).toHaveBeenCalledTimes(1)
+  })
+
+  // Why: the caller hoists this hook above the stage switch, so a disabled read is the
+  // common case — and on an SSH workspace an eager one is a round-trip per turn boundary.
+  it('does not touch the host while the caller has it disabled', async () => {
+    mockState.activeSessionByTask = { t1: 's1' }
+    mockState.sessionStatusBySession = { s1: 'running' }
+    const { result, rerender } = renderHook((item: TodoItem) => useDesignDocFiles(item, false), {
+      initialProps: mkItem({ status: 'in_progress' })
+    })
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    mockState.sessionStatusBySession = { s1: 'complete' }
+    await act(async () => {
+      rerender(mkItem({ status: 'in_progress' }))
+    })
+
+    expect(readDir).not.toHaveBeenCalled()
+    expect(result.current.names).toEqual([])
   })
 
   it('drops a slow read that lands after the card path changed', async () => {
@@ -167,7 +210,7 @@ describe('useDesignDocFiles', () => {
       )
       .mockResolvedValue([{ name: 'second.md', isDirectory: false, isSymlink: false }])
 
-    const { result, rerender } = renderHook((item: TodoItem) => useDesignDocFiles(item), {
+    const { result, rerender } = renderHook((item: TodoItem) => useDesignDocFiles(item, true), {
       initialProps: mkItem({ identifier: 'ORCA-12' })
     })
     rerender(mkItem({ identifier: 'ORCA-99' }))
