@@ -162,6 +162,24 @@ export function TodoDetailView({ itemId }: TodoDetailViewProps): React.JSX.Eleme
                 />
               </div>
             ) : null}
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="todo-design-stage"
+                checked={item.designStageEnabled}
+                onCheckedChange={(checked) =>
+                  void updateTodoItem(item.id, { designStageEnabled: checked === true })
+                }
+              />
+              <Label
+                htmlFor="todo-design-stage"
+                className="cursor-pointer text-[11px] font-medium text-muted-foreground"
+              >
+                {translate(
+                  'auto.components.todo.detail.TodoDetailView.designStage',
+                  'Solution design stage'
+                )}
+              </Label>
+            </div>
           </div>
           {item.status === 'human_review' ? (
             <div className="px-2 pt-3">

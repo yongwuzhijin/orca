@@ -14660,6 +14660,7 @@
           },
           "TodoDetailView": {
             "startTask": "작업 시작",
+            "designStage": "솔루션 설계 단계",
             "autoPilotEligible": "AutoPilot 대상",
             "autoPilotMaxTurns": "최대 턴 수",
             "autoPilotMaxTurnsPlaceholder": "전역 기본값"

@@ -14649,6 +14649,7 @@
           },
           "TodoDetailView": {
             "startTask": "タスクを開始",
+            "designStage": "ソリューション設計段階",
             "autoPilotEligible": "AutoPilot 対象",
             "autoPilotMaxTurns": "最大ターン数",
             "autoPilotMaxTurnsPlaceholder": "グローバル既定値"

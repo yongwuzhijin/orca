@@ -14677,6 +14677,7 @@
           },
           "TodoDetailView": {
             "startTask": "开始任务",
+            "designStage": "方案设计阶段",
             "autoPilotEligible": "AutoPilot 自动执行",
             "autoPilotMaxTurns": "最大轮次",
             "autoPilotMaxTurnsPlaceholder": "全局默认"

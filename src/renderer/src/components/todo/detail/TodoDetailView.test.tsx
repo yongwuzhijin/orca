@@ -136,6 +136,20 @@ describe('TodoDetailView', () => {
     expect(dateInput).toBeDisabled()
   })
 
+  it('toggles the design-stage flag from the property rail', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup()
+    items = [mkItem({ status: 'todo', designStageEnabled: false })]
+    render(<TodoDetailView itemId="t1" />)
+    await user.click(screen.getByLabelText(/solution design stage/i))
+    expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', { designStageEnabled: true })
+  })
+
+  it('seeds the design-stage checkbox from the card', () => {
+    items = [mkItem({ status: 'todo', designStageEnabled: true })]
+    render(<TodoDetailView itemId="t1" />)
+    expect(screen.getByLabelText(/solution design stage/i)).toBeChecked()
+  })
+
   it('shows Reject/Approve under scheduled date only for human_review', () => {
     items = [mkItem({ status: 'todo' })]
     const { rerender } = render(<TodoDetailView itemId="t1" />)

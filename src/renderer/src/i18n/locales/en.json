@@ -16180,6 +16180,7 @@
           },
           "TodoDetailView": {
             "startTask": "Start task",
+            "designStage": "Solution design stage",
             "autoPilotEligible": "AutoPilot eligible",
             "autoPilotMaxTurns": "Max turns",
             "autoPilotMaxTurnsPlaceholder": "Global default"

@@ -14649,6 +14649,7 @@
           },
           "TodoDetailView": {
             "startTask": "Iniciar tarea",
+            "designStage": "Etapa de diseño de solución",
             "autoPilotEligible": "Apto para AutoPilot",
             "autoPilotMaxTurns": "Turnos máximos",
             "autoPilotMaxTurnsPlaceholder": "Valor predeterminado global"
