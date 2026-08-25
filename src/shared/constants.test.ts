@@ -128,6 +128,10 @@ describe('getDefaultSettings', () => {
     })
   })
 
+  it('defaults the solution-design skill to the requirements-analysis command', () => {
+    expect(getDefaultSettings('/tmp').todoDesignStageSkill).toBe('/ddd-requirements-analysis')
+  })
+
   it('suppresses notifications for the focused worktree by default for new users', () => {
     expect(getDefaultNotificationSettings().suppressWhenFocused).toBe(true)
     expect(getDefaultSettings('/tmp').notifications.suppressWhenFocused).toBe(true)

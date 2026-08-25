@@ -2,6 +2,7 @@ import { afterEach, beforeEach, vi, type Mock } from 'vitest'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { DEFAULT_TODO_DESIGN_STAGE_SKILL } from '../../shared/constants'
 import type { GlobalSettings } from '../../shared/global-settings-types'
 import { DEFAULT_TODO_ORCHESTRATOR_CONFIG } from '../../shared/todo/todo-orchestrator-config'
 import type { CodexResetCreditAttemptLedger } from '../../shared/codex-reset-credit-attempt-ledger'
@@ -139,6 +140,7 @@ export function createSettings(overrides: Partial<GlobalSettings> = {}): GlobalS
     agentCmdOverrides: {},
     keepComputerAwakeWhileAgentsRun: false,
     todoOrchestrator: { ...DEFAULT_TODO_ORCHESTRATOR_CONFIG },
+    todoDesignStageSkill: DEFAULT_TODO_DESIGN_STAGE_SKILL,
     confirmClosePinnedTab: true,
     terminalMacOptionAsAlt: 'false',
     terminalMacOptionAsAltMigrated: true,

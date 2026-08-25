@@ -1,3 +1,4 @@
+import { DEFAULT_TODO_DESIGN_STAGE_SKILL } from '../../shared/constants'
 import type { GlobalSettings } from '../../shared/global-settings-types'
 import { DEFAULT_TODO_ORCHESTRATOR_CONFIG } from '../../shared/todo/todo-orchestrator-config'
 import {
@@ -118,6 +119,7 @@ export function createSettings(overrides: TestSettingsOverrides = {}): GlobalSet
     agentCmdOverrides: {},
     keepComputerAwakeWhileAgentsRun: false,
     todoOrchestrator: { ...DEFAULT_TODO_ORCHESTRATOR_CONFIG },
+    todoDesignStageSkill: DEFAULT_TODO_DESIGN_STAGE_SKILL,
     confirmClosePinnedTab: true,
     terminalMacOptionAsAlt: 'false',
     terminalMacOptionAsAltMigrated: true,

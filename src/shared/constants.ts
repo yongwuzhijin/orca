@@ -165,6 +165,9 @@ export function getDefaultOnboardingState(): OnboardingState {
   }
 }
 
+// Why: a prompt prefix, not an identifier — free text because Orca cannot enumerate a project's slash commands.
+export const DEFAULT_TODO_DESIGN_STAGE_SKILL = '/ddd-requirements-analysis'
+
 function getDefaultWorkspaceDir(homeDir: string): string {
   const separator = homeDir.includes('\\') ? '\\' : '/'
   const trimmedHomeDir = homeDir.replace(/[\\/]+$/, '')
@@ -350,6 +353,7 @@ export function getDefaultSettings(homedir: string): GlobalSettings {
     confirmClosePinnedTab: true,
     keepComputerAwakeWhileAgentsRun: false,
     todoOrchestrator: { ...DEFAULT_TODO_ORCHESTRATOR_CONFIG },
+    todoDesignStageSkill: DEFAULT_TODO_DESIGN_STAGE_SKILL,
     // Why: 'auto' runs a layout-aware probe at boot (see
     // src/renderer/src/lib/keyboard-layout/*) that picks 'true' for US and
     // US-International and 'false' for every other layout. This mirrors
