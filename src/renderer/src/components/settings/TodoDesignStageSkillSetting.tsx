@@ -16,6 +16,7 @@ export function TodoDesignStageSkillSetting({
 }: TodoDesignStageSkillSettingProps): React.JSX.Element {
   return (
     <SettingsRow
+      labelId="todo-design-stage-skill-label"
       label={translate(
         'auto.components.settings.todoDesignStageSkill.label',
         'Solution design skill'
@@ -26,8 +27,8 @@ export function TodoDesignStageSkillSetting({
       )}
       control={
         <Input
-          data-testid="todo-design-stage-skill"
-          className="w-64 text-xs"
+          aria-labelledby="todo-design-stage-skill-label"
+          className="w-64 font-mono text-xs"
           value={value}
           placeholder={DEFAULT_TODO_DESIGN_STAGE_SKILL}
           spellCheck={false}
