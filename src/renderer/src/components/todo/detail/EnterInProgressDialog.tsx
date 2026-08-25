@@ -66,7 +66,7 @@ export function EnterInProgressDialog({
   )
   const designStageAvailable = designStageSkill.length > 0
   const useDesignStage = mode !== 'from-design' && designStage && designStageAvailable
-  // Why: one value for both the preview and the dispatch, so the user never sees a different prompt.
+  // Why: one value, so the preview and the dispatch cannot drift apart.
   const base =
     mode === 'from-design'
       ? buildDesignHandoffPrompt(item, designDocNames ?? [])
@@ -198,11 +198,11 @@ export function EnterInProgressDialog({
             <div className="flex items-center gap-3">
               <input
                 id="enter-design-stage"
-                data-testid="enter-design-stage"
                 type="checkbox"
                 className="size-4"
                 checked={designStage && designStageAvailable}
                 disabled={!designStageAvailable}
+                aria-describedby={designStageAvailable ? undefined : 'enter-design-stage-hint'}
                 onChange={(e) => setDesignStage(e.target.checked)}
               />
               <Label htmlFor="enter-design-stage" className="cursor-pointer">
@@ -212,7 +212,7 @@ export function EnterInProgressDialog({
                 )}
               </Label>
               {designStageAvailable ? null : (
-                <span className="text-xs text-muted-foreground">
+                <span id="enter-design-stage-hint" className="text-xs text-muted-foreground">
                   {translate(
                     'auto.components.todo.detail.EnterInProgressDialog.designStageUnset',
                     'Set a solution design skill in Settings to enable this stage'

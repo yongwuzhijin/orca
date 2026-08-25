@@ -176,7 +176,7 @@ describe('EnterInProgressDialog design stage', () => {
     // Deliberately not DEFAULT_TODO_DESIGN_STAGE_SKILL, so a hardcoded default cannot pass.
     mockState.settings = { todoDesignStageSkill: '/design-skill' }
     renderDialog(item)
-    await userEvent.click(screen.getByTestId('enter-design-stage'))
+    await userEvent.click(screen.getByLabelText(/design the solution first/i))
     await userEvent.click(screen.getByRole('button', { name: /start/i }))
     expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', {
       status: 'solution_design',
@@ -187,6 +187,12 @@ describe('EnterInProgressDialog design stage', () => {
         prompt: buildDesignStagePrompt(item, '/design-skill')
       })
     )
+  })
+
+  it('seeds the checkbox from the card', () => {
+    mockState.settings = { todoDesignStageSkill: '/design-skill' }
+    renderDialog(mkItem({ workspaceProjectId: 'wp-1', designStageEnabled: true }))
+    expect(screen.getByLabelText(/design the solution first/i)).toBeChecked()
   })
 
   it('starts implementation directly with the base prompt when unchecked', async () => {
@@ -205,8 +211,9 @@ describe('EnterInProgressDialog design stage', () => {
   it('disables the design stage when no skill is configured', async () => {
     mockState.settings = { todoDesignStageSkill: '' }
     renderDialog(mkItem({ workspaceProjectId: 'wp-1', designStageEnabled: true }))
-    expect(screen.getByTestId('enter-design-stage')).toBeDisabled()
-    expect(screen.getByTestId('enter-design-stage')).not.toBeChecked()
+    expect(screen.getByLabelText(/design the solution first/i)).toBeDisabled()
+    expect(screen.getByLabelText(/design the solution first/i)).not.toBeChecked()
+    expect(screen.getByText(/set a solution design skill in settings/i)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /start/i }))
     expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', {
       status: 'in_progress',
@@ -217,7 +224,7 @@ describe('EnterInProgressDialog design stage', () => {
   it('hands off to implementation with the design docs in from-design mode', async () => {
     const item = mkItem({ workspaceProjectId: 'wp-1', designStageEnabled: true })
     renderDialog(item, { mode: 'from-design', designDocNames: ['plan.md'] })
-    expect(screen.queryByTestId('enter-design-stage')).toBeNull()
+    expect(screen.queryByLabelText(/design the solution first/i)).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: /start/i }))
     expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', {
       status: 'in_progress',
