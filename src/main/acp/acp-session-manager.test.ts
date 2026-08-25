@@ -343,3 +343,23 @@ describe('AcpSessionManager autoPilot flip suppression', () => {
     expect(mgr.readLastTurnText('sess-x')).toBe('AUTOPILOT: COMPLETE')
   })
 })
+
+// A solution_design card only advances when a human approves the design.
+describe('AcpSessionManager solution_design human gate', () => {
+  it('leaves a solution_design card alone when a turn ends', async () => {
+    const d = deps()
+    d.todos.getItem.mockReturnValue({ id: 'task-1', status: 'solution_design' })
+    const mgr = makeManager(d)
+    await mgr.startPrompt({ taskId: 'task-1', engine: 'claude', prompt: 'hi', cwd: '/tmp' })
+    await mgr.waitForPrompt('eng-sess-1')
+    expect(d.todos.updateItem).not.toHaveBeenCalledWith('task-1', { status: 'human_review' })
+  })
+
+  it('flipToHumanReview leaves a solution_design card alone', () => {
+    const d = deps()
+    d.todos.getItem.mockReturnValue({ id: 'task-1', status: 'solution_design' })
+    const mgr = makeManager(d)
+    mgr.flipToHumanReview('task-1')
+    expect(d.todos.updateItem).not.toHaveBeenCalledWith('task-1', { status: 'human_review' })
+  })
+})
