@@ -29,6 +29,10 @@ describe('resolveWorkspaceProjectConnectionId', () => {
     ).toBeUndefined()
   })
 
+  it('ignores setups belonging to another project', () => {
+    expect(resolveWorkspaceProjectConnectionId('p1', [setup({ projectId: 'p2' })])).toBeUndefined()
+  })
+
   it('returns undefined when the card has no workspace project', () => {
     expect(resolveWorkspaceProjectConnectionId(null, [setup()])).toBeUndefined()
   })
