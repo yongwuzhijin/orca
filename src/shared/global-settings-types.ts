@@ -391,7 +391,7 @@ export type GlobalSettings = {
   computerAwakeMode?: ComputerAwakeMode
   /** Autonomous TODO orchestrator loop config (Symphony #1). Off by default. */
   todoOrchestrator: TodoOrchestratorConfig
-  /** Prompt prefix for the solution-design stage; free text because it may be a slash command Orca cannot enumerate. */
+  /** Prompt prefix for the solution-design stage; free text because it may be a slash command Orca cannot enumerate. Empty disables the stage. */
   todoDesignStageSkill: string
   /** macOS Option key: compose layout chars (@ German, € French) vs act as Meta/Esc for readline.
    *  'auto' (default) = layout-aware via navigator.keyboard.getLayoutMap() (US → Meta, else compose);

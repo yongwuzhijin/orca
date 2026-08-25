@@ -130,6 +130,9 @@ export const REPO_COLORS = [
 
 export const DEFAULT_REPO_BADGE_COLOR = REPO_COLORS[0]
 
+// Why: the requirements-analysis command is the only skill that reliably emits design docs today.
+export const DEFAULT_TODO_DESIGN_STAGE_SKILL = '/ddd-requirements-analysis'
+
 export function getDefaultNotificationSettings(): NotificationSettings {
   return {
     enabled: true,
@@ -164,9 +167,6 @@ export function getDefaultOnboardingState(): OnboardingState {
     } satisfies OnboardingChecklistState
   }
 }
-
-// Why: a prompt prefix, not an identifier — free text because Orca cannot enumerate a project's slash commands.
-export const DEFAULT_TODO_DESIGN_STAGE_SKILL = '/ddd-requirements-analysis'
 
 function getDefaultWorkspaceDir(homeDir: string): string {
   const separator = homeDir.includes('\\') ? '\\' : '/'
