@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { scanAiVaultSessions } from './session-scanner'
+import { isolatedScanRoots } from './session-scanner-test-fixtures'
 import Database from '../sqlite/sync-database'
 
 // Why: this source-level integration suite has no built worker entry. Keep its
@@ -30,31 +31,6 @@ afterEach(async () => {
   tempRoots = []
   tempDbDirs = []
 })
-
-function isolatedScanRoots(root: string) {
-  return {
-    claudeProjectsDir: join(root, 'claude-projects'),
-    codexSessionsDir: join(root, 'codex-sessions'),
-    geminiSessionsDir: join(root, 'gemini-sessions'),
-    antigravityBrainDir: join(root, 'antigravity-brain'),
-    copilotSessionsDir: join(root, 'copilot-sessions'),
-    cursorProjectsDir: join(root, 'cursor-projects'),
-    opencodeStorageDir: join(root, 'opencode-storage'),
-    opencodeDbPaths: [] as readonly string[],
-    grokSessionsDir: join(root, 'grok-sessions'),
-    devinTranscriptsDir: join(root, 'devin-transcripts'),
-    hermesSessionsDir: join(root, 'hermes-sessions'),
-    rovoSessionsDir: join(root, 'rovo-sessions'),
-    openclawStateDir: join(root, 'openclaw-state'),
-    openclawLegacyStateDir: join(root, 'openclaw-legacy-state'),
-    piSessionsDir: join(root, 'pi-sessions'),
-    droidSessionsDir: join(root, 'droid-sessions'),
-    droidProjectsDir: join(root, 'droid-projects'),
-    kimiSessionsDir: join(root, 'kimi-sessions'),
-    ompSessionsDir: join(root, 'omp-sessions'),
-    primeAgentSessionsDir: join(root, 'prime-agent-sessions')
-  }
-}
 
 function createTempOpenCodeDb(): { db: Database.Database; path: string } {
   const dir = mkdtempSync(join(tmpdir(), 'orca-ai-vault-sqlite-'))

@@ -76,5 +76,9 @@ export async function parseAgentSessionFile(
       return parseDevinSessionFile(candidate.file, platform)
     case 'kimi':
       return parseKimiSessionFile(candidate.file, platform)
+    // Why: Qoder writes Claude-shaped JSONL (verified against qodercli v1.1.3),
+    // so the parser is shared; only the agent label and root dir differ.
+    case 'qoder':
+      return parseClaudeSessionFile(candidate.file, platform, 'qoder')
   }
 }

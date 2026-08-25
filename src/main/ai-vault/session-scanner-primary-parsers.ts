@@ -1,7 +1,7 @@
 import { remoteSessionContentLines } from './remote-session-content-lines'
 import { openTranscriptReadStream } from '../native-chat/wsl-transcript-fs-access'
 import { createInterface } from 'node:readline'
-import type { AiVaultSession } from '../../shared/ai-vault-types'
+import type { AiVaultAgent, AiVaultSession } from '../../shared/ai-vault-types'
 import { LOCAL_EXECUTION_HOST_ID, type ExecutionHostId } from '../../shared/execution-host'
 import { isKnownHarnessInjectedUserTurnText } from '../../shared/harness-injected-user-turns'
 import { normalizePromptField } from '../../shared/agent-status-field-normalization'
@@ -42,10 +42,13 @@ export type ClaudeSessionParseState = {
   firstUserTitle: string | null
 }
 
-export function createClaudeSessionParseState(file: FileWithMtime): ClaudeSessionParseState {
+export function createClaudeSessionParseState(
+  file: FileWithMtime,
+  agent: AiVaultAgent = 'claude'
+): ClaudeSessionParseState {
   return {
     accumulator: createAccumulator({
-      agent: 'claude',
+      agent,
       file,
       sessionId: sessionIdFromFileName(file.path)
     }),
@@ -188,8 +191,11 @@ export async function finalizeClaudeSessionParseState(
   return finalizeSession(snapshot.accumulator, platform, options)
 }
 
-export function createClaudeSessionResumeState(file: FileWithMtime): ResumableSessionParseState {
-  return claudeResumeStateFromParseState(createClaudeSessionParseState(file))
+export function createClaudeSessionResumeState(
+  file: FileWithMtime,
+  agent: AiVaultAgent = 'claude'
+): ResumableSessionParseState {
+  return claudeResumeStateFromParseState(createClaudeSessionParseState(file, agent))
 }
 
 function claudeResumeStateFromParseState(
@@ -207,13 +213,14 @@ function claudeResumeStateFromParseState(
 
 export async function parseClaudeSessionFile(
   file: FileWithMtime,
-  platform: NodeJS.Platform = process.platform
+  platform: NodeJS.Platform = process.platform,
+  agent: AiVaultAgent = 'claude'
 ): Promise<AiVaultSession | null> {
   const lines = createInterface({
     input: openTranscriptReadStream(file.path, { encoding: 'utf-8' }, 'scan'),
     crlfDelay: Infinity
   })
-  return parseClaudeSessionLines({ file, lines, platform })
+  return parseClaudeSessionLines({ file, lines, platform, agent })
 }
 
 export async function parseClaudeSessionContent(
@@ -221,13 +228,15 @@ export async function parseClaudeSessionContent(
   content: string,
   platform: NodeJS.Platform = process.platform,
   options: ParserSessionOptions = {},
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  agent: AiVaultAgent = 'claude'
 ): Promise<AiVaultSession | null> {
   return parseClaudeSessionLines({
     file,
     lines: remoteSessionContentLines(content, signal),
     platform,
-    options
+    options,
+    agent
   })
 }
 
@@ -236,8 +245,9 @@ async function parseClaudeSessionLines(args: {
   lines: AsyncIterable<string> | Iterable<string>
   platform: NodeJS.Platform
   options?: ParserSessionOptions
+  agent?: AiVaultAgent
 }): Promise<AiVaultSession | null> {
-  const state = createClaudeSessionParseState(args.file)
+  const state = createClaudeSessionParseState(args.file, args.agent ?? 'claude')
   for await (const line of args.lines) {
     consumeClaudeSessionLine(state, line)
   }

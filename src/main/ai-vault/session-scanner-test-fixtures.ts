@@ -24,7 +24,8 @@ export function isolatedScanRoots(root: string) {
     primeAgentSessionsDir: join(root, 'prime-agent-sessions'),
     droidSessionsDir: join(root, 'droid-sessions'),
     droidProjectsDir: join(root, 'droid-projects'),
-    kimiSessionsDir: join(root, 'kimi-sessions')
+    kimiSessionsDir: join(root, 'kimi-sessions'),
+    qoderProjectsDir: join(root, 'qoder-projects')
   }
 }
 

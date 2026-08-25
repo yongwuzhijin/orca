@@ -6,7 +6,12 @@ import { resolveGrokSessionsDir } from '../../shared/grok-session-paths'
 import { uniqueCodexSessionsDirs } from './session-scanner-codex-paths'
 import { resolveKimiSessionsDir } from './session-scanner-kimi-paths'
 import { OMP_SESSION_ARTIFACT_DIR_PATTERN } from './session-scanner-omp-subagent-transcripts'
-import { claudeProjectsRootDirs, OMP_SESSIONS_DIR, sessionRootDirs } from './session-scanner-roots'
+import {
+  claudeProjectsRootDirs,
+  OMP_SESSIONS_DIR,
+  qoderProjectsRootDirs,
+  sessionRootDirs
+} from './session-scanner-roots'
 import { SUBAGENT_DIR_NAME } from './session-scanner-subagent-transcripts'
 import type { AiVaultScanOptions } from './session-scanner-types'
 import { normalizeAgentSessionsDir, primeAgentSessionsDirFromEnv } from './session-scanner-values'
@@ -232,6 +237,14 @@ export const AI_VAULT_AGENT_SOURCES: AiVaultAgentSourceTable = {
     // only those (not the sibling agents/*/wire.jsonl transcripts).
     filePredicate: (filePath) =>
       basename(filePath) === 'state.json' && basename(dirname(filePath)).startsWith('session_')
+  },
+  qoder: {
+    rootDirs: (options, wslHomeDirs) =>
+      qoderProjectsRootDirs({ qoderProjectsDir: options.qoderProjectsDir, wslHomeDirs }),
+    // Why: `<slug>/` also holds bare `<uuid>/` dirs (each with only a state.json)
+    // and a `transcript/` dir. The extension filter already excludes them — only
+    // a `<uuid>.jsonl` is a resumable session, which matches `--list-sessions`.
+    extensions: ['.jsonl']
   }
 }
 

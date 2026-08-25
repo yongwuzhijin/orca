@@ -23,6 +23,20 @@ export function claudeProjectsRootDirs(args: {
   ]
 }
 
+const QODER_PROJECTS_DIR = join(homedir(), '.qoder', 'projects')
+
+// Why: Qoder mirrors Claude's `<root>/<slug>/<id>.jsonl` layout but under its own
+// home dir. Kept as a separate builder so a Qoder scan can never reach ~/.claude.
+export function qoderProjectsRootDirs(args: {
+  qoderProjectsDir?: string
+  wslHomeDirs?: readonly string[]
+}): string[] {
+  return [
+    args.qoderProjectsDir ?? QODER_PROJECTS_DIR,
+    ...(args.wslHomeDirs ?? []).map((homeDir) => join(homeDir, '.qoder', 'projects'))
+  ]
+}
+
 // The local host and each WSL distro's OMP sessions root. Callers reading OMP
 // session files by path use these roots to reject arbitrary paths.
 export function ompSessionsRootDirs(args: {

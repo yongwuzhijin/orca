@@ -696,6 +696,31 @@ describe('scanAiVaultSessions', () => {
       ])
     )
 
+    // Qoder: Claude-shaped JSONL under its own <slug>/<sessionId>.jsonl root.
+    await mkdir(join(roots.qoderProjectsDir, '-tmp-qoder'), { recursive: true })
+    await writeFile(
+      join(roots.qoderProjectsDir, '-tmp-qoder', 'qoder-session.jsonl'),
+      jsonLines([
+        {
+          type: 'user',
+          sessionId: 'qoder-session',
+          timestamp: '2026-05-01T10:12:00.000Z',
+          cwd: '/tmp/qoder',
+          message: { role: 'user', content: 'Qoder vault title' }
+        },
+        {
+          type: 'assistant',
+          sessionId: 'qoder-session',
+          timestamp: '2026-05-01T10:12:01.000Z',
+          message: {
+            role: 'assistant',
+            model: 'auto',
+            content: [{ type: 'text', text: 'Qoder reply' }]
+          }
+        }
+      ])
+    )
+
     const result = await scanAiVaultSessions({ ...roots, platform: 'darwin', limit: 20 })
 
     expect(result.issues).toEqual([])
@@ -743,6 +768,7 @@ describe('scanAiVaultSessions', () => {
     expect(commandByAgent.get('kimi')).toBe(
       "cd '/tmp/kimi' && kimi --session 'session_kimi-session'"
     )
+    expect(commandByAgent.get('qoder')).toBe("cd '/tmp/qoder' && qodercli --resume 'qoder-session'")
 
     const ompSession = result.sessions.find((session) => session.agent === 'omp')
     expect(ompSession?.model).toBe('gpt-5.4-mini')
