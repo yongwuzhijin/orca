@@ -1,4 +1,4 @@
-import type { AgentType } from '../../../../shared/agent-status-types'
+import type { AgentType } from '../../../../shared/agent-type'
 import type { SessionOptionValue } from '../../../../shared/native-chat-session-options'
 import {
   cloneNativeChatSessionOptionRecord,

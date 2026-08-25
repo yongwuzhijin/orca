@@ -26,6 +26,12 @@ export async function markRemoteAgentWorkspaceTrusted(args: {
     await markRemoteCursorWorkspaceTrusted(fsProvider, home, workspacePath)
   } else if (args.preset === 'copilot') {
     await markRemoteCopilotFolderTrusted(fsProvider, home, workspacePath)
+  } else if (args.preset === 'qoder') {
+    await markRemoteQoderFolderTrusted(fsProvider, home, workspacePath)
+  } else {
+    // Why: same silent-no-op hazard as the local chain — a preset with no remote
+    // writer would leave SSH launches facing the trust menu.
+    args.preset satisfies never
   }
 }
 
@@ -143,6 +149,45 @@ async function markRemoteCopilotFolderTrusted(
     return
   }
   config.trustedFolders = [...existing.filter((entry) => typeof entry === 'string'), workspacePath]
+  await fsProvider.createDir(configDir)
+  await fsProvider.writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`)
+}
+
+async function markRemoteQoderFolderTrusted(
+  fsProvider: IFilesystemProvider,
+  remoteHome: string,
+  workspacePath: string
+): Promise<void> {
+  const configDir = `${remoteHome}/.qoder`
+  const configPath = `${configDir}/settings.json`
+  const raw = await readRemoteTextFile(fsProvider, configPath)
+  let config: Record<string, unknown> = {}
+  if (raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw)
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return
+      }
+      config = parsed as Record<string, unknown>
+    } catch {
+      return
+    }
+  }
+  const permissionsValue = config.permissions
+  const permissions: Record<string, unknown> =
+    permissionsValue && typeof permissionsValue === 'object' && !Array.isArray(permissionsValue)
+      ? (permissionsValue as Record<string, unknown>)
+      : {}
+  const existing = Array.isArray(permissions.trustDirectories)
+    ? (permissions.trustDirectories as unknown[]).filter(
+        (entry): entry is string => typeof entry === 'string'
+      )
+    : []
+  if (existing.includes(workspacePath)) {
+    return
+  }
+  permissions.trustDirectories = [...existing, workspacePath]
+  config.permissions = permissions
   await fsProvider.createDir(configDir)
   await fsProvider.writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`)
 }

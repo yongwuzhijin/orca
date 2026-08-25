@@ -1,7 +1,8 @@
 import type { TerminalTab } from '../../../shared/terminal-tab-types'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import type { Worktree } from '../../../shared/worktree/types'
-import type { AgentStatusState, AgentType } from '../../../shared/agent-status-types'
+import type { AgentStatusState } from '../../../shared/agent-status-types'
+import type { AgentType } from '../../../shared/agent-type'
 import { tabHasLivePty } from './tab-has-live-pty'
 import type { WorktreeStatus } from './worktree-status'
 import { tuiAgentToAgentKind } from '../../../shared/agent-kind'
@@ -108,6 +109,7 @@ const ICONABLE_AGENT_TYPES: Record<TuiAgent, true> = {
   pi: true,
   omp: true,
   'prime-agent': true,
+  qoder: true,
   gemini: true,
   antigravity: true,
   aider: true,

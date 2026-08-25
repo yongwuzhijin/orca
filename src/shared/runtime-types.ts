@@ -2,9 +2,9 @@
 import type {
   AgentStatusEntry,
   AgentStatusOrchestrationContext,
-  AgentStatusState,
-  AgentType
+  AgentStatusState
 } from './agent-status-types'
+import type { AgentType } from './agent-type'
 import type {
   BrowserCertificateFailure,
   BrowserCookieImportResult,

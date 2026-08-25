@@ -70,9 +70,9 @@ import {
   type AgentStateHistoryEntry,
   type AgentStatusEntry,
   type AgentStatusState,
-  type AgentType,
   type MigrationUnsupportedPtyEntry
 } from '../../../../shared/agent-status-types'
+import type { AgentType } from '../../../../shared/agent-type'
 import { parsePaneKey } from '../../../../shared/stable-pane-id'
 import { isClipboardTextByteLengthOverLimit } from '../../../../shared/clipboard-text'
 import { migrationUnsupportedToAgentStatusEntry } from '@/lib/migration-unsupported-agent-entry'

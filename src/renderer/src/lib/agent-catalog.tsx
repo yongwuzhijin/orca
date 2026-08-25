@@ -135,6 +135,13 @@ export const getAgentCatalog = createLocalizedCatalog((): AgentCatalogEntry[] =>
     homepageUrl: 'https://github.com/PrimeIntellect-ai/prime-agent'
   },
   {
+    id: 'qoder',
+    label: translate('auto.lib.agent.catalog.qoder', 'Qoder'),
+    cmd: 'qodercli',
+    faviconDomain: 'qoder.com',
+    homepageUrl: 'https://qoder.com'
+  },
+  {
     id: 'gemini',
     label: translate('auto.lib.agent.catalog.12e6baa4f7', 'Gemini'),
     cmd: 'gemini',

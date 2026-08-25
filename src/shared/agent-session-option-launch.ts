@@ -1,4 +1,4 @@
-import type { AgentType } from './agent-status-types'
+import type { AgentType } from './agent-type'
 import { findCatalogModel, getAgentSessionOptionCatalog } from './agent-session-option-catalog'
 import type { SessionOptionValue } from './native-chat-session-options'
 

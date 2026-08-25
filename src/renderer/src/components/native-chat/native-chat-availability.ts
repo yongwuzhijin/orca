@@ -1,6 +1,6 @@
 import type { Tab } from '../../../../shared/tab-types'
 import type { TuiAgent } from '../../../../shared/tui-agent'
-import type { AgentType } from '../../../../shared/agent-status-types'
+import type { AgentType } from '../../../../shared/agent-type'
 import {
   isNativeChatSupportedAgent,
   nativeChatRequiresLocalTranscript

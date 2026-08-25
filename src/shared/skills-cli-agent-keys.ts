@@ -23,6 +23,10 @@ export const SKILLS_CLI_AGENT_KEY_BY_TUI_AGENT = {
   pi: 'pi',
   omp: null,
   'prime-agent': null,
+  // Why: `qodercli skills` exists as a subcommand but Orca's skills-CLI install
+  // path is keyed to namespaces it can write; Qoder gets home-dir discovery
+  // (skill-discovery-sources.ts) instead of a CLI-managed namespace.
+  qoder: null,
   gemini: 'gemini-cli',
   antigravity: 'antigravity',
   aider: null,

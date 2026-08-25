@@ -2,7 +2,7 @@ import {
   getAgentSessionOptionCatalog,
   type CatalogModel
 } from '../../../../shared/agent-session-option-catalog'
-import type { AgentType } from '../../../../shared/agent-status-types'
+import type { AgentType } from '../../../../shared/agent-type'
 import type {
   SessionOptionDescriptor,
   SessionOptionsSurface,

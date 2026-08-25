@@ -3,7 +3,8 @@ import {
   type AgentTrustPreset,
   markCodexProjectTrusted,
   markCopilotFolderTrusted,
-  markCursorWorkspaceTrusted
+  markCursorWorkspaceTrusted,
+  markQoderFolderTrusted
 } from '../agent-trust-presets'
 import { markRemoteAgentWorkspaceTrusted } from '../remote-agent-trust-presets'
 
@@ -28,21 +29,26 @@ export function registerAgentTrustHandlers(): void {
         return
       }
       try {
+        const preset = args.preset
         const connectionId = typeof args.connectionId === 'string' ? args.connectionId.trim() : ''
         if (connectionId) {
           // Why: SSH-launched agents read trust artifacts from the remote
           // user's home, not from this desktop process.
           await markRemoteAgentWorkspaceTrusted({
-            preset: args.preset,
+            preset,
             connectionId,
             workspacePath: args.workspacePath
           })
-        } else if (args.preset === 'cursor') {
+        } else if (preset === 'cursor') {
           markCursorWorkspaceTrusted(args.workspacePath)
-        } else if (args.preset === 'copilot') {
+        } else if (preset === 'copilot') {
           markCopilotFolderTrusted(args.workspacePath)
-        } else if (args.preset === 'codex') {
+        } else if (preset === 'codex') {
           markCodexProjectTrusted(args.workspacePath)
+        } else if (preset === 'qoder') {
+          markQoderFolderTrusted(args.workspacePath)
+        } else {
+          preset satisfies never
         }
       } catch {
         // Best-effort: see Why above. The user can still accept the trust

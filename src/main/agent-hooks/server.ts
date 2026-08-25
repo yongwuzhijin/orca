@@ -67,11 +67,11 @@ import {
   AGENT_STATUS_STALE_AFTER_MS,
   type AgentStatusClearIpcPayload,
   type AgentStatusIpcPayload,
-  type AgentType,
   type AgentStatusState,
   type ParsedAgentStatusPayload,
   normalizeAgentStatusPayload
 } from '../../shared/agent-status-types'
+import type { AgentType } from '../../shared/agent-type'
 import {
   AgentStatusObservationSequencer,
   createAgentStatusAuthorityId,

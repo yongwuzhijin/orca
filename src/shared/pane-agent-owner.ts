@@ -1,4 +1,4 @@
-import type { AgentType } from './agent-status-types'
+import type { AgentType } from './agent-type'
 
 /**
  * The owner-evidence signals a terminal pane can carry, strongest launch intent

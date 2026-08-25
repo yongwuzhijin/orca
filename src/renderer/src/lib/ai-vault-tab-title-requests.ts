@@ -1,5 +1,5 @@
 import type { AgentProviderSessionMetadata } from '../../../shared/agent-session-resume'
-import type { AgentType } from '../../../shared/agent-status-types'
+import type { AgentType } from '../../../shared/agent-type'
 import type { AiVaultSessionTitle } from '../../../shared/ai-vault-session-title'
 import { isAiVaultTitleAgent } from '../../../shared/ai-vault-session-title'
 import type { ExecutionHostId } from '../../../shared/execution-host'

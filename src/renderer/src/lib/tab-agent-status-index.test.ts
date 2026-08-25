@@ -9,11 +9,8 @@ import {
 } from './tab-agent'
 import { agentTypeToIconAgent } from './agent-status'
 import { isTerminalLeafId, parsePaneKey } from '../../../shared/stable-pane-id'
-import type {
-  AgentStatusEntry,
-  AgentStatusState,
-  AgentType
-} from '../../../shared/agent-status-types'
+import type { AgentStatusEntry, AgentStatusState } from '../../../shared/agent-status-types'
+import type { AgentType } from '../../../shared/agent-type'
 import type { TerminalLayoutSnapshot, TerminalTab } from '../../../shared/terminal-tab-types'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import type { RetainedAgentEntry } from '@/store/slices/agent-status'

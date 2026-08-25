@@ -1,5 +1,5 @@
 import { normalizeCompatibleAgentTitleForOwner } from '../../../../shared/agent-title-owner'
-import type { AgentType } from '../../../../shared/agent-status-types'
+import type { AgentType } from '../../../../shared/agent-type'
 import {
   resolvePaneRendererPolicy,
   type RendererPolicyDecision,

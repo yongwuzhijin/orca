@@ -8,10 +8,10 @@ import {
   type AgentStateHistoryEntry,
   type AgentStatusEntry,
   type AgentStatusOrchestrationContext,
-  type AgentType,
   type MigrationUnsupportedPtyEntry,
   type ParsedAgentStatusPayload
 } from '../../../../shared/agent-status-types'
+import type { AgentType } from '../../../../shared/agent-type'
 import type { AgentStatusObservation } from '../../../../shared/agent-status-observation'
 import { rendererAgentStatusObservations } from '../../lib/renderer-agent-status-observations'
 import {

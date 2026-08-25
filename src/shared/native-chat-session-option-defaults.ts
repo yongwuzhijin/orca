@@ -1,4 +1,4 @@
-import type { AgentType } from './agent-status-types'
+import type { AgentType } from './agent-type'
 import { sessionOptionValueIsValid } from './agent-session-option-catalog'
 import type {
   PersistedNativeChatSessionOptions,

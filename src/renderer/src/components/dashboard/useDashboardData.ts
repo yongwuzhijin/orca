@@ -1,8 +1,5 @@
-import type {
-  AgentStatusEntry,
-  AgentStatusState,
-  AgentType
-} from '../../../../shared/agent-status-types'
+import type { AgentStatusEntry, AgentStatusState } from '../../../../shared/agent-status-types'
+import type { AgentType } from '../../../../shared/agent-type'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 
 export type DashboardAgentRow = {

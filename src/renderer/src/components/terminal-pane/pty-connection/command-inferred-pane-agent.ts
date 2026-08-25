@@ -2,9 +2,9 @@ import { detectAgentStatusFromTitle, isClaudeAgent } from '@/lib/agent-status'
 import { useAppStore } from '@/store'
 import {
   isFreshNonDoneAgentStatus,
-  type AgentStatusEntry,
-  type AgentType
+  type AgentStatusEntry
 } from '../../../../../shared/agent-status-types'
+import type { AgentType } from '../../../../../shared/agent-type'
 import { registerAgentHookTerminalLifecycleHandler } from '../agent-hook-terminal-lifecycle'
 import type { AgentCompletionStatusSnapshot } from '../agent-completion-coordinator-types'
 import { resolveCompatibleAgentTypeForOwner } from '../../../../../shared/agent-title-owner'

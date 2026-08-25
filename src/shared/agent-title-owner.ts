@@ -1,5 +1,6 @@
 import { detectAgentStatusFromTitle, getAgentLabel } from './agent-detection'
-import type { AgentStatusEntry, AgentType } from './agent-status-types'
+import type { AgentStatusEntry } from './agent-status-types'
+import type { AgentType } from './agent-type'
 import {
   getSyntheticAgentTitleProfile,
   SYNTHETIC_AGENT_TITLE_PROFILES,

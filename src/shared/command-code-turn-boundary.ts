@@ -1,4 +1,4 @@
-import type { AgentType } from './agent-status-types'
+import type { AgentType } from './agent-type'
 
 type CommandCodeTurnBoundaryInput = {
   agentType: AgentType | undefined

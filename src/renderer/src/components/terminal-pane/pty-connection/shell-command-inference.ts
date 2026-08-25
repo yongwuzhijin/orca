@@ -1,6 +1,6 @@
 import { detectAgentStatusFromTitle } from '@/lib/agent-status'
 import { useAppStore } from '@/store'
-import type { AgentType } from '../../../../../shared/agent-status-types'
+import type { AgentType } from '../../../../../shared/agent-type'
 import { AGENT_INTERRUPT_SETTLE_MS } from '../../../../../shared/agent-interrupt-intent'
 import { resolvePaneAgentOwner } from '../../../../../shared/pane-agent-owner'
 

@@ -1,11 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, realpathSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
+import { isPathInsideOrEqual } from '../shared/cross-platform-path'
 import { writeFileAtomically } from './codex-accounts/fs-utils'
 import { getOrcaManagedCodexHomePath } from './codex/codex-home-paths'
 import { upsertProjectTrustLevel } from './codex/config-toml-trust'
 
-export type AgentTrustPreset = 'cursor' | 'copilot' | 'codex'
+export type AgentTrustPreset = 'cursor' | 'copilot' | 'codex' | 'qoder'
 
 /**
  * Pre-mark a workspace as trusted for cursor-agent, GitHub Copilot CLI, or
@@ -94,6 +95,59 @@ export function markCopilotFolderTrusted(workspacePath: string): void {
   }
   const next = [...existing.filter((e) => typeof e === 'string'), absPath]
   config.trustedFolders = next
+  if (!existsSync(configDir)) {
+    mkdirSync(configDir, { recursive: true })
+  }
+  writeFileAtomically(configPath, `${JSON.stringify(config, null, 2)}\n`)
+}
+
+/** Pre-write Qoder's folder trust so its first-launch trust menu never consumes
+ *  the bracketed paste. Qoder nests the list under `permissions.trustDirectories`
+ *  in ~/.qoder/settings.json (verified against qodercli v1.1.3). */
+export function markQoderFolderTrusted(workspacePath: string): void {
+  const absPath = canonicalize(workspacePath)
+  const configDir = join(homedir(), '.qoder')
+  const configPath = join(configDir, 'settings.json')
+  let config: Record<string, unknown> = {}
+  if (existsSync(configPath)) {
+    let raw = ''
+    try {
+      raw = readFileSync(configPath, 'utf-8')
+    } catch {
+      return
+    }
+    if (raw.trim()) {
+      try {
+        const parsed = JSON.parse(raw)
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          return
+        }
+        config = parsed as Record<string, unknown>
+      } catch {
+        // Why: a hand-edited settings.json also holds the user's MCP servers and
+        // hooks. Refuse rather than overwrite; the trust menu is recoverable.
+        return
+      }
+    }
+  }
+  const permissionsValue = config.permissions
+  const permissions: Record<string, unknown> =
+    permissionsValue && typeof permissionsValue === 'object' && !Array.isArray(permissionsValue)
+      ? (permissionsValue as Record<string, unknown>)
+      : {}
+  const existing = Array.isArray(permissions.trustDirectories)
+    ? (permissions.trustDirectories as unknown[]).filter(
+        (entry): entry is string => typeof entry === 'string'
+      )
+    : []
+  // Why: Qoder trusts descendants of a trusted dir, so an ancestor entry already
+  // covers this workspace — appending it would just grow the file on every launch.
+  // Arg order matters: isPathInsideOrEqual(rootPath, candidatePath).
+  if (existing.some((entry) => isPathInsideOrEqual(canonicalize(entry), absPath))) {
+    return
+  }
+  permissions.trustDirectories = [...existing, absPath]
+  config.permissions = permissions
   if (!existsSync(configDir)) {
     mkdirSync(configDir, { recursive: true })
   }

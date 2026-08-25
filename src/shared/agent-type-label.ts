@@ -1,4 +1,4 @@
-import type { AgentType } from './agent-status-types'
+import type { AgentType } from './agent-type'
 
 // Shared so the desktop renderer and the mobile app show the same agent name
 // (e.g. native chat's empty state on both surfaces) from one source of truth.
@@ -17,6 +17,7 @@ const WELL_KNOWN_LABELS: Record<string, string> = {
   pi: 'Pi',
   omp: 'OMP',
   'prime-agent': 'Prime Agent',
+  qoder: 'Qoder',
   droid: 'Droid',
   'command-code': 'Command Code',
   grok: 'Grok',

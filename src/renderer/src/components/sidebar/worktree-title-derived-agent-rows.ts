@@ -6,9 +6,9 @@ import { tabHasLivePty } from '@/lib/tab-has-live-pty'
 import type {
   AgentStatusEntry,
   AgentStatusOrchestrationContext,
-  AgentStatusState,
-  AgentType
+  AgentStatusState
 } from '../../../../shared/agent-status-types'
+import type { AgentType } from '../../../../shared/agent-type'
 import { isTerminalLeafId, makePaneKey } from '../../../../shared/stable-pane-id'
 import type {
   TerminalLayoutSnapshot,

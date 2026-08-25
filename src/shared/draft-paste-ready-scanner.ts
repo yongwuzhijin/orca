@@ -1,4 +1,4 @@
-import type { DraftPasteReadySignal } from './tui-agent-config'
+import type { DraftPasteReadySignal } from './tui-agent-config-types'
 
 // Why: agents enable bracketed paste (DECSET 2004) before their composer is
 // actually mounted/focused. These markers let the scanner detect the real
@@ -21,6 +21,13 @@ const DECTCEM_SHOW_CURSOR = '\x1b[?25h'
 const GROK_COMPOSER_PROMPT = '❯'
 const DECSET_ALT_SCREEN = '\x1b[?1049h'
 const DECRST_ALT_SCREEN = '\x1b[?1049l'
+// Why: Qoder's composer placeholder. The placeholder sentence is unusable —
+// Qoder interleaves SGR/cursor-position escapes between its words — but this
+// token renders contiguously, exactly once, ~14ms after bracketed paste is
+// enabled. It is anchored on DECSET 2004 rather than an alt-screen switch
+// because Qoder never enters the alternate screen, and no shell prompt emits
+// this token (unlike grok's `❯`), so the anchor is safe.
+const QODER_COMPOSER_PLACEHOLDER = '@path/to/file'
 
 type DraftPasteReadySignalSpec = {
   /** Bytes that must precede `marker` for it to count; null when there is no marker. */
@@ -59,6 +66,16 @@ const DRAFT_PASTE_READY_SIGNALS: Record<DraftPasteReadySignal, DraftPasteReadySi
     // `[ui] screen_mode = "minimal"`), where 1049h never arrives — anchoring the
     // fallback there too would leave the draft with no delivery path at all, and
     // the main-process caller drops the draft when readiness never resolves.
+    quietAnchor: DECSET_BRACKETED_PASTE
+  },
+  'qoder-composer-prompt': {
+    markerAnchor: DECSET_BRACKETED_PASTE,
+    markerAnchorEnd: null,
+    marker: QODER_COMPOSER_PLACEHOLDER,
+    // Why: unlike the Codex/opencode marker signals, keep the quiet-window floor.
+    // Qoder's launch-time self-updater emits ~176 chunks over 22s, and a build
+    // that changes the placeholder copy would otherwise have no delivery path at
+    // all. The quiet window is a floor, not the primary path.
     quietAnchor: DECSET_BRACKETED_PASTE
   },
   'render-quiet-after-bracketed-paste': {

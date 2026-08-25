@@ -586,7 +586,8 @@ import {
 import {
   markCodexProjectTrusted,
   markCopilotFolderTrusted,
-  markCursorWorkspaceTrusted
+  markCursorWorkspaceTrusted,
+  markQoderFolderTrusted
 } from '../agent-trust-presets'
 import { markRemoteAgentWorkspaceTrusted } from '../remote-agent-trust-presets'
 import { applyAgentStatusHooksEnabled } from '../agent-hooks/managed-agent-hook-controls'
@@ -23941,6 +23942,13 @@ export class OrcaRuntimeService {
         markCopilotFolderTrusted(workspacePath)
       } else if (preset === 'codex') {
         markCodexProjectTrusted(workspacePath)
+      } else if (preset === 'qoder') {
+        markQoderFolderTrusted(workspacePath)
+      } else {
+        // Why: this chain silently no-ops for an unhandled preset, which would send
+        // every launch back to the trust menu that eats the bracketed paste. Fail the
+        // build instead when a new preset arrives without a writer here.
+        preset satisfies never
       }
     } catch {
       // Best-effort: the user can still accept the agent trust prompt manually.

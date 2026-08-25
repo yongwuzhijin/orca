@@ -1,4 +1,4 @@
-import type { AgentType } from './agent-status-types'
+import type { AgentType } from './agent-type'
 
 /** Baseline snapshot the renderer captured when it observed the submit
  *  keystroke. The main process re-validates every field against its own

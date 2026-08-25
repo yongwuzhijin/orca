@@ -1,4 +1,4 @@
-import type { AgentType } from '../../../shared/agent-status-types'
+import type { AgentType } from '../../../shared/agent-type'
 import type { DiscoveredSkill, SkillDiscoverySource } from '../../../shared/skills'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import { ORCHESTRATION_SKILL_NAME } from '@/lib/agent-feature-install-commands'

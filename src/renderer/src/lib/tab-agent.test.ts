@@ -7,7 +7,8 @@ import {
   resolveSiblingRetainedTabAgent,
   resolveSiblingTabAgent
 } from './tab-agent'
-import type { AgentStatusEntry, AgentType } from '../../../shared/agent-status-types'
+import type { AgentStatusEntry } from '../../../shared/agent-status-types'
+import type { AgentType } from '../../../shared/agent-type'
 import type { TerminalLayoutSnapshot, TerminalTab } from '../../../shared/terminal-tab-types'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import type { RetainedAgentEntry } from '@/store/slices/agent-status'

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { AgentType } from './agent-status-types'
+import type { AgentType } from './agent-type'
 import type { ProjectExecutionRuntimeResolution } from './project-execution-runtime'
 
 export type SkillProvider = 'codex' | 'claude' | 'agent-skills'

@@ -1,4 +1,4 @@
-import type { AgentType } from './agent-status-types'
+import type { AgentType } from './agent-type'
 import { getAgentSlashCommands, type SlashCommandSuggestion } from './native-chat-slash-commands'
 
 export type NativeChatAgentProfile = {

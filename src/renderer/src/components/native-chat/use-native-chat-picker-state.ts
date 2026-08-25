@@ -9,7 +9,7 @@ import {
   type RefObject,
   type SetStateAction
 } from 'react'
-import type { AgentType } from '../../../../shared/agent-status-types'
+import type { AgentType } from '../../../../shared/agent-type'
 import { getNativeChatAgentProfile } from '../../../../shared/native-chat-agent-profiles'
 import type { SlashCommandSuggestion } from '../../../../shared/native-chat-slash-commands'
 import {

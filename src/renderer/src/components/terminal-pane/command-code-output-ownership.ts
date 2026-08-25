@@ -1,4 +1,4 @@
-import type { AgentType } from '../../../../shared/agent-status-types'
+import type { AgentType } from '../../../../shared/agent-type'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 
 export function canCommandCodeOutputOwnPane(args: {

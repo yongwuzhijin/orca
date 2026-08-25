@@ -5,9 +5,9 @@ import type { TuiAgent } from '../../../shared/tui-agent'
 import {
   AGENT_STATUS_STALE_AFTER_MS,
   type AgentStatusEntry,
-  type AgentStatusState,
-  type AgentType
+  type AgentStatusState
 } from '../../../shared/agent-status-types'
+import type { AgentType } from '../../../shared/agent-type'
 
 // Why: explicit agent status entries (from hook-based reports) can go stale if
 // the agent process exits without sending a final update. This helper lets

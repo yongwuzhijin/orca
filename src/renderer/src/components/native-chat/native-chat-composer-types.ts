@@ -1,4 +1,4 @@
-import type { AgentType } from '../../../../shared/agent-status-types'
+import type { AgentType } from '../../../../shared/agent-type'
 import type { NativeChatLaunchDraft } from '@/lib/native-chat-launch-prompt'
 
 export type NativeChatComposerProps = {

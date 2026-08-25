@@ -1,4 +1,5 @@
-import type { AgentStatusState, AgentType } from './agent-status-types'
+import type { AgentStatusState } from './agent-status-types'
+import type { AgentType } from './agent-type'
 
 export type SyntheticAgentTitleProfile = {
   workingLabel: string

@@ -3,10 +3,10 @@ import { isExplicitAgentStatusFresh } from '@/lib/agent-status'
 import type { RetainedAgentEntry } from '@/store/slices/agent-status'
 import {
   AGENT_STATUS_STALE_AFTER_MS,
-  type AgentType,
   type AgentStatusEntry,
   type AgentStatusOrchestrationContext
 } from '../../../../shared/agent-status-types'
+import type { AgentType } from '../../../../shared/agent-type'
 import {
   makePaneKey,
   parseLegacyNumericPaneKey,

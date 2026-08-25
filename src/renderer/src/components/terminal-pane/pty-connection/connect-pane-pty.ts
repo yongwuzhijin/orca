@@ -9,7 +9,7 @@ import { RESET_TERMINAL_CURSOR_STYLE } from '../../../../../shared/terminal-mode
 import { writeTerminalOutput } from '@/lib/pane-manager/pane-terminal-output-scheduler'
 import { createTerminalStructuralReplayCoordinator } from '@/lib/pane-manager/terminal-structural-replay-coordinator'
 import { makePaneKey } from '../../../../../shared/stable-pane-id'
-import type { AgentType } from '../../../../../shared/agent-status-types'
+import type { AgentType } from '../../../../../shared/agent-type'
 import { resolveCommittedTitleAgentType } from '@/lib/pane-agent-evidence'
 
 import { shouldWritePtyOutputForeground } from './foreground-output-scan'

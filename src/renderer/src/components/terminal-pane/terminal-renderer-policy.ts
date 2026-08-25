@@ -1,5 +1,5 @@
 import { isGeminiTerminalTitle } from '@/lib/agent-status'
-import type { AgentType } from '../../../../shared/agent-status-types'
+import type { AgentType } from '../../../../shared/agent-type'
 import type { GlobalSettings } from '../../../../shared/global-settings-types'
 
 export type TerminalGpuAccelerationMode = GlobalSettings['terminalGpuAcceleration']

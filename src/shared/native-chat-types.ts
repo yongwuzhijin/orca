@@ -6,7 +6,7 @@
 // here must be plain JSON: these values cross the IPC boundary, so no class
 // instances, Maps, or Dates.
 
-import type { AgentType } from './agent-status-types'
+import type { AgentType } from './agent-type'
 
 export type { AgentType }
 
