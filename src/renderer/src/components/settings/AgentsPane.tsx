@@ -906,7 +906,7 @@ export function AgentsPane({
       <TodoOrchestratorSetting settings={settings} updateSettings={updateSettings} />
 
       <TodoDesignStageSkillSetting
-        value={settings.todoDesignStageSkill ?? ''}
+        value={settings.todoDesignStageSkill}
         onChange={(next) => void updateSettings({ todoDesignStageSkill: next })}
       />
 
