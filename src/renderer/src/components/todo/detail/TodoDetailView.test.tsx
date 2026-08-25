@@ -136,12 +136,17 @@ describe('TodoDetailView', () => {
     expect(dateInput).toBeDisabled()
   })
 
-  it('toggles the design-stage flag from the property rail', async () => {
+  it('toggles the design-stage flag both ways from the property rail', async () => {
     const user = (await import('@testing-library/user-event')).default.setup()
     items = [mkItem({ status: 'todo', designStageEnabled: false })]
-    render(<TodoDetailView itemId="t1" />)
+    const { rerender } = render(<TodoDetailView itemId="t1" />)
     await user.click(screen.getByLabelText(/solution design stage/i))
-    expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', { designStageEnabled: true })
+    expect(mockState.updateTodoItem).toHaveBeenLastCalledWith('t1', { designStageEnabled: true })
+
+    items = [mkItem({ status: 'todo', designStageEnabled: true })]
+    rerender(<TodoDetailView itemId="t1" />)
+    await user.click(screen.getByLabelText(/solution design stage/i))
+    expect(mockState.updateTodoItem).toHaveBeenLastCalledWith('t1', { designStageEnabled: false })
   })
 
   it('seeds the design-stage checkbox from the card', () => {

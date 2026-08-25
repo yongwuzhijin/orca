@@ -134,7 +134,7 @@ export function TodoDetailView({ itemId }: TodoDetailViewProps): React.JSX.Eleme
               </Label>
             </div>
             {item.autoPilotEnabled ? (
-              <div className="flex flex-col gap-0.5 pt-1">
+              <div className="flex flex-col gap-0.5 pl-6 pt-1">
                 <label
                   htmlFor="todo-autopilot-max-turns"
                   className="text-[11px] font-medium text-muted-foreground"
