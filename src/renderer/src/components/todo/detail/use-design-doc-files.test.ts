@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, renderHook, waitFor } from '@testing-library/react'
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import type { TodoItem } from '../../../../../shared/todo/todo-item'
 
 const readDir = vi.fn()
@@ -104,5 +104,42 @@ describe('useDesignDocFiles', () => {
     const { result } = renderHook(() => useDesignDocFiles(mkItem()))
 
     await waitFor(() => expect(result.current.names).toEqual(['overview.md']))
+  })
+
+  it('picks up documents written after the first read when refreshed', async () => {
+    const { result } = renderHook(() => useDesignDocFiles(mkItem()))
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.names).toEqual([])
+
+    readDir.mockResolvedValue([{ name: 'design.md', isDirectory: false, isSymlink: false }])
+    act(() => result.current.refresh())
+
+    await waitFor(() => expect(result.current.names).toEqual(['design.md']))
+    expect(readDir).toHaveBeenCalledTimes(2)
+  })
+
+  it('drops a slow read that lands after the card path changed', async () => {
+    let resolveFirst: (entries: unknown[]) => void = () => {}
+    readDir
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveFirst = resolve
+          })
+      )
+      .mockResolvedValue([{ name: 'second.md', isDirectory: false, isSymlink: false }])
+
+    const { result, rerender } = renderHook((item: TodoItem) => useDesignDocFiles(item), {
+      initialProps: mkItem({ identifier: 'ORCA-12' })
+    })
+    rerender(mkItem({ identifier: 'ORCA-99' }))
+    await waitFor(() => expect(result.current.names).toEqual(['second.md']))
+
+    await act(async () => {
+      resolveFirst([{ name: 'first.md', isDirectory: false, isSymlink: false }])
+    })
+
+    expect(result.current.names).toEqual(['second.md'])
   })
 })
