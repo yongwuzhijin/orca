@@ -16,7 +16,8 @@ export const RESUMABLE_TUI_AGENTS = [
   'omp',
   'prime-agent',
   'copilot',
-  'kimi'
+  'kimi',
+  'qoder'
 ] as const satisfies readonly TuiAgent[]
 
 export type ResumableTuiAgent = (typeof RESUMABLE_TUI_AGENTS)[number]
@@ -291,5 +292,10 @@ export function getAgentResumeArgv(
     // Why: Kimi resumes by id with --session; sessions are work-dir-scoped (enforced by callers).
     case 'kimi':
       return providerSession.key === 'session_id' ? ['kimi', '--session', id] : null
+    // Why: `qodercli --resume <id>` — the id is also the transcript basename
+    // under ~/.qoder/projects/<slug>/, so no path locator is needed (unlike
+    // pi/prime-agent/omp, which resume by file).
+    case 'qoder':
+      return providerSession.key === 'session_id' ? ['qodercli', '--resume', id] : null
   }
 }

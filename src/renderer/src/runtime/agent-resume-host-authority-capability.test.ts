@@ -3,6 +3,7 @@ import { RESUMABLE_TUI_AGENTS } from '../../../shared/agent-session-resume'
 import {
   AGENT_SESSION_KIMI_RESUME_RUNTIME_CAPABILITY,
   AGENT_SESSION_OMP_RESUME_PATH_RUNTIME_CAPABILITY,
+  AGENT_SESSION_QODER_RESUME_RUNTIME_CAPABILITY,
   RUNTIME_CAPABILITIES
 } from '../../../shared/protocol-version'
 import { agentResumeHostAuthorityCapability } from './agent-resume-host-authority-capability'
@@ -30,6 +31,13 @@ describe('agentResumeHostAuthorityCapability', () => {
     expect(RUNTIME_CAPABILITIES).toContain(AGENT_SESSION_KIMI_RESUME_RUNTIME_CAPABILITY)
   })
 
+  it('gates Qoder resume behind its own advertised capability', () => {
+    expect(agentResumeHostAuthorityCapability('qoder')).toBe(
+      AGENT_SESSION_QODER_RESUME_RUNTIME_CAPABILITY
+    )
+    expect(RUNTIME_CAPABILITIES).toContain(AGENT_SESSION_QODER_RESUME_RUNTIME_CAPABILITY)
+  })
+
   it('pins the gate for every resumable agent so a new member is a deliberate decision', () => {
     // Why: silently defaulting a newly resumable agent to the generic probe is the exact skew
     // failure this module exists to prevent — the mapping must be reviewed, not inherited.
@@ -51,7 +59,8 @@ describe('agentResumeHostAuthorityCapability', () => {
       'prime-agent': undefined,
       copilot: undefined,
       omp: AGENT_SESSION_OMP_RESUME_PATH_RUNTIME_CAPABILITY,
-      kimi: AGENT_SESSION_KIMI_RESUME_RUNTIME_CAPABILITY
+      kimi: AGENT_SESSION_KIMI_RESUME_RUNTIME_CAPABILITY,
+      qoder: AGENT_SESSION_QODER_RESUME_RUNTIME_CAPABILITY
     })
   })
 })
