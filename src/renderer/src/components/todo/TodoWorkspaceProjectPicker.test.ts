@@ -29,6 +29,12 @@ describe('resolveWorkspaceProjectCwd', () => {
     ).toBe('/fallback')
   })
 
+  it('falls back when the ready setup has a blank path', () => {
+    expect(resolveWorkspaceProjectCwd('proj-1', [mkSetup({ path: '' })], '/fallback')).toBe(
+      '/fallback'
+    )
+  })
+
   it('returns empty string when nothing is available', () => {
     expect(resolveWorkspaceProjectCwd(null, [], null)).toBe('')
   })
