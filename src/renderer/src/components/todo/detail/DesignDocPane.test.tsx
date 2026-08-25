@@ -4,49 +4,20 @@ import '@testing-library/jest-dom/vitest'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type { TodoItem } from '../../../../../shared/todo/todo-item'
+import type { DesignDocFiles } from './use-design-doc-files'
 
 let mockNames: string[] = []
 let mockLoading = false
 const readFile = vi.fn()
 
-vi.mock('./use-design-doc-files', () => ({
-  useDesignDocFiles: () => ({
+const { DesignDocPane } = await import('./DesignDocPane')
+
+function mkDocFiles(): DesignDocFiles {
+  return {
     dirPath: '/repo/.orca/design/ORCA-12',
-    connectionId: undefined,
     names: mockNames,
     loading: mockLoading,
     refresh: vi.fn()
-  })
-}))
-
-const { DesignDocPane } = await import('./DesignDocPane')
-
-function mkItem(): TodoItem {
-  return {
-    id: 't1',
-    identifier: 'ORCA-12',
-    projectId: 'p1',
-    title: 'Ship feature',
-    description: '',
-    status: 'solution_design',
-    priority: 'none',
-    scheduledDate: null,
-    estimate: null,
-    labels: [],
-    templateId: null,
-    orderKey: 't1',
-    createdAt: '',
-    updatedAt: '',
-    startedAt: null,
-    completedAt: null,
-    sessionId: null,
-    workspaceProjectId: 'wp-1',
-    workspaceName: null,
-    preferredAgent: null,
-    autoPilotEnabled: false,
-    autoPilotMaxTurns: null,
-    designStageEnabled: true
   }
 }
 
@@ -65,7 +36,7 @@ describe('DesignDocPane', () => {
   })
 
   it('invites a refresh while the skill has not written any document yet', () => {
-    render(<DesignDocPane item={mkItem()} />)
+    render(<DesignDocPane docFiles={mkDocFiles()} />)
 
     expect(screen.getByText(/no design documents yet/i)).toBeInTheDocument()
   })
@@ -73,7 +44,7 @@ describe('DesignDocPane', () => {
   it('holds the empty copy back while the directory read is still in flight', () => {
     mockLoading = true
 
-    render(<DesignDocPane item={mkItem()} />)
+    render(<DesignDocPane docFiles={mkDocFiles()} />)
 
     expect(screen.queryByText(/no design documents yet/i)).not.toBeInTheDocument()
   })
@@ -82,7 +53,7 @@ describe('DesignDocPane', () => {
     mockNames = ['api.md', 'overview.md']
     readFile.mockResolvedValue({ content: '# Overview\n\nThe plan.', isBinary: false })
 
-    render(<DesignDocPane item={mkItem()} />)
+    render(<DesignDocPane docFiles={mkDocFiles()} />)
 
     expect(await screen.findByText('Overview')).toBeInTheDocument()
     expect(readFile).toHaveBeenCalledTimes(1)
@@ -101,7 +72,7 @@ describe('DesignDocPane', () => {
       })
     )
 
-    render(<DesignDocPane item={mkItem()} />)
+    render(<DesignDocPane docFiles={mkDocFiles()} />)
     expect(await screen.findByText('API')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'overview.md' }))
@@ -120,7 +91,7 @@ describe('DesignDocPane', () => {
       )
     )
 
-    render(<DesignDocPane item={mkItem()} />)
+    render(<DesignDocPane docFiles={mkDocFiles()} />)
     expect(await screen.findByText('Notes')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'overview.md' }))

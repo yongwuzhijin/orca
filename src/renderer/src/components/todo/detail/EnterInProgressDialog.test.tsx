@@ -221,15 +221,28 @@ describe('EnterInProgressDialog design stage', () => {
     })
   })
 
-  it('hands off to implementation with the design docs in from-design mode', async () => {
-    const item = mkItem({ workspaceProjectId: 'wp-1', designStageEnabled: true })
-    renderDialog(item, { mode: 'from-design', designDocNames: ['plan.md'] })
-    expect(screen.queryByLabelText(/design the solution first/i)).toBeNull()
+  it('disables the design stage when the configured skill is only whitespace', async () => {
+    mockState.settings = { todoDesignStageSkill: '   ' }
+    renderDialog(mkItem({ workspaceProjectId: 'wp-1', designStageEnabled: true }))
+    expect(screen.getByLabelText(/design the solution first/i)).toBeDisabled()
     await userEvent.click(screen.getByRole('button', { name: /start/i }))
     expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', {
       status: 'in_progress',
       designStageEnabled: false
     })
+  })
+
+  it('hands off to implementation with the design docs in from-design mode', async () => {
+    const item = mkItem({ workspaceProjectId: 'wp-1', designStageEnabled: true })
+    renderDialog(item, { mode: 'from-design', designDocNames: ['plan.md'] })
+    expect(screen.queryByLabelText(/design the solution first/i)).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: /start/i }))
+    // Why: the handoff must not erase the card's record of having gone through design.
+    expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', { status: 'in_progress' })
+    expect(mockState.updateTodoItem).not.toHaveBeenCalledWith(
+      't1',
+      expect.objectContaining({ designStageEnabled: false })
+    )
     expect(mockState.executeTask).toHaveBeenCalledWith(
       expect.objectContaining({ prompt: buildDesignHandoffPrompt(item, ['plan.md']) })
     )

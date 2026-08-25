@@ -4,17 +4,18 @@ import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import type { TodoItem } from '../../../../../shared/todo/todo-item'
 import { EnterInProgressDialog } from './EnterInProgressDialog'
-import { useDesignDocFiles } from './use-design-doc-files'
+import type { DesignDocFiles } from './use-design-doc-files'
 
 type StartImplementationButtonProps = {
   item: TodoItem
+  docFiles: DesignDocFiles
 }
 
 // Why: reuses the start dialog so cwd/engine plumbing stays in one place; the docs feed the handoff prompt.
 export function StartImplementationButton({
-  item
+  item,
+  docFiles
 }: StartImplementationButtonProps): React.JSX.Element {
-  const { names } = useDesignDocFiles(item)
   const [open, setOpen] = React.useState(false)
 
   return (
@@ -27,7 +28,7 @@ export function StartImplementationButton({
         <EnterInProgressDialog
           item={item}
           mode="from-design"
-          designDocNames={names}
+          designDocNames={docFiles.names}
           onClose={() => setOpen(false)}
         />
       ) : null}

@@ -18,6 +18,12 @@ export type DesignDocFiles = {
 export function useDesignDocFiles(item: TodoItem): DesignDocFiles {
   const project = useAppStore((s) => s.todoProjects.find((p) => p.id === item.projectId))
   const projectHostSetups = useAppStore((s) => s.projectHostSetups)
+  // Why: turn boundaries, not individual events, are when documents land — and the read may
+  // cross SSH, so per-event re-listing would be exactly the chatter the spec rejected.
+  const sessionTurnKey = useAppStore((s) => {
+    const sessionId = s.activeSessionByTask[item.id]
+    return sessionId ? `${sessionId}:${s.sessionStatusBySession[sessionId] ?? ''}` : ''
+  })
   const [names, setNames] = React.useState<string[]>([])
   const [loading, setLoading] = React.useState(true)
   const [nonce, setNonce] = React.useState(0)
@@ -56,7 +62,7 @@ export function useDesignDocFiles(item: TodoItem): DesignDocFiles {
     return () => {
       cancelled = true
     }
-  }, [dirPath, connectionId, nonce])
+  }, [dirPath, connectionId, nonce, sessionTurnKey])
 
   const refresh = React.useCallback(() => setNonce((n) => n + 1), [])
 

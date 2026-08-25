@@ -25,8 +25,26 @@ vi.mock('./InProgressPanel', () => ({
 vi.mock('./HumanReviewPanel', () => ({
   HumanReviewPanel: () => <div>human-review-panel</div>
 }))
+// Why: a fresh names array per hook call, so a second useDesignDocFiles instance is visible.
+let designDocCalls = 0
+vi.mock('./use-design-doc-files', () => ({
+  useDesignDocFiles: () => {
+    designDocCalls += 1
+    return {
+      dirPath: '/repo/.orca/design/P-1',
+      connectionId: undefined,
+      names: [`doc-${designDocCalls}.md`],
+      loading: false,
+      refresh: vi.fn()
+    }
+  }
+}))
+const solutionDesignPanelProps = vi.fn()
 vi.mock('./SolutionDesignPanel', () => ({
-  SolutionDesignPanel: () => <div>solution-design-panel</div>
+  SolutionDesignPanel: (props: unknown) => {
+    solutionDesignPanelProps(props)
+    return <div>solution-design-panel</div>
+  }
 }))
 vi.mock('./MergingPanel', () => ({
   MergingPanel: () => <div>merging-panel</div>
@@ -37,8 +55,12 @@ vi.mock('./EnterInProgressDialog', () => ({
 vi.mock('./ReviewDecisionBar', () => ({
   ReviewDecisionBar: () => <div data-testid="review-decision-bar">decision-bar</div>
 }))
+const startImplementationProps = vi.fn()
 vi.mock('./StartImplementationButton', () => ({
-  StartImplementationButton: () => <div data-testid="start-implementation-button" />
+  StartImplementationButton: (props: unknown) => {
+    startImplementationProps(props)
+    return <div data-testid="start-implementation-button" />
+  }
 }))
 // MarkdownPreview reads a deep slice of the real store; stub it for the same reason.
 vi.mock('@/components/editor/MarkdownPreview', () => ({
@@ -50,6 +72,7 @@ const { TodoDetailView } = await import('./TodoDetailView')
 afterEach(() => {
   cleanup()
   items = []
+  designDocCalls = 0
   vi.clearAllMocks()
 })
 
@@ -175,6 +198,19 @@ describe('TodoDetailView', () => {
     items = [mkItem({ status: 'solution_design' })]
     rerender(<TodoDetailView itemId="t1" />)
     expect(screen.getByTestId('start-implementation-button')).toBeInTheDocument()
+  })
+
+  // Why: two useDesignDocFiles instances silently handed the implementation agent an empty
+  // doc list after the pane had already refreshed; one shared value makes that impossible.
+  it('hands the design panel and the start button the very same document list', () => {
+    items = [mkItem({ status: 'solution_design' })]
+    render(<TodoDetailView itemId="t1" />)
+
+    const panel = solutionDesignPanelProps.mock.calls[0]?.[0] as { docFiles: { names: string[] } }
+    const button = startImplementationProps.mock.calls[0]?.[0] as { docFiles: { names: string[] } }
+    expect(panel.docFiles.names).toEqual(['doc-1.md'])
+    expect(button.docFiles).toBe(panel.docFiles)
+    expect(designDocCalls).toBe(1)
   })
 
   it('shows Reject/Approve under scheduled date only for human_review', () => {

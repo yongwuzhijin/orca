@@ -7,6 +7,8 @@ const readDir = vi.fn()
 
 const mockState = {
   todoProjects: [{ id: 'p1', defaultWorkingDir: '/local/fallback' }],
+  activeSessionByTask: {} as Record<string, string | undefined>,
+  sessionStatusBySession: {} as Record<string, string | undefined>,
   projectHostSetups: [
     {
       id: 'setup-1',
@@ -62,6 +64,8 @@ function mkItem(overrides: Partial<TodoItem> = {}): TodoItem {
 describe('useDesignDocFiles', () => {
   beforeEach(() => {
     readDir.mockResolvedValue([])
+    mockState.activeSessionByTask = {}
+    mockState.sessionStatusBySession = {}
     ;(window as unknown as { api: unknown }).api = { fs: { readDir } }
   })
 
@@ -117,6 +121,39 @@ describe('useDesignDocFiles', () => {
 
     await waitFor(() => expect(result.current.names).toEqual(['design.md']))
     expect(readDir).toHaveBeenCalledTimes(2)
+  })
+
+  it('re-lists the directory when the design session reaches a turn boundary', async () => {
+    mockState.activeSessionByTask = { t1: 's1' }
+    mockState.sessionStatusBySession = { s1: 'running' }
+    const { result, rerender } = renderHook((item: TodoItem) => useDesignDocFiles(item), {
+      initialProps: mkItem()
+    })
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(readDir).toHaveBeenCalledTimes(1)
+
+    readDir.mockResolvedValue([{ name: 'design.md', isDirectory: false, isSymlink: false }])
+    mockState.sessionStatusBySession = { s1: 'idle' }
+    rerender(mkItem())
+
+    await waitFor(() => expect(result.current.names).toEqual(['design.md']))
+    expect(readDir).toHaveBeenCalledTimes(2)
+  })
+
+  it('leaves the list alone on re-renders that are not a turn boundary', async () => {
+    mockState.activeSessionByTask = { t1: 's1' }
+    mockState.sessionStatusBySession = { s1: 'running' }
+    const { result, rerender } = renderHook((item: TodoItem) => useDesignDocFiles(item), {
+      initialProps: mkItem()
+    })
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    await act(async () => {
+      rerender(mkItem())
+    })
+
+    expect(readDir).toHaveBeenCalledTimes(1)
   })
 
   it('drops a slow read that lands after the card path changed', async () => {

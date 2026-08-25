@@ -4,7 +4,10 @@ import type { AcpEngine } from '../../shared/acp/acp-session'
 import { ACP_ENGINES } from '../../shared/acp/acp-session'
 import type { TodoOrchestratorConfig } from '../../shared/todo/todo-orchestrator-config'
 import { buildBasePrompt } from '../../shared/todo/todo-base-prompt'
-import { buildDesignStagePrompt } from '../../shared/todo/todo-design-prompt'
+import {
+  buildDesignStagePrompt,
+  isDesignStageSkillConfigured
+} from '../../shared/todo/todo-design-prompt'
 import { sortAutoPilotCandidates } from './todo-orchestrator-candidate-order'
 
 export type OrchestratorDispatchInput = {
@@ -82,9 +85,9 @@ export class TodoOrchestratorService {
         const engine: AcpEngine = candidate.preferredAgent ?? ACP_ENGINES[0]
         // Why: autoPilotRunner.run() resolves only at loop-end, so this promise's
         // lifetime == one AutoPilot run. Free the slot on either settle path and
-        // re-evaluate to refill it. On reject the task stays in_progress for a human
-        // (no auto-retry); .then(cb, cb) swallows the rejection so a dispatch failure
-        // never surfaces as an unhandled rejection.
+        // re-evaluate to refill it. On reject the task stays in whichever stage it was
+        // moved to for a human (no auto-retry); .then(cb, cb) swallows the rejection so a
+        // dispatch failure never surfaces as an unhandled rejection.
         const release = (): void => {
           this.liveSessions.delete(candidate.id)
           void this.tick()
@@ -93,9 +96,9 @@ export class TodoOrchestratorService {
         // throw from updateStatus (e.g. the row was deleted mid-tick) must free the
         // reservation, or the slot leaks permanently and maxConcurrent erodes to 0.
         try {
-          const skill = this.deps.getDesignStageSkill().trim()
+          const skill = this.deps.getDesignStageSkill()
           // Why: an unconfigured skill would park the card in a stage that does nothing.
-          const useDesignStage = candidate.designStageEnabled && skill.length > 0
+          const useDesignStage = candidate.designStageEnabled && isDesignStageSkillConfigured(skill)
           this.deps.updateStatus(candidate.id, useDesignStage ? 'solution_design' : 'in_progress')
           void this.deps
             .dispatch({

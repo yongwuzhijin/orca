@@ -6,18 +6,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { TodoItem } from '../../../../../shared/todo/todo-item'
+import type { DesignDocFiles } from './use-design-doc-files'
 
 const dialogProps = vi.fn()
 
-vi.mock('./use-design-doc-files', () => ({
-  useDesignDocFiles: () => ({
-    dirPath: '/repo/.orca/design/ORCA-12',
-    connectionId: undefined,
-    names: ['overview.md'],
-    loading: false,
-    refresh: vi.fn()
-  })
-}))
 vi.mock('./EnterInProgressDialog', () => ({
   EnterInProgressDialog: (props: unknown) => {
     dialogProps(props)
@@ -33,11 +25,17 @@ afterEach(() => {
 })
 
 const item = { id: 't1', identifier: 'ORCA-12', status: 'solution_design' } as TodoItem
+const docFiles: DesignDocFiles = {
+  dirPath: '/repo/.orca/design/ORCA-12',
+  names: ['overview.md'],
+  loading: false,
+  refresh: vi.fn()
+}
 
 describe('StartImplementationButton', () => {
   it('opens the start dialog in handoff mode with the design docs', async () => {
     const user = userEvent.setup()
-    render(<StartImplementationButton item={item} />)
+    render(<StartImplementationButton item={item} docFiles={docFiles} />)
     expect(screen.queryByTestId('start-dialog')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /start implementation/i }))
@@ -50,7 +48,7 @@ describe('StartImplementationButton', () => {
 
   it('dismisses the dialog when it reports a close', async () => {
     const user = userEvent.setup()
-    render(<StartImplementationButton item={item} />)
+    render(<StartImplementationButton item={item} docFiles={docFiles} />)
     await user.click(screen.getByRole('button', { name: /start implementation/i }))
 
     const props = dialogProps.mock.calls[0]?.[0] as { onClose: () => void }

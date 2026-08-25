@@ -15,7 +15,8 @@ import {
 import { buildBasePrompt, composePrompt } from '../../../../../shared/todo/todo-base-prompt'
 import {
   buildDesignHandoffPrompt,
-  buildDesignStagePrompt
+  buildDesignStagePrompt,
+  isDesignStageSkillConfigured
 } from '../../../../../shared/todo/todo-design-prompt'
 import { DEFAULT_TODO_DESIGN_STAGE_SKILL } from '../../../../../shared/constants'
 
@@ -64,7 +65,7 @@ export function EnterInProgressDialog({
     projectHostSetups,
     project?.defaultWorkingDir
   )
-  const designStageAvailable = designStageSkill.length > 0
+  const designStageAvailable = isDesignStageSkillConfigured(designStageSkill)
   const useDesignStage = mode !== 'from-design' && designStage && designStageAvailable
   // Why: one value, so the preview and the dispatch cannot drift apart.
   const base =
@@ -84,7 +85,13 @@ export function EnterInProgressDialog({
       await updateTodoItem(item.id, { workspaceProjectId })
     }
     const nextStatus: TodoStatus = useDesignStage ? 'solution_design' : 'in_progress'
-    await updateTodoItem(item.id, { status: nextStatus, designStageEnabled: useDesignStage })
+    // Why: the handoff out of design must not erase the card's record of having gone through it.
+    await updateTodoItem(
+      item.id,
+      mode === 'from-design'
+        ? { status: nextStatus }
+        : { status: nextStatus, designStageEnabled: useDesignStage }
+    )
     await executeTask({
       taskId: item.id,
       engine,

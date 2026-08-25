@@ -4,7 +4,8 @@ import {
   DESIGN_DOC_DIR_SEGMENTS,
   buildDesignHandoffPrompt,
   buildDesignStagePrompt,
-  designDocDirRelativePath
+  designDocDirRelativePath,
+  isDesignStageSkillConfigured
 } from './todo-design-prompt'
 
 function mkItem(overrides: Partial<TodoItem> = {}): TodoItem {
@@ -20,6 +21,21 @@ describe('designDocDirRelativePath', () => {
   it('is a posix path under .orca/design keyed by identifier', () => {
     expect(designDocDirRelativePath('ORCA-12')).toBe('.orca/design/ORCA-12')
     expect(DESIGN_DOC_DIR_SEGMENTS).toEqual(['.orca', 'design'])
+  })
+})
+
+describe('isDesignStageSkillConfigured', () => {
+  it('treats an unset skill as not configured', () => {
+    expect(isDesignStageSkillConfigured('')).toBe(false)
+  })
+
+  it('treats a whitespace-only skill as not configured, matching the prompt builder', () => {
+    expect(isDesignStageSkillConfigured('   \n\t ')).toBe(false)
+  })
+
+  it('accepts a real skill, including one with stray whitespace', () => {
+    expect(isDesignStageSkillConfigured('/plan')).toBe(true)
+    expect(isDesignStageSkillConfigured('  /plan  ')).toBe(true)
   })
 })
 

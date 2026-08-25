@@ -9,6 +9,12 @@ export function designDocDirRelativePath(identifier: string): string {
   return [...DESIGN_DOC_DIR_SEGMENTS, identifier].join('/')
 }
 
+// Why: one predicate for every entry path, so a whitespace-only skill cannot mean
+// "configured" here and "unset" there — the trimming semantics live with the builder.
+export function isDesignStageSkillConfigured(skill: string): boolean {
+  return skill.trim().length > 0
+}
+
 export function buildDesignStagePrompt(item: TodoItem, skill: string): string {
   const dir = designDocDirRelativePath(item.identifier)
   const body = composePrompt(

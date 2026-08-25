@@ -5,15 +5,14 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { translate } from '@/i18n/i18n'
 import { joinPath } from '@/lib/path'
-import type { TodoItem } from '../../../../../shared/todo/todo-item'
-import { useDesignDocFiles } from './use-design-doc-files'
+import type { DesignDocFiles } from './use-design-doc-files'
 
 type DesignDocPaneProps = {
-  item: TodoItem
+  docFiles: DesignDocFiles
 }
 
-export function DesignDocPane({ item }: DesignDocPaneProps): React.JSX.Element {
-  const { dirPath, connectionId, names, loading, refresh } = useDesignDocFiles(item)
+export function DesignDocPane({ docFiles }: DesignDocPaneProps): React.JSX.Element {
+  const { dirPath, connectionId, names, loading, refresh } = docFiles
   const [selected, setSelected] = React.useState<string | null>(null)
   const [body, setBody] = React.useState('')
 

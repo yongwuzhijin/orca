@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
+import type { TodoItem } from '../../../../../shared/todo/todo-item'
 import type { TodoStatus } from '../../../../../shared/todo/todo-status'
 import type { TodoPriority } from '../../../../../shared/todo/todo-priority'
 import { TodoStatusMenu } from '../TodoStatusMenu'
@@ -18,6 +19,7 @@ import { SolutionDesignPanel } from './SolutionDesignPanel'
 import { MergingPanel } from './MergingPanel'
 import { ReviewDecisionBar } from './ReviewDecisionBar'
 import { StartImplementationButton } from './StartImplementationButton'
+import { useDesignDocFiles } from './use-design-doc-files'
 
 type TodoDetailViewProps = {
   itemId: string
@@ -25,9 +27,7 @@ type TodoDetailViewProps = {
 
 export function TodoDetailView({ itemId }: TodoDetailViewProps): React.JSX.Element | null {
   const item = useAppStore((s) => s.todoItems.find((i) => i.id === itemId))
-  const updateTodoItem = useAppStore((s) => s.updateTodoItem)
   const closeTodoDetail = useAppStore((s) => s.closeTodoDetail)
-  const [enterOpen, setEnterOpen] = React.useState(false)
 
   // Item vanished (deleted / project switch) -> return to the board.
   React.useEffect(() => {
@@ -36,9 +36,16 @@ export function TodoDetailView({ itemId }: TodoDetailViewProps): React.JSX.Eleme
     }
   }, [item, closeTodoDetail])
 
-  if (!item) {
-    return null
-  }
+  // Why: the body needs a non-null item for its hooks, so existence is guarded here instead.
+  return item ? <TodoDetailBody item={item} /> : null
+}
+
+function TodoDetailBody({ item }: { item: TodoItem }): React.JSX.Element {
+  const updateTodoItem = useAppStore((s) => s.updateTodoItem)
+  const closeTodoDetail = useAppStore((s) => s.closeTodoDetail)
+  const [enterOpen, setEnterOpen] = React.useState(false)
+  // Why: one list for the pane and the handoff button, so they cannot disagree about the docs.
+  const docFiles = useDesignDocFiles(item)
 
   const onStatusChange = (next: TodoStatus): void => {
     // Spec §5: entering in_progress is intercepted to launch the session dialog.
@@ -75,7 +82,7 @@ export function TodoDetailView({ itemId }: TodoDetailViewProps): React.JSX.Eleme
             {item.status === 'in_progress' ? (
               <InProgressPanel item={item} />
             ) : item.status === 'solution_design' ? (
-              <SolutionDesignPanel item={item} />
+              <SolutionDesignPanel item={item} docFiles={docFiles} />
             ) : item.status === 'human_review' ? (
               <HumanReviewPanel item={item} />
             ) : item.status === 'merging' ? (
@@ -187,7 +194,7 @@ export function TodoDetailView({ itemId }: TodoDetailViewProps): React.JSX.Eleme
           </div>
           {item.status === 'solution_design' ? (
             <div className="px-2 pt-3">
-              <StartImplementationButton item={item} />
+              <StartImplementationButton item={item} docFiles={docFiles} />
             </div>
           ) : null}
           {item.status === 'human_review' ? (
