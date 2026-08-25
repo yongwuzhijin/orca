@@ -14740,7 +14740,8 @@
           "designDocs": {
             "empty": "暂无方案文档。技能写入后会显示在这里。",
             "refresh": "刷新"
-          }
+          },
+          "startImplementation": "开始实施"
         },
         "dashboard": {
           "CycleTimeCard": {

@@ -14712,7 +14712,8 @@
           "designDocs": {
             "empty": "Aún no hay documentos de diseño. Aparecerán aquí cuando la habilidad los escriba.",
             "refresh": "Actualizar"
-          }
+          },
+          "startImplementation": "Iniciar implementación"
         },
         "dashboard": {
           "CycleTimeCard": {

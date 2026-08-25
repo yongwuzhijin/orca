@@ -14712,7 +14712,8 @@
           "designDocs": {
             "empty": "設計ドキュメントはまだありません。スキルが書き込むとここに表示されます。",
             "refresh": "更新"
-          }
+          },
+          "startImplementation": "実装を開始"
         },
         "dashboard": {
           "CycleTimeCard": {

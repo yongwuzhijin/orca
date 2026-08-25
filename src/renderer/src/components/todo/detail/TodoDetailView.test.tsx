@@ -37,6 +37,9 @@ vi.mock('./EnterInProgressDialog', () => ({
 vi.mock('./ReviewDecisionBar', () => ({
   ReviewDecisionBar: () => <div data-testid="review-decision-bar">decision-bar</div>
 }))
+vi.mock('./StartImplementationButton', () => ({
+  StartImplementationButton: () => <div data-testid="start-implementation-button" />
+}))
 // MarkdownPreview reads a deep slice of the real store; stub it for the same reason.
 vi.mock('@/components/editor/MarkdownPreview', () => ({
   default: () => <div>markdown-preview</div>
@@ -162,6 +165,16 @@ describe('TodoDetailView', () => {
     items = [mkItem({ status: 'todo', designStageEnabled: true })]
     render(<TodoDetailView itemId="t1" />)
     expect(screen.getByLabelText(/solution design stage/i)).toBeChecked()
+  })
+
+  it('shows Start implementation in the rail only for solution_design', () => {
+    items = [mkItem({ status: 'todo' })]
+    const { rerender } = render(<TodoDetailView itemId="t1" />)
+    expect(screen.queryByTestId('start-implementation-button')).not.toBeInTheDocument()
+
+    items = [mkItem({ status: 'solution_design' })]
+    rerender(<TodoDetailView itemId="t1" />)
+    expect(screen.getByTestId('start-implementation-button')).toBeInTheDocument()
   })
 
   it('shows Reject/Approve under scheduled date only for human_review', () => {

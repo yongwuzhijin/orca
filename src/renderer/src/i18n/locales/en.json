@@ -16243,7 +16243,8 @@
           "designDocs": {
             "empty": "No design documents yet. They appear here once the skill writes them.",
             "refresh": "Refresh"
-          }
+          },
+          "startImplementation": "Start implementation"
         },
         "dashboard": {
           "CycleTimeCard": {

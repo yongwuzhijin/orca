@@ -17,6 +17,7 @@ import { HumanReviewPanel } from './HumanReviewPanel'
 import { SolutionDesignPanel } from './SolutionDesignPanel'
 import { MergingPanel } from './MergingPanel'
 import { ReviewDecisionBar } from './ReviewDecisionBar'
+import { StartImplementationButton } from './StartImplementationButton'
 
 type TodoDetailViewProps = {
   itemId: string
@@ -184,6 +185,11 @@ export function TodoDetailView({ itemId }: TodoDetailViewProps): React.JSX.Eleme
               </Label>
             </div>
           </div>
+          {item.status === 'solution_design' ? (
+            <div className="px-2 pt-3">
+              <StartImplementationButton item={item} />
+            </div>
+          ) : null}
           {item.status === 'human_review' ? (
             <div className="px-2 pt-3">
               <ReviewDecisionBar item={item} />
