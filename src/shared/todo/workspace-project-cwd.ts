@@ -17,3 +17,17 @@ export function resolveWorkspaceProjectCwd(
   }
   return fallbackCwd?.trim() ?? ''
 }
+
+// Why: reads the same ready setup as resolveWorkspaceProjectCwd, so the host and the cwd can never diverge.
+export function resolveWorkspaceProjectConnectionId(
+  workspaceProjectId: string | null,
+  projectHostSetups: readonly ProjectHostSetup[]
+): string | undefined {
+  if (!workspaceProjectId) {
+    return undefined
+  }
+  const ready = projectHostSetups.find(
+    (setup) => setup.projectId === workspaceProjectId && setup.setupState === 'ready'
+  )
+  return ready?.connectionId ?? undefined
+}
