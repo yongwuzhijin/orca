@@ -164,4 +164,47 @@ describe('markdown document templates', () => {
       }
     ])
   })
+
+  it('reads templates from the configured workspace Orca directory', async () => {
+    stubReadDir({
+      '/repo/.tmp/orca/templates': [entry('note.md')]
+    })
+
+    await expect(
+      listMarkdownDocumentTemplates(
+        {
+          settings: { activeRuntimeEnvironmentId: null, workspaceOrcaDirName: '.tmp/orca' },
+          worktreeId: 'wt-1',
+          worktreePath: '/repo'
+        },
+        '/repo'
+      )
+    ).resolves.toEqual([
+      {
+        id: '.tmp/orca/templates/note.md',
+        name: 'Note',
+        filePath: '/repo/.tmp/orca/templates/note.md',
+        relativePath: '.tmp/orca/templates/note.md',
+        templateRelativePath: 'note.md',
+        basename: 'note.md'
+      }
+    ])
+  })
+
+  it('falls back to .orca when the setting is unset', async () => {
+    stubReadDir({
+      '/repo/.orca/templates': [entry('note.md')]
+    })
+
+    const templates = await listMarkdownDocumentTemplates(
+      {
+        settings: { activeRuntimeEnvironmentId: null },
+        worktreeId: 'wt-1',
+        worktreePath: '/repo'
+      },
+      '/repo'
+    )
+
+    expect(templates[0].relativePath).toBe('.orca/templates/note.md')
+  })
 })

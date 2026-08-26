@@ -7,8 +7,12 @@ import {
   runtimePathExists
 } from '@/runtime/runtime-file-client'
 import { basename, joinPath, normalizeRelativePath } from './path'
+import { resolveWorkspaceOrcaDirName } from '../../../shared/orca-dir-names'
 
-const MARKDOWN_TEMPLATE_ROOT = '.orca/templates'
+function markdownTemplateRoot(settings: RuntimeFileOperationArgs['settings']): string {
+  return `${resolveWorkspaceOrcaDirName(settings)}/templates`
+}
+
 const MARKDOWN_TEMPLATE_MAX_DEPTH = 8
 const MARKDOWN_TEMPLATE_MAX_COUNT = 100
 
@@ -136,7 +140,8 @@ export async function listMarkdownDocumentTemplates(
   worktreePath: string
 ): Promise<MarkdownDocumentTemplate[]> {
   const templates: MarkdownDocumentTemplate[] = []
-  const rootPath = joinPath(worktreePath, MARKDOWN_TEMPLATE_ROOT)
+  const templateRoot = markdownTemplateRoot(context.settings)
+  const rootPath = joinPath(worktreePath, templateRoot)
 
   // Why: missing template directories are the normal case. Probe quietly first
   // so Electron does not log an IPC handler error for an optional feature.
@@ -185,9 +190,7 @@ export async function listMarkdownDocumentTemplates(
       }
 
       const templateRelativePath = entryRelativePath
-      const rootRelativePath = normalizeRelativePath(
-        `${MARKDOWN_TEMPLATE_ROOT}/${templateRelativePath}`
-      )
+      const rootRelativePath = normalizeRelativePath(`${templateRoot}/${templateRelativePath}`)
       templates.push({
         id: rootRelativePath,
         name: titleFromName(entry.name),

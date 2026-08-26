@@ -65,7 +65,12 @@ export type RuntimeFileReadArgs = {
 }
 
 export type RuntimeFileOperationArgs = {
-  settings: Pick<GlobalSettings, 'activeRuntimeEnvironmentId'> | null | undefined
+  // Why both keys: this context already routes the operation to a host; the workspace
+  // Orca directory name is the other thing a path builder needs from settings.
+  settings:
+    | Pick<GlobalSettings, 'activeRuntimeEnvironmentId' | 'workspaceOrcaDirName'>
+    | null
+    | undefined
   worktreeId: string | null | undefined
   worktreePath: string | null | undefined
   connectionId?: string
