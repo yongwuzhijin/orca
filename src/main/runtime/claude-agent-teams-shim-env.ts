@@ -1,7 +1,7 @@
 import { chmod, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { accessSync, constants, existsSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { delimiter, dirname, isAbsolute, join } from 'node:path'
+import { orcaHomeDirPath } from '../orca-home-dir-path'
 import {
   addClaudeTeammateModeAuto,
   addClaudeTeammateModeInProcess,
@@ -84,7 +84,7 @@ export function resolveClaudeAgentTeamsShimBin(
 }
 
 function defaultShimRoot(): string {
-  return join(homedir(), '.orca', 'claude-agent-teams-bin')
+  return orcaHomeDirPath('claude-agent-teams-bin')
 }
 
 function bundledLauncherPath(): string | null {

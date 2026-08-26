@@ -15,6 +15,7 @@ import {
   type KeybindingOverrides,
   type KeybindingPlatform
 } from '../../shared/keybindings'
+import { getOrcaHomeDirName } from '../../shared/orca-home-dir-name'
 
 type JsonObject = Record<string, unknown>
 
@@ -23,7 +24,7 @@ const PLATFORM_KEYS: readonly KeybindingPlatform[] = ['darwin', 'linux', 'win32'
 const ROOT_KEYS = new Set(['$schema', 'version', 'keybindings', 'platforms'])
 
 export function getUserKeybindingsPath(homePath: string): string {
-  return join(homePath, '.orca', 'keybindings.json')
+  return join(homePath, getOrcaHomeDirName(), 'keybindings.json')
 }
 
 function isJsonObject(value: unknown): value is JsonObject {

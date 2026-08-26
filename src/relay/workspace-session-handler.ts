@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { getOrcaHomeDirName } from '../shared/orca-home-dir-name'
 import type { RelayDispatcher } from './dispatcher'
 
 type RemoteWorkspaceSnapshot = {
@@ -57,7 +58,7 @@ export class WorkspaceSessionHandler {
 
   constructor(
     private dispatcher: RelayDispatcher,
-    private baseDir = join(homedir(), '.orca', 'sessions')
+    private baseDir = join(homedir(), getOrcaHomeDirName(), 'sessions')
   ) {
     this.dispatcher.onRequest('workspace.get', (params) => this.get(params))
     this.dispatcher.onRequest('workspace.patch', (params) => this.patch(params))

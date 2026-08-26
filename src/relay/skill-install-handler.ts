@@ -1,5 +1,6 @@
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { getOrcaHomeDirName } from '../shared/orca-home-dir-name'
 import {
   SKILL_BUNDLE_INSTALL_CAPABILITY,
   SKILL_BUNDLE_PREVIEW_CAPABILITY,
@@ -92,7 +93,7 @@ export class SkillInstallHandler {
     } = {}
   ) {
     this.homeDirectory = options.homeDirectory ?? homedir()
-    this.stateDirectory = options.stateDirectory ?? join(this.homeDirectory, '.orca')
+    this.stateDirectory = options.stateDirectory ?? join(this.homeDirectory, getOrcaHomeDirName())
     this.uploads = new SkillUploadSessionService(
       join(this.stateDirectory, 'skill-installs', SKILL_UPLOAD_STAGING_ROOT_NAME)
     )
