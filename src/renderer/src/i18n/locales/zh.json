@@ -6393,12 +6393,12 @@
         "OpenAiTranscriptionKeyDialog": {
           "fa83512e48": "保存密钥",
           "07b26f2742": "清除键",
-          "d246b2bdb3": "本地运行时密钥使用 Electron 加密存储（如果可用）存储在 ~/.orca 中。",
           "c3380e4ca5": "sk-...",
           "2f797018f0": "API 密钥已配置",
           "16015322f9": "API密钥",
           "07ed3e512e": "仅当选择 OpenAI 语音模型时，音频才会发送到 OpenAI。",
-          "439e91879e": "OpenAI 转录"
+          "439e91879e": "OpenAI 转录",
+          "localKeyStorage": "本地运行时密钥存储在 ~/{{dir}}，在可用时使用 Electron 加密存储。"
         },
         "OpenAiTranscriptionSettingsRow": {
           "85c589cd61": "添加API密钥",
@@ -7058,8 +7058,8 @@
           "25b0004fbf": "终端活跃",
           "781cb74d22": "从终端窗格运行。",
           "cb02e00202": "终端",
-          "d8c988dab4": "~/.orca/keybindings.json",
-          "shortcutUnavailable": "此快捷键已不再可用。"
+          "shortcutUnavailable": "此快捷键已不再可用。",
+          "keybindingsFilePath": "~/{{dir}}/keybindings.json"
         },
         "SourceControlAiActionRecipeDefaults": {
           "2576299196": "参数",
@@ -8729,7 +8729,6 @@
         },
         "repository": {
           "search": {
-            "bc7e504b8e": ".orca/issue-command",
             "603c68b68c": "orca.yaml",
             "9dc60d7f6d": "GitHub",
             "ec70364df2": "工作流程",
@@ -8845,7 +8844,8 @@
             "externalWorktreesDescription": "覆盖是否为此项目显示在 Orca 外部创建的工作树。",
             "copy": "复制",
             "clone": "克隆",
-            "apfs": "apfs"
+            "apfs": "apfs",
+            "issueCommand": "issue-command"
           }
         },
         "runtime": {
@@ -9428,7 +9428,7 @@
           "3c4d5e6f7a": "覆盖客户端默认值",
           "4d5e6f7a8b": "继承客户端默认值",
           "5e6f7a8b9c": "重置",
-          "6f7a8b9cad": "使用相对路径（例如 .orca/worktrees）可让每个项目使用各自的位置，使用绝对路径则所有项目共用一个文件夹。"
+          "relativePathHint": "使用相对路径（例如 {{example}}）可为每个项目单独存放，使用绝对路径则共用一个文件夹。"
         },
         "ProviderHostScopeControl": {
           "scope_label": "{{value0}}：{{value1}}",
@@ -10355,7 +10355,8 @@
           "homeLabel": "主目录 Orca 目录",
           "resetHome": "重置主目录名",
           "homeInvalid": "请输入主目录下的单个目录名。不允许路径分隔符或特殊字符。",
-          "homeHelp": "用于存放凭据、快捷键配置和 agent hook 脚本。重启后生效；已有文件不会被移动。"
+          "homeHelp": "用于存放凭据、快捷键配置和 agent hook 脚本。重启后生效；已有文件不会被移动。",
+          "restartPending": "重启 Orca 后将使用 ~/{{pending}}。当前会话仍在使用 ~/{{effective}}。"
         }
       },
       "right": {

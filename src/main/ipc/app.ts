@@ -6,6 +6,7 @@ import { app, BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'el
 import { is } from '@electron-toolkit/utils'
 import type { AppIdentity } from '../../shared/app-identity'
 import type { MarkdownDocument } from '../../shared/filesystem-entry-types'
+import { getOrcaHomeDirName } from '../../shared/orca-home-dir-name'
 import type { FloatingTerminalCwdRequest } from '../../shared/ui-chrome-types'
 import { relaunchApp } from '../app-relaunch'
 import type { Store } from '../persistence'
@@ -259,7 +260,8 @@ export function registerAppHandlers(store: Store, options: RegisterAppHandlersOp
       devBranch: identity.devBranch,
       devWorktreeName: identity.devWorktreeName,
       devRepoRoot: identity.devRepoRoot,
-      dockBadgeLabel: identity.dockBadgeLabel
+      dockBadgeLabel: identity.dockBadgeLabel,
+      orcaHomeDirName: getOrcaHomeDirName()
     }
   })
 

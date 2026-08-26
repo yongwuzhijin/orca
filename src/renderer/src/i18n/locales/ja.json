@@ -6418,12 +6418,12 @@
         "OpenAiTranscriptionKeyDialog": {
           "fa83512e48": "キーの保存",
           "07b26f2742": "クリアキー",
-          "d246b2bdb3": "ローカルランタイムキーは、利用可能な場合は Electron 暗号化ストレージを使用して ~/.orca に保存されます。",
           "c3380e4ca5": "sk-...",
           "2f797018f0": "APIキーが設定されました",
           "16015322f9": "APIキー",
           "07ed3e512e": "音声は、OpenAI 音声モデルが選択されている場合にのみ OpenAI に送信されます。",
-          "439e91879e": "OpenAI 文字起こし"
+          "439e91879e": "OpenAI 文字起こし",
+          "localKeyStorage": "ローカルランタイムキーは ~/{{dir}} に保存され、利用可能な場合は Electron の暗号化ストレージを使用します。"
         },
         "OpenAiTranscriptionSettingsRow": {
           "85c589cd61": "APIキーを追加",
@@ -7083,8 +7083,8 @@
           "25b0004fbf": "ターミナルがアクティブです",
           "781cb74d22": "ターミナルペインから実行します。",
           "cb02e00202": "ターミナル",
-          "d8c988dab4": "~/.orca/keybindings.json",
-          "shortcutUnavailable": "ショートカットは利用できなくなりました。"
+          "shortcutUnavailable": "ショートカットは利用できなくなりました。",
+          "keybindingsFilePath": "~/{{dir}}/keybindings.json"
         },
         "SourceControlAiActionRecipeDefaults": {
           "2576299196": "引数",
@@ -8754,7 +8754,6 @@
         },
         "repository": {
           "search": {
-            "bc7e504b8e": ".orca/issue-command",
             "603c68b68c": "orca.yaml",
             "9dc60d7f6d": "GitHub",
             "ec70364df2": "ワークフロー",
@@ -8870,7 +8869,8 @@
             "externalWorktreesDescription": "このプロジェクトで Orca 外のワークツリーを表示するかどうかを上書きします。",
             "copy": "コピー",
             "clone": "clone",
-            "apfs": "apfs"
+            "apfs": "apfs",
+            "issueCommand": "issue-command"
           }
         },
         "runtime": {
@@ -9416,7 +9416,7 @@
           "3c4d5e6f7a": "クライアントのデフォルトを上書き",
           "4d5e6f7a8b": "クライアントのデフォルトを継承",
           "5e6f7a8b9c": "リセット",
-          "6f7a8b9cad": "相対パス（例: .orca/ワークツリー）を指定するとプロジェクトごとの場所になり、絶対パスを指定すると全プロジェクトで 1 つのフォルダーを共有します。"
+          "relativePathHint": "プロジェクトごとの場所には相対パス（例: {{example}}）を、共有フォルダーには絶対パスを使用します。"
         },
         "ProviderHostScopeControl": {
           "scope_label": "{{value0}}: {{value1}}",
@@ -10335,7 +10335,8 @@
           "homeLabel": "ホームの Orca ディレクトリ",
           "resetHome": "ホーム名をリセット",
           "homeInvalid": "ホームディレクトリ直下の単一のディレクトリ名を入力してください。区切り文字や特殊文字は使用できません。",
-          "homeHelp": "認証情報、キーバインド、Agent フックスクリプトを保存します。再起動後に反映され、既存のファイルは移動されません。"
+          "homeHelp": "認証情報、キーバインド、Agent フックスクリプトを保存します。再起動後に反映され、既存のファイルは移動されません。",
+          "restartPending": "Orca を再起動すると ~/{{pending}} を使用します。このセッションは引き続き ~/{{effective}} を使用しています。"
         }
       },
       "right": {

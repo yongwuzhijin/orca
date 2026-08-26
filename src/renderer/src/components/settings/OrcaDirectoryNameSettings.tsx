@@ -10,6 +10,7 @@ import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { SearchableSetting } from './SearchableSetting'
+import { useEffectiveOrcaHomeDirName } from '@/hooks/useEffectiveOrcaHomeDirName'
 import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
 import { translate } from '@/i18n/i18n'
 
@@ -143,6 +144,8 @@ export function OrcaDirectoryNameSettings({
   settings,
   updateSettings
 }: OrcaDirectoryNameSettingsProps): React.JSX.Element {
+  const effectiveHomeDirName = useEffectiveOrcaHomeDirName()
+  const pendingHomeDirName = settings.homeOrcaDirName ?? DEFAULT_ORCA_DIR_NAME
   return (
     <SearchableSetting
       title={translate(
@@ -198,6 +201,15 @@ export function OrcaDirectoryNameSettings({
         )}
         onCommit={(next) => updateSettings({ homeOrcaDirName: next })}
       />
+      {pendingHomeDirName !== effectiveHomeDirName && (
+        <p role="status" className="text-xs text-amber-600 dark:text-amber-500">
+          {translate(
+            'auto.components.settings.OrcaDirectoryNameSettings.restartPending',
+            'Restart Orca to use ~/{{pending}}. This session is still using ~/{{effective}}.',
+            { pending: pendingHomeDirName, effective: effectiveHomeDirName }
+          )}
+        </p>
+      )}
     </SearchableSetting>
   )
 }

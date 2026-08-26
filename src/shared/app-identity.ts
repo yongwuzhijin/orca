@@ -6,4 +6,6 @@ export type AppIdentity = {
   devWorktreeName: string | null
   devRepoRoot: string | null
   dockBadgeLabel: string | null
+  /** The home Orca directory name this process actually booted with. */
+  orcaHomeDirName: string
 }

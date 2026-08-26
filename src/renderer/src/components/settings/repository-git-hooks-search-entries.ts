@@ -164,8 +164,8 @@ export function getRepositoryGitHooksSearchEntries(repo: Repo): SettingsSearchEn
           'orca.yaml'
         ),
         ...translateSearchKeyword(
-          'auto.components.settings.repository.search.bc7e504b8e',
-          '.orca/issue-command'
+          'auto.components.settings.repository.search.issueCommand',
+          'issue-command'
         )
       ]
     }

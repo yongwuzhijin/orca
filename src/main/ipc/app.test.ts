@@ -180,6 +180,21 @@ describe('registerAppHandlers', () => {
     expect(registerMacKeyboardLayoutChangeNotificationsMock).toHaveBeenCalledOnce()
   })
 
+  it('reports the effective home Orca directory name', async () => {
+    const { initializeOrcaHomeDirName, DEFAULT_ORCA_DIR_NAME } =
+      await import('../../shared/orca-home-dir-name')
+    registerAppHandlers({} as never)
+    try {
+      initializeOrcaHomeDirName('.orca-ci')
+      const identity = (await handlers.get('app:getIdentity')?.(null)) as {
+        orcaHomeDirName?: string
+      }
+      expect(identity.orcaHomeDirName).toBe('.orca-ci')
+    } finally {
+      initializeOrcaHomeDirName(DEFAULT_ORCA_DIR_NAME)
+    }
+  })
+
   it('marks relaunch as expected shutdown before exiting', async () => {
     const onBeforeRelaunch = vi.fn()
     registerAppHandlers({} as never, { onBeforeRelaunch })

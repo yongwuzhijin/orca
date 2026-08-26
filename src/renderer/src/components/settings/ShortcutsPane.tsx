@@ -33,6 +33,7 @@ import {
   removeBindingAt,
   replaceBindingAt
 } from './shortcut-binding-list-mutations'
+import { useEffectiveOrcaHomeDirName } from '@/hooks/useEffectiveOrcaHomeDirName'
 import { useMountedRef } from '@/hooks/useMountedRef'
 import { translate } from '@/i18n/i18n'
 import { useEditablePluginCommands } from '@/store/plugin-panels'
@@ -57,6 +58,7 @@ export function ShortcutsPane(): React.JSX.Element {
   const updateSettings = useAppStore((state) => state.updateSettings)
   const keybindings = useAppStore((state) => state.keybindings)
   const keybindingSnapshot = useAppStore((state) => state.keybindingSnapshot)
+  const orcaHomeDirName = useEffectiveOrcaHomeDirName()
   const disabledTuiAgents = useAppStore(
     (state) => state.settings?.disabledTuiAgents ?? EMPTY_DISABLED_TUI_AGENTS
   )
@@ -318,8 +320,9 @@ export function ShortcutsPane(): React.JSX.Element {
               <span className="font-mono text-[11px]">
                 {keybindingSnapshot?.path ??
                   translate(
-                    'auto.components.settings.ShortcutsPane.d8c988dab4',
-                    '~/.orca/keybindings.json'
+                    'auto.components.settings.ShortcutsPane.keybindingsFilePath',
+                    '~/{{dir}}/keybindings.json',
+                    { dir: orcaHomeDirName }
                   )}
               </span>{' '}
               {translate('auto.components.settings.ShortcutsPane.4b7ae34062', 'directly.')}

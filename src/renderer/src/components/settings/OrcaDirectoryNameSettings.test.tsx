@@ -2,7 +2,7 @@
 
 import '@testing-library/jest-dom/vitest'
 
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { GlobalSettings } from '../../../../shared/global-settings-types'
 import { OrcaDirectoryNameSettings } from './OrcaDirectoryNameSettings'
@@ -13,6 +13,12 @@ const settings = {
 } as unknown as GlobalSettings
 
 describe('OrcaDirectoryNameSettings', () => {
+  beforeEach(() => {
+    window.api = {
+      app: { getIdentity: vi.fn().mockResolvedValue({ orcaHomeDirName: '.orca' }) }
+    } as never
+  })
+
   afterEach(() => {
     cleanup()
   })

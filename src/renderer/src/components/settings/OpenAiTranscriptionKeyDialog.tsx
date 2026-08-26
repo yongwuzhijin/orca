@@ -10,6 +10,7 @@ import {
 } from '../ui/dialog'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
+import { useEffectiveOrcaHomeDirName } from '@/hooks/useEffectiveOrcaHomeDirName'
 import { translate } from '@/i18n/i18n'
 
 type OpenAiTranscriptionKeyDialogProps = {
@@ -33,6 +34,7 @@ export function OpenAiTranscriptionKeyDialog({
   onSave,
   onClear
 }: OpenAiTranscriptionKeyDialogProps): React.JSX.Element {
+  const orcaHomeDirName = useEffectiveOrcaHomeDirName()
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -84,8 +86,9 @@ export function OpenAiTranscriptionKeyDialog({
         <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70">
           <Lock className="size-3 shrink-0" />
           {translate(
-            'auto.components.settings.OpenAiTranscriptionKeyDialog.d246b2bdb3',
-            'Local runtime keys are stored in ~/.orca using Electron encrypted storage when available.'
+            'auto.components.settings.OpenAiTranscriptionKeyDialog.localKeyStorage',
+            'Local runtime keys are stored in ~/{{dir}} using Electron encrypted storage when available.',
+            { dir: orcaHomeDirName }
           )}
         </p>
         <DialogFooter>

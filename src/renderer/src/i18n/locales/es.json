@@ -6396,12 +6396,12 @@
         "OpenAiTranscriptionKeyDialog": {
           "fa83512e48": "Guardar clave",
           "07b26f2742": "Borrar clave",
-          "d246b2bdb3": "Las claves del runtime local se almacenan en ~/.orca mediante el almacenamiento cifrado de Electron cuando está disponible.",
           "c3380e4ca5": "sk-...",
           "2f797018f0": "Clave API configurada",
           "16015322f9": "Clave API",
           "07ed3e512e": "El audio se envía a OpenAI solo cuando se selecciona un modelo de voz de OpenAI.",
-          "439e91879e": "Transcripción OpenAI"
+          "439e91879e": "Transcripción OpenAI",
+          "localKeyStorage": "Las claves de runtime local se guardan en ~/{{dir}} usando el almacenamiento cifrado de Electron cuando está disponible."
         },
         "OpenAiTranscriptionSettingsRow": {
           "85c589cd61": "Agregar clave API",
@@ -7061,8 +7061,8 @@
           "25b0004fbf": "Terminal activa",
           "781cb74d22": "Se ejecuta desde paneles de terminal.",
           "cb02e00202": "Terminal",
-          "d8c988dab4": "~/.orca/keybindings.json",
-          "shortcutUnavailable": "El atajo ya no está disponible."
+          "shortcutUnavailable": "El atajo ya no está disponible.",
+          "keybindingsFilePath": "~/{{dir}}/keybindings.json"
         },
         "SourceControlAiActionRecipeDefaults": {
           "2576299196": "argumentos",
@@ -8732,7 +8732,6 @@
         },
         "repository": {
           "search": {
-            "bc7e504b8e": ".orca/issue-command",
             "603c68b68c": "orca.yaml",
             "9dc60d7f6d": "github",
             "ec70364df2": "flujo de trabajo",
@@ -8848,7 +8847,8 @@
             "externalWorktreesDescription": "Sobrescribe si los worktrees creados fuera de Orca aparecen en este proyecto.",
             "copy": "copy",
             "clone": "clone",
-            "apfs": "apfs"
+            "apfs": "apfs",
+            "issueCommand": "issue-command"
           }
         },
         "runtime": {
@@ -9416,7 +9416,7 @@
           "3c4d5e6f7a": "Anula el valor predeterminado del cliente",
           "4d5e6f7a8b": "Hereda el valor predeterminado del cliente",
           "5e6f7a8b9c": "Restablecer",
-          "6f7a8b9cad": "Usa una ruta relativa (p. ej., .orca/worktrees) para una ubicación por proyecto, o una ruta absoluta para una carpeta compartida."
+          "relativePathHint": "Usa una ruta relativa (p. ej. {{example}}) para una ubicación por proyecto, o una ruta absoluta para una carpeta compartida."
         },
         "ProviderHostScopeControl": {
           "scope_label": "{{value0}}: {{value1}}",
@@ -10335,7 +10335,8 @@
           "homeLabel": "Directorio Orca personal",
           "resetHome": "Restablecer el nombre del directorio personal",
           "homeInvalid": "Introduce un único nombre de directorio dentro de tu directorio personal. No se permiten separadores ni caracteres especiales.",
-          "homeHelp": "Contiene las credenciales, los atajos de teclado y los scripts de hooks de agentes. Se aplica tras reiniciar; los archivos existentes no se mueven."
+          "homeHelp": "Contiene las credenciales, los atajos de teclado y los scripts de hooks de agentes. Se aplica tras reiniciar; los archivos existentes no se mueven.",
+          "restartPending": "Reinicia Orca para usar ~/{{pending}}. Esta sesión sigue usando ~/{{effective}}."
         }
       },
       "right": {

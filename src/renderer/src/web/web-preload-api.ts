@@ -66,6 +66,7 @@ import {
   createDefaultLocalOrcaProfile,
   DEFAULT_LOCAL_ORCA_PROFILE_ID
 } from '../../../shared/orca-profiles'
+import { DEFAULT_ORCA_DIR_NAME } from '../../../shared/orca-dir-names'
 import { legacyBaseRefSearchResult } from '../../../shared/base-ref-search-result'
 import { EMPTY_PTY_MAIN_DELIVERY_DIAGNOSTICS } from '../../../shared/pty-delivery-diagnostics'
 import { createE2EConfig } from '../../../shared/e2e-config'
@@ -567,7 +568,9 @@ function createWebPreloadApi(): Partial<PreloadApi> {
           devBranch: null,
           devWorktreeName: null,
           devRepoRoot: null,
-          dockBadgeLabel: null
+          // Why the default: the browser fallback has no local home directory to name.
+          dockBadgeLabel: null,
+          orcaHomeDirName: DEFAULT_ORCA_DIR_NAME
         }),
       getFeatureWallAssetBaseUrl: () => Promise.resolve('/'),
       relaunch: () => Promise.resolve(window.location.reload()),

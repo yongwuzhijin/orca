@@ -6381,12 +6381,12 @@
         "OpenAiTranscriptionKeyDialog": {
           "fa83512e48": "키 저장",
           "07b26f2742": "키 지우기",
-          "d246b2bdb3": "로컬 런타임 키는 가능한 경우 Electron 암호화 저장소를 사용하여 ~/.orca에 저장됩니다.",
           "c3380e4ca5": "sk-...",
           "2f797018f0": "API 키가 구성됨",
           "16015322f9": "API 키",
           "07ed3e512e": "OpenAI 음성 모델이 선택된 경우에만 오디오가 OpenAI로 전송됩니다.",
-          "439e91879e": "OpenAI 전사"
+          "439e91879e": "OpenAI 전사",
+          "localKeyStorage": "로컬 런타임 키는 ~/{{dir}}에 저장되며, 가능한 경우 Electron 암호화 저장소를 사용합니다."
         },
         "OpenAiTranscriptionSettingsRow": {
           "85c589cd61": "API 키 추가",
@@ -7046,8 +7046,8 @@
           "25b0004fbf": "Terminal 활성",
           "781cb74d22": "terminal 패널에서 실행됩니다.",
           "cb02e00202": "터미널",
-          "d8c988dab4": "~/.orca/keybindings.json",
-          "shortcutUnavailable": "단축키를 더 이상 사용할 수 없습니다."
+          "shortcutUnavailable": "단축키를 더 이상 사용할 수 없습니다.",
+          "keybindingsFilePath": "~/{{dir}}/keybindings.json"
         },
         "SourceControlAiActionRecipeDefaults": {
           "2576299196": "인수",
@@ -8717,7 +8717,6 @@
         },
         "repository": {
           "search": {
-            "bc7e504b8e": ".orca/issue-command",
             "603c68b68c": "orca.yaml",
             "9dc60d7f6d": "GitHub",
             "ec70364df2": "작업 흐름",
@@ -8833,7 +8832,8 @@
             "externalWorktreesDescription": "이 프로젝트에서 Orca 외부 작업 트리를 표시할지 재정의합니다.",
             "copy": "copy",
             "clone": "clone",
-            "apfs": "apfs"
+            "apfs": "apfs",
+            "issueCommand": "issue-command"
           }
         },
         "runtime": {
@@ -9416,7 +9416,7 @@
           "3c4d5e6f7a": "클라이언트 기본값 재정의",
           "4d5e6f7a8b": "클라이언트 기본값 상속",
           "5e6f7a8b9c": "재설정",
-          "6f7a8b9cad": "상대 경로(예: .orca/worktrees)를 사용하면 프로젝트별 위치가 되고, 절대 경로를 사용하면 모든 프로젝트가 하나의 폴더를 공유합니다."
+          "relativePathHint": "프로젝트별 위치에는 상대 경로(예: {{example}})를, 공유 폴더에는 절대 경로를 사용하세요."
         },
         "ProviderHostScopeControl": {
           "scope_label": "{{value0}}: {{value1}}",
@@ -10335,7 +10335,8 @@
           "homeLabel": "홈 Orca 디렉터리",
           "resetHome": "홈 이름 초기화",
           "homeInvalid": "홈 디렉터리 아래의 단일 디렉터리 이름을 입력하세요. 구분자나 특수 문자는 사용할 수 없습니다.",
-          "homeHelp": "자격 증명, 키 바인딩, 에이전트 훅 스크립트를 저장합니다. 재시작 후 적용되며 기존 파일은 이동되지 않습니다."
+          "homeHelp": "자격 증명, 키 바인딩, 에이전트 훅 스크립트를 저장합니다. 재시작 후 적용되며 기존 파일은 이동되지 않습니다.",
+          "restartPending": "Orca를 재시작하면 ~/{{pending}}을(를) 사용합니다. 현재 세션은 여전히 ~/{{effective}}을(를) 사용합니다."
         }
       },
       "right": {

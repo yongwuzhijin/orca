@@ -6,7 +6,9 @@ const BASE_APP_NAME = 'DmonWork'
 const BASE_APP_USER_MODEL_ID = 'com.yongwuzhijin.dmonwork'
 const MAX_LABEL_LENGTH = 80
 
-export type DevInstanceIdentity = AppIdentity & {
+// Why the omit: the home Orca directory name is a boot-time snapshot owned by the IPC layer,
+// not part of the branch/worktree identity this module derives.
+export type DevInstanceIdentity = Omit<AppIdentity, 'orcaHomeDirName'> & {
   appUserModelId: string
   // Why: drives app.setName → the macOS safeStorage Keychain item name
   // ("<appName> Safe Storage"). Kept stable across dev branches (unlike the
