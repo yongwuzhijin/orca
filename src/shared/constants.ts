@@ -17,6 +17,7 @@ import { TASK_PROVIDERS } from './task-providers'
 import { DEFAULT_WORKTREE_CARD_PROPERTIES } from './worktree/card-properties'
 import { getDefaultSourceControlAiSettings } from './source-control-ai'
 import { DEFAULT_APP_ICON_ID } from './app-icon'
+import { DEFAULT_ORCA_DIR_NAME } from './orca-dir-names'
 import { DEFAULT_TODO_ORCHESTRATOR_CONFIG } from './todo/todo-orchestrator-config'
 import { DEFAULT_OPEN_IN_APPLICATIONS } from './open-in-applications'
 import { DEFAULT_BROWSER_PAGE_ZOOM_LEVEL } from './browser-page-zoom'
@@ -177,6 +178,8 @@ function getDefaultWorkspaceDir(homeDir: string): string {
 export function getDefaultSettings(homedir: string): GlobalSettings {
   return {
     workspaceDir: getDefaultWorkspaceDir(homedir),
+    workspaceOrcaDirName: DEFAULT_ORCA_DIR_NAME,
+    homeOrcaDirName: DEFAULT_ORCA_DIR_NAME,
     worktreeVisibilityDefaults: { external: 'hide' },
     nestWorkspaces: true,
     workspaceDirHistory: [],

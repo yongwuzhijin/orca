@@ -59,6 +59,12 @@ export type WorktreeVisibilityDefaults = {
 
 export type GlobalSettings = {
   workspaceDir: string
+  /** Relative directory inside each workspace for Orca's per-workspace scratch
+   *  (`drops/`, `templates/`, `design/`, `issue-command`). Applies immediately. */
+  workspaceOrcaDirName?: string
+  /** Single directory name under `$HOME` for Orca's global state (credentials,
+   *  keybindings, agent hook scripts). Restart to apply. */
+  homeOrcaDirName?: string
   /** Host-owned defaults used when a repository has no explicit visibility override. */
   worktreeVisibilityDefaults?: WorktreeVisibilityDefaults
   /** Per-host overrides keyed by ExecutionHostId. Effective value for a
