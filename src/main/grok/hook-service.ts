@@ -15,6 +15,7 @@ import {
   type HookDefinition
 } from '../agent-hooks/installer-utils'
 import { refreshManagedScriptIfPresent } from '../agent-hooks/managed-hook-script-refresh'
+import { remoteHomeAgentHookScriptPath } from '../agent-hooks/remote-home-hook-script-path'
 import {
   readHooksJsonRemote,
   writeHooksJsonRemote,
@@ -277,7 +278,7 @@ export class GrokHookService {
     // Why: only a guest-resolved path can describe remote Grok; never apply the
     // host process's GROK_HOME to SFTP paths.
     const remoteConfigPath = `${getRemoteGrokHome(home, remoteGrokHome)}/hooks/orca-status.json`
-    const remoteScriptPath = `${home}/.orca/agent-hooks/grok-hook.sh`
+    const remoteScriptPath = remoteHomeAgentHookScriptPath(home, 'grok-hook.sh')
     try {
       const config = await readHooksJsonRemote(sftp, remoteConfigPath)
       if (!config) {

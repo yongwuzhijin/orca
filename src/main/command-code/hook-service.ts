@@ -15,6 +15,7 @@ import {
   type HookDefinition
 } from '../agent-hooks/installer-utils'
 import { refreshManagedScriptIfPresent } from '../agent-hooks/managed-hook-script-refresh'
+import { remoteHomeAgentHookScriptPath } from '../agent-hooks/remote-home-hook-script-path'
 import {
   readHooksJsonRemote,
   writeHooksJsonRemote,
@@ -163,7 +164,7 @@ export class CommandCodeHookService {
   async installRemote(sftp: SFTPWrapper, remoteHome: string): Promise<AgentHookInstallStatus> {
     const home = remoteHome.replace(/\/$/, '')
     const remoteConfigPath = `${home}/.commandcode/settings.json`
-    const remoteScriptPath = `${home}/.orca/agent-hooks/command-code-hook.sh`
+    const remoteScriptPath = remoteHomeAgentHookScriptPath(home, 'command-code-hook.sh')
     try {
       const config = await readHooksJsonRemote(sftp, remoteConfigPath)
       if (!config) {

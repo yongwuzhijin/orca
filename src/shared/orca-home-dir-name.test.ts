@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 async function loadModule() {
   vi.resetModules()
@@ -10,8 +10,16 @@ describe('orca home dir name snapshot', () => {
     vi.resetModules()
   })
 
+  // Why: the snapshot lives on the realm, so a cleared or renamed slot would leak into
+  // every later suite that relies on the shared vitest seed.
+  afterEach(async () => {
+    const { initializeOrcaHomeDirName, DEFAULT_ORCA_DIR_NAME } = await loadModule()
+    initializeOrcaHomeDirName(DEFAULT_ORCA_DIR_NAME)
+  })
+
   it('throws when read before initialization', async () => {
-    const { getOrcaHomeDirName } = await loadModule()
+    const { getOrcaHomeDirName, clearOrcaHomeDirNameForTests } = await loadModule()
+    clearOrcaHomeDirNameForTests()
     expect(() => getOrcaHomeDirName()).toThrow('orca_home_dir_name_not_initialized')
   })
 

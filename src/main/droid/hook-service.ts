@@ -17,6 +17,7 @@ import {
   type HooksConfig
 } from '../agent-hooks/installer-utils'
 import { refreshManagedScriptIfPresent } from '../agent-hooks/managed-hook-script-refresh'
+import { remoteHomeAgentHookScriptPath } from '../agent-hooks/remote-home-hook-script-path'
 import {
   readHooksJsonRemote,
   writeHooksJsonRemote,
@@ -255,7 +256,7 @@ export class DroidHookService {
   async installRemote(sftp: SFTPWrapper, remoteHome: string): Promise<AgentHookInstallStatus> {
     const home = remoteHome.replace(/\/$/, '')
     const remoteConfigPath = `${home}/.factory/settings.json`
-    const remoteScriptPath = `${home}/.orca/agent-hooks/droid-hook.sh`
+    const remoteScriptPath = remoteHomeAgentHookScriptPath(home, 'droid-hook.sh')
     try {
       const config = await readHooksJsonRemote(sftp, remoteConfigPath)
       if (!config) {

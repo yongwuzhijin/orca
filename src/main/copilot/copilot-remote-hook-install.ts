@@ -11,6 +11,7 @@ import {
   writeHooksJsonRemote,
   writeManagedScriptRemote
 } from '../agent-hooks/installer-utils-remote'
+import { remoteHomeAgentHookScriptPath } from '../agent-hooks/remote-home-hook-script-path'
 import { COPILOT_EVENTS } from './copilot-managed-hook-definitions'
 import { getManagedScript } from './copilot-managed-script'
 
@@ -24,7 +25,7 @@ export async function installCopilotHooksRemote(
 ): Promise<AgentHookInstallStatus> {
   const home = remoteHome.replace(/\/$/, '')
   const remoteConfigPath = `${home}/.copilot/hooks/orca.json`
-  const remoteScriptPath = `${home}/.orca/agent-hooks/copilot-hook.sh`
+  const remoteScriptPath = remoteHomeAgentHookScriptPath(home, 'copilot-hook.sh')
 
   try {
     const config = await readHooksJsonRemote(sftp, remoteConfigPath)

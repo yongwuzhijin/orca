@@ -19,6 +19,7 @@ import {
   writeManagedScript
 } from '../agent-hooks/installer-utils'
 import { refreshManagedScriptIfPresent } from '../agent-hooks/managed-hook-script-refresh'
+import { remoteHomeAgentHookScriptPath } from '../agent-hooks/remote-home-hook-script-path'
 import {
   readTextFileRemote,
   writeManagedScriptRemote,
@@ -209,12 +210,7 @@ export class KimiHookService {
   // managed script body is already platform-independent.
   async installRemote(sftp: SFTPWrapper, remoteHome: string): Promise<AgentHookInstallStatus> {
     const remoteConfigPath = pathPosix.join(remoteHome, '.kimi-code', 'config.toml')
-    const remoteScriptPath = pathPosix.join(
-      remoteHome,
-      '.orca',
-      'agent-hooks',
-      MANAGED_SCRIPT_FILE_NAME
-    )
+    const remoteScriptPath = remoteHomeAgentHookScriptPath(remoteHome, MANAGED_SCRIPT_FILE_NAME)
     try {
       // null (file absent) → start from an empty config; Kimi creates it lazily.
       const text = (await readTextFileRemote(sftp, remoteConfigPath)) ?? ''
