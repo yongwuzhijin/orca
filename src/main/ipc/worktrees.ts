@@ -6,6 +6,7 @@ import type { Store } from '../persistence'
 import { pruneLineageForMissingRepoWorktrees } from '../worktree-lineage-pruning'
 import { isFolderRepo } from '../../shared/repo-kind'
 import { resolveWorkspaceOrcaDirName } from '../../shared/orca-dir-names'
+import { appendOrcaDirIgnore } from '../../shared/orca-dir-gitignore-entry'
 import { readBranchRenameFailureOutputForDisplay } from '../agent-hooks/branch-rename-failure-output'
 import { parseWorkspaceKey } from '../../shared/workspace-scope'
 import { inspectSetupScriptImportCandidates } from '../../shared/setup-script-imports'
@@ -3577,7 +3578,8 @@ export function registerWorktreeHandlers(
         }
       }
       if (repo.connectionId) {
-        const issueCommandPath = joinWorktreeRelativePath(repo.path, '.orca/issue-command')
+        const orcaDirName = resolveWorkspaceOrcaDirName(store.getSettings())
+        const issueCommandPath = joinWorktreeRelativePath(repo.path, `${orcaDirName}/issue-command`)
         const fsProvider = getSshFilesystemProvider(repo.connectionId)
         if (!fsProvider) {
           return {
@@ -3637,7 +3639,8 @@ export function registerWorktreeHandlers(
         return
       }
       if (repo.connectionId) {
-        const issueCommandPath = joinWorktreeRelativePath(repo.path, '.orca/issue-command')
+        const orcaDirName = resolveWorkspaceOrcaDirName(store.getSettings())
+        const issueCommandPath = joinWorktreeRelativePath(repo.path, `${orcaDirName}/issue-command`)
         const fsProvider = getSshFilesystemProvider(repo.connectionId)
         if (!fsProvider) {
           throw new Error(
@@ -3653,19 +3656,21 @@ export function registerWorktreeHandlers(
           })
           return
         }
-        await fsProvider.createDir(joinWorktreeRelativePath(repo.path, '.orca'))
+        await fsProvider.createDir(joinWorktreeRelativePath(repo.path, orcaDirName))
         const gitignorePath = joinWorktreeRelativePath(repo.path, '.gitignore')
         try {
           const result = await fsProvider.readFile(gitignorePath)
-          if (!result.isBinary && !/^\.orca\/?$/m.test(result.content)) {
-            const separator = result.content.endsWith('\n') ? '' : '\n'
-            await fsProvider.writeFile(gitignorePath, `${result.content}${separator}.orca\n`)
+          if (!result.isBinary) {
+            const next = appendOrcaDirIgnore(result.content, orcaDirName)
+            if (next !== result.content) {
+              await fsProvider.writeFile(gitignorePath, next)
+            }
           }
         } catch (error) {
           if (!isENOENT(error)) {
             throw error
           }
-          await fsProvider.writeFile(gitignorePath, '.orca\n')
+          await fsProvider.writeFile(gitignorePath, appendOrcaDirIgnore('', orcaDirName))
         }
         await fsProvider.writeFile(issueCommandPath, `${trimmed}\n`)
         return

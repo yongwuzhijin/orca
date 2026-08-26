@@ -525,6 +525,7 @@ import { parsePtySessionId } from '../../shared/pty-session-id-format'
 import { clampLinearIssueListLimit } from '../../shared/linear/issue-read-limits'
 import { isFolderRepo } from '../../shared/repo-kind'
 import { resolveWorkspaceOrcaDirName as resolveWorkspaceOrcaDirNameFromSettings } from '../../shared/orca-dir-names'
+import { appendOrcaDirIgnore } from '../../shared/orca-dir-gitignore-entry'
 import { DEFAULT_WORKSPACE_STATUS_ID } from '../../shared/workspace-statuses'
 import {
   buildSetupRunnerCommand,
@@ -23227,7 +23228,8 @@ export class OrcaRuntimeService {
     }
 
     if (repo.connectionId) {
-      const issueCommandPath = joinWorktreeRelativePath(repo.path, '.orca/issue-command')
+      const orcaDirName = this.resolveWorkspaceOrcaDirName()
+      const issueCommandPath = joinWorktreeRelativePath(repo.path, `${orcaDirName}/issue-command`)
       const fsProvider = getSshFilesystemProvider(repo.connectionId)
       if (!fsProvider) {
         return {
@@ -23294,7 +23296,8 @@ export class OrcaRuntimeService {
     }
 
     if (repo.connectionId) {
-      const issueCommandPath = joinWorktreeRelativePath(repo.path, '.orca/issue-command')
+      const orcaDirName = this.resolveWorkspaceOrcaDirName()
+      const issueCommandPath = joinWorktreeRelativePath(repo.path, `${orcaDirName}/issue-command`)
       const fsProvider = getSshFilesystemProvider(repo.connectionId)
       if (!fsProvider) {
         return { ok: true }
@@ -23308,8 +23311,8 @@ export class OrcaRuntimeService {
         })
         return { ok: true }
       }
-      await fsProvider.createDir(joinWorktreeRelativePath(repo.path, '.orca'))
-      await this.ensureRemoteOrcaDirIgnored(fsProvider, repo.path)
+      await fsProvider.createDir(joinWorktreeRelativePath(repo.path, orcaDirName))
+      await this.ensureRemoteOrcaDirIgnored(fsProvider, repo.path, orcaDirName)
       await fsProvider.writeFile(issueCommandPath, `${trimmed}\n`)
       return { ok: true }
     }
@@ -23321,6 +23324,7 @@ export class OrcaRuntimeService {
   private async ensureRemoteOrcaDirIgnored(
     fsProvider: IFilesystemProvider,
     repoPath: string,
+    orcaDirName: string,
     options: { required?: boolean } = {}
   ): Promise<void> {
     const gitignorePath = joinWorktreeRelativePath(repoPath, '.gitignore')
@@ -23332,36 +23336,42 @@ export class OrcaRuntimeService {
         if (options.required) {
           throw error
         }
-        console.warn('[runtime] Could not inspect remote .gitignore for .orca', error)
+        console.warn(`[runtime] Could not inspect remote .gitignore for ${orcaDirName}`, error)
         return
       }
       try {
-        await fsProvider.writeFile(gitignorePath, '.orca\n')
+        await fsProvider.writeFile(gitignorePath, appendOrcaDirIgnore('', orcaDirName))
       } catch (writeError) {
         if (options.required) {
           throw writeError
         }
-        console.warn('[runtime] Could not update remote .gitignore to exclude .orca', writeError)
+        console.warn(
+          `[runtime] Could not update remote .gitignore to exclude ${orcaDirName}`,
+          writeError
+        )
       }
       return
     }
     if (result.isBinary) {
       if (options.required) {
-        throw new Error('Remote .gitignore is binary; cannot verify .orca is ignored')
+        throw new Error(`Remote .gitignore is binary; cannot verify ${orcaDirName} is ignored`)
       }
       return
     }
-    if (/^\.orca\/?$/m.test(result.content)) {
+    const next = appendOrcaDirIgnore(result.content, orcaDirName)
+    if (next === result.content) {
       return
     }
-    const separator = result.content.endsWith('\n') ? '' : '\n'
     try {
-      await fsProvider.writeFile(gitignorePath, `${result.content}${separator}.orca\n`)
+      await fsProvider.writeFile(gitignorePath, next)
     } catch (writeError) {
       if (options.required) {
         throw writeError
       }
-      console.warn('[runtime] Could not update remote .gitignore to exclude .orca', writeError)
+      console.warn(
+        `[runtime] Could not update remote .gitignore to exclude ${orcaDirName}`,
+        writeError
+      )
     }
   }
 
