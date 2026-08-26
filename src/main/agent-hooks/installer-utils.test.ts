@@ -883,3 +883,17 @@ describe('buildWindowsAgentHookCurlPostCommand', () => {
     expect(buildWindowsAgentHookCurlPostCommand('grok')).toContain('/hook/grok')
   })
 })
+
+describe('createManagedCommandMatcher across home directory names', () => {
+  it('still recognizes an entry installed under a different home directory name', () => {
+    const isManaged = createManagedCommandMatcher('claude-hook.sh')
+    expect(isManaged('/bin/sh "$HOME/.orca/agent-hooks/claude-hook.sh"')).toBe(true)
+    expect(isManaged('/bin/sh "$HOME/.orca-ci/agent-hooks/claude-hook.sh"')).toBe(true)
+    expect(isManaged('C:\\Users\\me\\.orca-ci\\agent-hooks\\claude-hook.cmd')).toBe(true)
+  })
+
+  it('does not claim an unrelated command', () => {
+    const isManaged = createManagedCommandMatcher('claude-hook.sh')
+    expect(isManaged('/usr/bin/env node ./scripts/other-hook.sh')).toBe(false)
+  })
+})

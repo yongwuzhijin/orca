@@ -13,6 +13,7 @@ import {
   type HookDefinition,
   type HooksConfig
 } from '../agent-hooks/installer-utils'
+import { getOrcaHomeDirName } from '../../shared/orca-home-dir-name'
 import { wrapRuntimeHomeHookCommand } from '../agent-hooks/runtime-home-hook-command'
 
 export type ClaudeCompatibleHookSettings = {
@@ -167,7 +168,9 @@ export function getManagedLifecycleHook(
 export function getWindowsManagedLifecycleHook(scriptPath: string): HookCommandConfig {
   const scriptFileName = win32.basename(scriptPath)
   // Why: runtime profile resolution keeps the managed entry portable across users (STA-3348).
-  const quotedRelativePath = quotePowerShellString(`.orca\\agent-hooks\\${scriptFileName}`)
+  const quotedRelativePath = quotePowerShellString(
+    `${getOrcaHomeDirName()}\\agent-hooks\\${scriptFileName}`
+  )
   // Why: compat consumers require neutral JSON even when the managed script is missing (#14818).
   const innerCommand =
     `$scriptPath = Join-Path $env:USERPROFILE ${quotedRelativePath}; ` +

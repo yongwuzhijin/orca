@@ -1,3 +1,4 @@
+import { getOrcaHomeDirName } from '../../shared/orca-home-dir-name'
 import { POSIX_HOOK_STDIN_DRAIN_COMMAND } from './hook-stdin-contract'
 import {
   encodeWindowsPowerShellHookCommand,
@@ -14,15 +15,18 @@ export function wrapRuntimeHomeHookCommand(
   if (!MANAGED_SCRIPT_BASE_NAME.test(scriptBaseName)) {
     throw new Error(`Invalid managed script base name: ${scriptBaseName}`)
   }
+  // Why safe to interpolate: sanitizeHomeOrcaDirName rejects every shell and PowerShell
+  // metacharacter, so this value cannot break out of either quoting context.
+  const homeDirName = getOrcaHomeDirName()
   // Why: default-form every var — a static hook precheck (Grok) rejects the whole command on a bare
   // reference it cannot resolve, even in a branch that platform never takes.
-  const windowsScript = `"\${HOME-}/.orca/agent-hooks/${scriptBaseName}.cmd"`
-  const posixScript = `"\${HOME-}/.orca/agent-hooks/${scriptBaseName}.sh"`
+  const windowsScript = `"\${HOME-}/${homeDirName}/agent-hooks/${scriptBaseName}.cmd"`
+  const posixScript = `"\${HOME-}/${homeDirName}/agent-hooks/${scriptBaseName}.sh"`
   const drain = POSIX_HOOK_STDIN_DRAIN_COMMAND
   const missingScriptFallback = options.neutralJsonWhenMissing ? `${drain}; printf '{}\\n'` : drain
   const powershell = '"${SYSTEMROOT-}/System32/WindowsPowerShell/v1.0/powershell.exe"'
   const powershellFallback = options.neutralJsonWhenMissing ? "; Write-Output '{}'" : ''
-  const powershellCommand = `$homePath = $env:HOME -replace '^/([A-Za-z])/', '$1:/'; $scriptPath = Join-Path $homePath '.orca\\agent-hooks\\${scriptBaseName}.cmd'; if (Test-Path -LiteralPath $scriptPath -PathType Leaf) { & $scriptPath; exit $LASTEXITCODE }; [Console]::In.ReadToEnd() | Out-Null${powershellFallback}; exit 0`
+  const powershellCommand = `$homePath = $env:HOME -replace '^/([A-Za-z])/', '$1:/'; $scriptPath = Join-Path $homePath '${homeDirName}\\agent-hooks\\${scriptBaseName}.cmd'; if (Test-Path -LiteralPath $scriptPath -PathType Leaf) { & $scriptPath; exit $LASTEXITCODE }; [Console]::In.ReadToEnd() | Out-Null${powershellFallback}; exit 0`
   const encodedCommand = encodeWindowsPowerShellHookCommand(powershellCommand)
   // Why: the Git Bash and native Windows launchers must suppress windows identically (#14815).
   const powershellInvocation = `${powershell} ${WINDOWS_POWERSHELL_HOOK_SWITCHES} -EncodedCommand ${encodedCommand}`

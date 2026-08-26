@@ -8,10 +8,10 @@ import {
   renameSync,
   unlinkSync
 } from 'node:fs'
-import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { AgentHookSource } from '../../shared/agent-hook-relay'
+import { orcaHomeDirPath } from '../orca-home-dir-path'
 import { grantDirAcl, isPermissionError } from '../win32-utils'
 import { resolveHooksJsonWritePath } from './hook-config-write-path'
 import { writeRollingFileBackup } from '../rolling-file-backup'
@@ -100,9 +100,13 @@ function decodePowerShellEncodedCommand(command: string): string | null {
   }
 }
 
-// Why: prod/dev/parallel Orca instances must write the same managed entry, not race between per-userData script paths.
+// Why shared, not per-userData: prod/dev/parallel Orca instances must write the same managed
+// entry rather than race between per-instance script paths. Two instances configured with
+// different homeOrcaDirName values each rewrite this slot on startup, so the last installer
+// wins — createManagedCommandMatcher matches on the `agent-hooks/<script>` suffix, so an entry
+// written under either name is still recognized as managed and rewritten in place.
 export function getSharedManagedScriptPath(scriptFileName: string): string {
-  return join(homedir(), '.orca', 'agent-hooks', scriptFileName)
+  return orcaHomeDirPath('agent-hooks', scriptFileName)
 }
 
 export { wrapPosixHookCommand } from './posix-hook-command'
