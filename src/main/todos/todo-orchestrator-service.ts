@@ -25,6 +25,7 @@ export type OrchestratorDeps = {
   dispatch: (input: OrchestratorDispatchInput) => Promise<{ sessionId: string }>
   getConfig: () => TodoOrchestratorConfig
   getDesignStageSkill: () => string
+  getWorkspaceOrcaDirName: () => string
 }
 
 export class TodoOrchestratorService {
@@ -105,7 +106,7 @@ export class TodoOrchestratorService {
               taskId: candidate.id,
               engine,
               prompt: useDesignStage
-                ? buildDesignStagePrompt(candidate, skill)
+                ? buildDesignStagePrompt(candidate, skill, this.deps.getWorkspaceOrcaDirName())
                 : buildBasePrompt(candidate),
               cwd,
               autoPilot: { maxTurns: candidate.autoPilotMaxTurns ?? cfg.defaultMaxTurns }

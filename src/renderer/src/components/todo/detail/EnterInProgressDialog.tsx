@@ -19,6 +19,7 @@ import {
   isDesignStageSkillConfigured
 } from '../../../../../shared/todo/todo-design-prompt'
 import { DEFAULT_TODO_DESIGN_STAGE_SKILL } from '../../../../../shared/constants'
+import { resolveWorkspaceOrcaDirName } from '../../../../../shared/orca-dir-names'
 
 export { buildBasePrompt, composePrompt }
 
@@ -50,6 +51,7 @@ export function EnterInProgressDialog({
   const designStageSkill = useAppStore(
     (s) => s.settings?.todoDesignStageSkill ?? DEFAULT_TODO_DESIGN_STAGE_SKILL
   )
+  const orcaDirName = useAppStore((s) => resolveWorkspaceOrcaDirName(s.settings))
 
   const [engine, setEngine] = React.useState<AcpEngine>(() => resolveInitialEngine(item))
   const [workspaceProjectId, setWorkspaceProjectId] = React.useState<string | null>(
@@ -70,9 +72,9 @@ export function EnterInProgressDialog({
   // Why: one value, so the preview and the dispatch cannot drift apart.
   const base =
     mode === 'from-design'
-      ? buildDesignHandoffPrompt(item, designDocNames ?? [])
+      ? buildDesignHandoffPrompt(item, designDocNames ?? [], orcaDirName)
       : useDesignStage
-        ? buildDesignStagePrompt(item, designStageSkill)
+        ? buildDesignStagePrompt(item, designStageSkill, orcaDirName)
         : buildBasePrompt(item)
   const canStart = cwd.trim().length > 0
 

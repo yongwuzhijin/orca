@@ -184,7 +184,7 @@ describe('EnterInProgressDialog design stage', () => {
     })
     expect(mockState.executeTask).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: buildDesignStagePrompt(item, '/design-skill')
+        prompt: buildDesignStagePrompt(item, '/design-skill', '.orca')
       })
     )
   })
@@ -244,7 +244,7 @@ describe('EnterInProgressDialog design stage', () => {
       expect.objectContaining({ designStageEnabled: false })
     )
     expect(mockState.executeTask).toHaveBeenCalledWith(
-      expect.objectContaining({ prompt: buildDesignHandoffPrompt(item, ['plan.md']) })
+      expect.objectContaining({ prompt: buildDesignHandoffPrompt(item, ['plan.md'], '.orca') })
     )
   })
 })

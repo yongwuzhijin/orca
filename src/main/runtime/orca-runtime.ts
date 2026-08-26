@@ -4338,7 +4338,8 @@ export class OrcaRuntimeService {
         getConfig: () =>
           this.store?.getSettings().todoOrchestrator ?? DEFAULT_TODO_ORCHESTRATOR_CONFIG,
         getDesignStageSkill: () =>
-          this.store?.getSettings().todoDesignStageSkill ?? DEFAULT_TODO_DESIGN_STAGE_SKILL
+          this.store?.getSettings().todoDesignStageSkill ?? DEFAULT_TODO_DESIGN_STAGE_SKILL,
+        getWorkspaceOrcaDirName: () => this.resolveWorkspaceOrcaDirName()
       })
     }
     return this._todoOrchestratorService

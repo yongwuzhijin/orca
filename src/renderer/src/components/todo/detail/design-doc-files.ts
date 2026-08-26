@@ -1,8 +1,12 @@
 import { joinPath } from '@/lib/path'
 import { designDocDirRelativePath } from '../../../../../shared/todo/todo-design-prompt'
 
-export function designDocDirAbsolutePath(cwd: string, identifier: string): string {
-  return joinPath(cwd, designDocDirRelativePath(identifier))
+export function designDocDirAbsolutePath(
+  cwd: string,
+  orcaDirName: string,
+  identifier: string
+): string {
+  return joinPath(cwd, designDocDirRelativePath(orcaDirName, identifier))
 }
 
 export function filterDesignDocNames<T extends { name: string; isDirectory: boolean }>(

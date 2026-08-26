@@ -94,7 +94,8 @@ function makeService(opts: {
         sessionId: 's'
       })),
     getConfig: opts.getConfig ?? (() => cfg()),
-    getDesignStageSkill: () => opts.designStageSkill ?? ''
+    getDesignStageSkill: () => opts.designStageSkill ?? '',
+    getWorkspaceOrcaDirName: () => '.orca'
   }
   return { service: new TodoOrchestratorService(deps), updateStatus, statuses }
 }
@@ -261,7 +262,8 @@ describe('TodoOrchestratorService.tick', () => {
       resolveCwd: () => '/repo',
       dispatch: fn,
       getConfig: () => cfg({ maxConcurrent: 1 }),
-      getDesignStageSkill: () => ''
+      getDesignStageSkill: () => '',
+      getWorkspaceOrcaDirName: () => '.orca'
     })
     await service.tick() // throw before dispatch → slot must be released, no dispatch
     expect(fn).not.toHaveBeenCalled()
@@ -294,7 +296,7 @@ describe('TodoOrchestratorService.tick', () => {
     await flush()
     expect(updateStatus).toHaveBeenCalledWith('t1', 'solution_design')
     expect(dispatch.mock.calls[0][0].prompt).toBe(
-      buildDesignStagePrompt(candidate, '/custom-design-skill')
+      buildDesignStagePrompt(candidate, '/custom-design-skill', '.orca')
     )
     // Why: the skill must be free to run multi-turn, so the turn budget is untouched.
     expect(dispatch.mock.calls[0][0].autoPilot).toEqual({ maxTurns: 10 })

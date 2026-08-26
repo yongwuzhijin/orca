@@ -1,6 +1,7 @@
 import React from 'react'
 import { useAppStore } from '@/store'
 import type { TodoItem } from '../../../../../shared/todo/todo-item'
+import { resolveWorkspaceOrcaDirName } from '../../../../../shared/orca-dir-names'
 import {
   resolveWorkspaceProjectConnectionId,
   resolveWorkspaceProjectCwd
@@ -20,6 +21,7 @@ export type DesignDocFiles = {
 export function useDesignDocFiles(item: TodoItem, enabled: boolean): DesignDocFiles {
   const project = useAppStore((s) => s.todoProjects.find((p) => p.id === item.projectId))
   const projectHostSetups = useAppStore((s) => s.projectHostSetups)
+  const orcaDirName = useAppStore((s) => resolveWorkspaceOrcaDirName(s.settings))
   // Why: documents land at turn boundaries, and the read may cross SSH — so re-list per turn
   // rather than per streamed event, the chatter the spec rejected an fs watcher over. Session
   // status alone only moves at run start and end; the AutoPilot turn covers mid-run writes.
@@ -44,7 +46,7 @@ export function useDesignDocFiles(item: TodoItem, enabled: boolean): DesignDocFi
     item.workspaceProjectId,
     projectHostSetups
   )
-  const dirPath = enabled && cwd ? designDocDirAbsolutePath(cwd, item.identifier) : ''
+  const dirPath = enabled && cwd ? designDocDirAbsolutePath(cwd, orcaDirName, item.identifier) : ''
 
   React.useEffect(() => {
     if (!dirPath) {
