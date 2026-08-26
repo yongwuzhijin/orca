@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto'
 import type { Store } from '../persistence'
 import { pruneLineageForMissingRepoWorktrees } from '../worktree-lineage-pruning'
 import { isFolderRepo } from '../../shared/repo-kind'
+import { resolveWorkspaceOrcaDirName } from '../../shared/orca-dir-names'
 import { readBranchRenameFailureOutputForDisplay } from '../agent-hooks/branch-rename-failure-output'
 import { parseWorkspaceKey } from '../../shared/workspace-scope'
 import { inspectSetupScriptImportCandidates } from '../../shared/setup-script-imports'
@@ -3624,7 +3625,7 @@ export function registerWorktreeHandlers(
               : ('none' as const)
         }
       }
-      return readIssueCommand(repo.path)
+      return readIssueCommand(repo.path, resolveWorkspaceOrcaDirName(store.getSettings()))
     }
   )
 
@@ -3669,7 +3670,7 @@ export function registerWorktreeHandlers(
         await fsProvider.writeFile(issueCommandPath, `${trimmed}\n`)
         return
       }
-      writeIssueCommand(repo.path, args.content)
+      writeIssueCommand(repo.path, resolveWorkspaceOrcaDirName(store.getSettings()), args.content)
     }
   )
 }

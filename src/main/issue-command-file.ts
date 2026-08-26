@@ -1,13 +1,14 @@
-// Why: `.orca/issue-command` is the per-user override; `orca.yaml` is the tracked project default.
+// Why: `<orcaDir>/issue-command` is the per-user override; `orca.yaml` is the tracked project default.
 import { readFileSync, existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
+import { appendOrcaDirIgnore } from '../shared/orca-dir-gitignore-entry'
 import { loadHooks } from './hooks'
 
-const ORCA_DIR = '.orca'
 const ISSUE_COMMAND_FILENAME = 'issue-command'
 
-export function getIssueCommandFilePath(repoPath: string): string {
-  return join(repoPath, ORCA_DIR, ISSUE_COMMAND_FILENAME)
+export function getIssueCommandFilePath(repoPath: string, orcaDirName: string): string {
+  // Why: `join` normalizes the posix-separated multi-segment name to the host separator.
+  return join(repoPath, orcaDirName, ISSUE_COMMAND_FILENAME)
 }
 
 export function getSharedIssueCommand(repoPath: string): string | null {
@@ -25,8 +26,8 @@ export type ResolvedIssueCommand = {
 /**
  * Resolve the GitHub issue command using local override first, then tracked repo config.
  */
-export function readIssueCommand(repoPath: string): ResolvedIssueCommand {
-  const filePath = getIssueCommandFilePath(repoPath)
+export function readIssueCommand(repoPath: string, orcaDirName: string): ResolvedIssueCommand {
+  const filePath = getIssueCommandFilePath(repoPath, orcaDirName)
   let localContent: string | null = null
 
   if (existsSync(filePath)) {
@@ -51,11 +52,11 @@ export function readIssueCommand(repoPath: string): ResolvedIssueCommand {
 }
 
 /**
- * Write the per-user issue command override to `{repoRoot}/.orca/issue-command`.
+ * Write the per-user issue command override to `{repoRoot}/{orcaDirName}/issue-command`.
  * Empty content deletes the override so the shared `orca.yaml` command applies again.
  */
-export function writeIssueCommand(repoPath: string, content: string): void {
-  const filePath = getIssueCommandFilePath(repoPath)
+export function writeIssueCommand(repoPath: string, orcaDirName: string, content: string): void {
+  const filePath = getIssueCommandFilePath(repoPath, orcaDirName)
   const trimmed = content.trim()
 
   try {
@@ -64,11 +65,11 @@ export function writeIssueCommand(repoPath: string, content: string): void {
       return
     }
 
-    const orcaDir = join(repoPath, ORCA_DIR)
+    const orcaDir = join(repoPath, orcaDirName)
     if (!existsSync(orcaDir)) {
       mkdirSync(orcaDir, { recursive: true })
     }
-    ensureOrcaDirIgnored(repoPath)
+    ensureOrcaDirIgnored(repoPath, orcaDirName)
     writeFileSync(filePath, `${trimmed}\n`, 'utf-8')
   } catch (err) {
     console.error('[hooks] Failed to write issue command:', err)
@@ -77,21 +78,16 @@ export function writeIssueCommand(repoPath: string, content: string): void {
   }
 }
 
-/** Ensure `.orca` is in `.gitignore` so the per-user directory is never committed. */
-function ensureOrcaDirIgnored(repoPath: string): void {
+/** Ensure the configured directory is in `.gitignore` so it is never committed. */
+function ensureOrcaDirIgnored(repoPath: string, orcaDirName: string): void {
   const gitignorePath = join(repoPath, '.gitignore')
   try {
-    if (existsSync(gitignorePath)) {
-      const content = readFileSync(gitignorePath, 'utf-8')
-      if (/^\.orca\/?$/m.test(content)) {
-        return
-      }
-      const separator = content.endsWith('\n') ? '' : '\n'
-      writeFileSync(gitignorePath, `${content}${separator}.orca\n`, 'utf-8')
-    } else {
-      writeFileSync(gitignorePath, '.orca\n', 'utf-8')
+    const existing = existsSync(gitignorePath) ? readFileSync(gitignorePath, 'utf-8') : ''
+    const next = appendOrcaDirIgnore(existing, orcaDirName)
+    if (next !== existing) {
+      writeFileSync(gitignorePath, next, 'utf-8')
     }
   } catch {
-    console.warn('[hooks] Could not update .gitignore to exclude .orca')
+    console.warn(`[hooks] Could not update .gitignore to exclude ${orcaDirName}`)
   }
 }

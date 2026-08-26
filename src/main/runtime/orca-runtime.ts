@@ -524,6 +524,7 @@ import {
 import { parsePtySessionId } from '../../shared/pty-session-id-format'
 import { clampLinearIssueListLimit } from '../../shared/linear/issue-read-limits'
 import { isFolderRepo } from '../../shared/repo-kind'
+import { resolveWorkspaceOrcaDirName as resolveWorkspaceOrcaDirNameFromSettings } from '../../shared/orca-dir-names'
 import { DEFAULT_WORKSPACE_STATUS_ID } from '../../shared/workspace-statuses'
 import {
   buildSetupRunnerCommand,
@@ -1337,6 +1338,7 @@ type RuntimeStore = {
   setMobileClientTabSelections?: Store['setMobileClientTabSelections']
   getSettings(): {
     workspaceDir: string
+    workspaceOrcaDirName?: GlobalSettings['workspaceOrcaDirName']
     nestWorkspaces: boolean
     refreshLocalBaseRefOnWorktreeCreate: boolean
     localBaseRefSuggestionDismissed?: boolean
@@ -23206,6 +23208,12 @@ export class OrcaRuntimeService {
     })
   }
 
+  // Why one accessor: the local write, the remote write, and the remote read must not
+  // disagree about which directory this host is using.
+  private resolveWorkspaceOrcaDirName(): string {
+    return resolveWorkspaceOrcaDirNameFromSettings(this.store?.getSettings())
+  }
+
   async readRepoIssueCommand(repoSelector: string) {
     const repo = await this.resolveRepoSelector(repoSelector)
     if (isFolderRepo(repo)) {
@@ -23246,7 +23254,7 @@ export class OrcaRuntimeService {
       }
     }
 
-    return readIssueCommand(repo.path)
+    return readIssueCommand(repo.path, this.resolveWorkspaceOrcaDirName())
   }
 
   private async readRemoteIssueCommandOverride(
@@ -23306,7 +23314,7 @@ export class OrcaRuntimeService {
       return { ok: true }
     }
 
-    writeIssueCommand(repo.path, content)
+    writeIssueCommand(repo.path, this.resolveWorkspaceOrcaDirName(), content)
     return { ok: true }
   }
 

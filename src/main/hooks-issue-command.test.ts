@@ -4,8 +4,11 @@ import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import {
   makeHookTestRepo,
+  TEST_CUSTOM_ISSUE_COMMAND_PATH,
+  TEST_CUSTOM_ORCA_DIR_NAME,
   TEST_GITIGNORE_PATH,
   TEST_ISSUE_COMMAND_PATH,
+  TEST_ORCA_DIR_NAME,
   TEST_REPO_ORCA_YAML_PATH,
   TEST_REPO_PATH
 } from './hooks-test-fixtures'
@@ -54,7 +57,7 @@ describe('readIssueCommand', () => {
     })
 
     const { readIssueCommand } = await import('./issue-command-file')
-    expect(readIssueCommand(TEST_REPO_PATH)).toEqual({
+    expect(readIssueCommand(TEST_REPO_PATH, TEST_ORCA_DIR_NAME)).toEqual({
       localContent: 'local command',
       sharedContent: 'shared command',
       effectiveContent: 'local command',
@@ -74,7 +77,7 @@ describe('readIssueCommand', () => {
     })
 
     const { readIssueCommand } = await import('./issue-command-file')
-    expect(readIssueCommand(TEST_REPO_PATH)).toEqual({
+    expect(readIssueCommand(TEST_REPO_PATH, TEST_ORCA_DIR_NAME)).toEqual({
       localContent: null,
       sharedContent: 'shared command',
       effectiveContent: 'shared command',
@@ -98,7 +101,7 @@ describe('writeIssueCommand', () => {
     })
 
     const { writeIssueCommand } = await import('./issue-command-file')
-    writeIssueCommand(TEST_REPO_PATH, 'local command')
+    writeIssueCommand(TEST_REPO_PATH, TEST_ORCA_DIR_NAME, 'local command')
 
     expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalledWith(
       TEST_GITIGNORE_PATH,
@@ -115,11 +118,56 @@ describe('writeIssueCommand', () => {
   it('deletes the local override when the override is cleared', async () => {
     const { writeIssueCommand } = await import('./issue-command-file')
     const fs = await import('node:fs')
-    writeIssueCommand(TEST_REPO_PATH, '   ')
+    writeIssueCommand(TEST_REPO_PATH, TEST_ORCA_DIR_NAME, '   ')
 
     expect(vi.mocked(fs.rmSync)).toHaveBeenCalledWith(TEST_ISSUE_COMMAND_PATH, {
       force: true
     })
+  })
+
+  it('writes into the configured directory name and ignores that name', async () => {
+    const fs = await import('node:fs')
+    vi.mocked(fs.existsSync).mockImplementation((path) => path === TEST_GITIGNORE_PATH)
+    vi.mocked(fs.readFileSync).mockImplementation((path) =>
+      path === TEST_GITIGNORE_PATH ? 'node_modules/\n' : ''
+    )
+    vi.mocked(fs.writeFileSync).mockClear()
+    vi.mocked(fs.mkdirSync).mockClear()
+
+    const { writeIssueCommand } = await import('./issue-command-file')
+    writeIssueCommand(TEST_REPO_PATH, TEST_CUSTOM_ORCA_DIR_NAME, 'local command')
+
+    expect(vi.mocked(fs.mkdirSync)).toHaveBeenCalledWith(join(TEST_REPO_PATH, '.tmp', 'orca'), {
+      recursive: true
+    })
+    expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalledWith(
+      TEST_GITIGNORE_PATH,
+      'node_modules/\n.tmp/orca\n',
+      'utf-8'
+    )
+    expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalledWith(
+      TEST_CUSTOM_ISSUE_COMMAND_PATH,
+      'local command\n',
+      'utf-8'
+    )
+  })
+
+  it('does not mistake a pre-existing .orca ignore line for a renamed directory', async () => {
+    const fs = await import('node:fs')
+    vi.mocked(fs.existsSync).mockImplementation((path) => path === TEST_GITIGNORE_PATH)
+    vi.mocked(fs.readFileSync).mockImplementation((path) =>
+      path === TEST_GITIGNORE_PATH ? '.orca\n' : ''
+    )
+    vi.mocked(fs.writeFileSync).mockClear()
+
+    const { writeIssueCommand } = await import('./issue-command-file')
+    writeIssueCommand(TEST_REPO_PATH, TEST_CUSTOM_ORCA_DIR_NAME, 'local command')
+
+    expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalledWith(
+      TEST_GITIGNORE_PATH,
+      '.orca\n.tmp/orca\n',
+      'utf-8'
+    )
   })
 })
 
