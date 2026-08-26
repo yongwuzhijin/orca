@@ -29,6 +29,7 @@ import {
   type DecodedFrame,
   type JsonRpcResponse
 } from './protocol'
+import { initializeOrcaHomeDirNameFromEnvironment } from '../shared/orca-home-dir-name'
 import { readLaunchVersion, runConnectHandshake, setupDaemonHandshake } from './relay-handshake'
 import { RelayDispatcher } from './dispatcher'
 import { RelayContext, expandTilde } from './context'
@@ -531,6 +532,9 @@ async function readOrcaCliStdin(): Promise<string | undefined> {
 // ── Normal mode ──────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
+  // Why env, not settings: relay runs as its own process on the remote host and has no
+  // settings store. The local side does not yet propagate this — see the plan's deviations.
+  initializeOrcaHomeDirNameFromEnvironment(process.env)
   const {
     graceTimeMs,
     connectMode,

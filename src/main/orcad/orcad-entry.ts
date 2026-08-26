@@ -13,21 +13,34 @@ import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
 import { setAppEnvironment, type AppEnvironment } from '../../shared/app-environment'
+import { DEFAULT_ORCA_DIR_NAME, sanitizeHomeOrcaDirName } from '../../shared/orca-dir-names'
+import { initializeOrcaHomeDirNameFromEnvironment } from '../../shared/orca-home-dir-name'
 import { setSecretStore, type SecretStore } from '../../shared/secret-store'
 import type { ServeReadiness } from '../server/serve-readiness'
 
-/** XDG-ish data root. `$ORCA_USER_DATA` wins so a smoke test can isolate state. */
-function resolveUserDataPath(): string {
-  const explicit = process.env.ORCA_USER_DATA
+/**
+ * XDG-ish data root. `$ORCA_USER_DATA` wins so a smoke test can isolate state.
+ *
+ * Why an env var and not the setting: settings live *inside* userData, so this one site
+ * cannot read the value it would need. `ORCA_HOME_DIR_NAME` is the escape hatch.
+ */
+export function resolveOrcadUserDataPath(
+  env: Record<string, string | undefined>,
+  home: string
+): string {
+  const explicit = env.ORCA_USER_DATA
   if (explicit) {
     return explicit
   }
-  const xdg = process.env.XDG_DATA_HOME
-  return xdg ? join(xdg, 'Orca') : join(homedir(), '.orca')
+  const xdg = env.XDG_DATA_HOME
+  if (xdg) {
+    return join(xdg, 'Orca')
+  }
+  return join(home, sanitizeHomeOrcaDirName(env.ORCA_HOME_DIR_NAME) ?? DEFAULT_ORCA_DIR_NAME)
 }
 
 function createNodeAppEnvironment(): AppEnvironment {
-  const userData = resolveUserDataPath()
+  const userData = resolveOrcadUserDataPath(process.env, homedir())
   const quitHandlers: (() => void)[] = []
   // Why SIGTERM/SIGINT: this is the Node equivalent of electron's will-quit, and the
   // runtime's teardown (daemon disconnect, PTY kill, store flush) hangs off it.
@@ -80,6 +93,7 @@ function createNodeSecretStore(): SecretStore {
 }
 
 export function installOrcadHostAdapters(): void {
+  initializeOrcaHomeDirNameFromEnvironment(process.env)
   setAppEnvironment(createNodeAppEnvironment())
   setSecretStore(createNodeSecretStore())
 }

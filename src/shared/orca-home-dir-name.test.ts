@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 async function loadModule() {
   vi.resetModules()
-  return await import('./orca-home-dir-name')
+  return await import('./orca-home-dir-name.js')
 }
 
 describe('orca home dir name snapshot', () => {

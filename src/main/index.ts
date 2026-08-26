@@ -34,6 +34,7 @@ import { electronSpeechServiceFactories } from './host/electron-speech-services'
 import { setSpeechServiceFactories } from './speech/speech-runtime-service'
 import { setWorktreeWatcherRemoval } from './ipc/worktree-watcher-removal'
 import { setSecretStore } from '../shared/secret-store'
+import { initializeOrcaHomeDirName } from '../shared/orca-home-dir-name'
 import { ElectronSecretStore } from './host/electron-secret-store'
 import { reportSecretProtectionGap } from './host/secret-protection-report'
 import { initSessionParseCachePersistence } from './ai-vault/session-parse-cache-persistence'
@@ -2311,6 +2312,9 @@ void app.whenReady().then(async () => {
 
   const activeOrcaProfile = ensureActiveOrcaProfile()
   store = new Store({ dataFile: activeOrcaProfile.dataFile })
+  // Why here: every home-level path helper reads this snapshot, and the settings that
+  // name it only exist once the store has loaded.
+  initializeOrcaHomeDirName(store.getSettings().homeOrcaDirName)
   // Why here and not at install time: the report remembers what it last said, and that
   // state lives beside the profile data file, which does not exist until now.
   reportSecretProtectionGap({
