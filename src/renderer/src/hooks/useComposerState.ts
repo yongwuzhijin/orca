@@ -32,6 +32,7 @@ import {
 } from '../../../shared/tui-agent-launch-defaults'
 import { tuiAgentToAgentKind } from '@/lib/telemetry'
 import { isGitRepoKind } from '../../../shared/repo-kind'
+import { resolveWorkspaceOrcaDirName } from '../../../shared/orca-dir-names'
 import { callRuntimeRpc, getActiveRuntimeTarget } from '@/runtime/runtime-rpc-client'
 import { resolveWorktreeCreateBaseBranch } from '@/runtime/worktree-create-base'
 import {
@@ -2542,7 +2543,12 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
         }
         return { filePaths: [], folderPaths: [] }
       }
-      const destinationDir = joinPath(targetRepoPath, '.orca/drops')
+      // Why global, not `targetSettings`: that is a per-repo slice; the Orca directory name
+      // is a global setting.
+      const destinationDir = joinPath(
+        targetRepoPath,
+        `${resolveWorkspaceOrcaDirName(useAppStore.getState().settings)}/drops`
+      )
       const sshExpectation = targetConnectionId
         ? captureDirectSshMutationExpectation(
             useAppStore.getState(),

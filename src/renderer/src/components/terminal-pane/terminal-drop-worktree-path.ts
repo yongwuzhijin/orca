@@ -11,9 +11,10 @@ export function resolveTerminalDropWorktreePath(
   return worktree?.path ?? fallbackCwd ?? null
 }
 
-export function joinRuntimeTerminalDropDir(worktreePath: string): string {
+export function joinRuntimeTerminalDropDir(worktreePath: string, orcaDirName: string): string {
+  const trimmed = worktreePath.replace(/[\\/]+$/, '')
   if (isTerminalDropWindowsPathLike(worktreePath)) {
-    return `${worktreePath.replace(/[\\/]+$/, '').replace(/\//g, '\\')}\\.orca\\drops`
+    return `${trimmed.replace(/\//g, '\\')}\\${orcaDirName.replace(/\//g, '\\')}\\drops`
   }
-  return `${worktreePath.replace(/[\\/]+$/, '')}/.orca/drops`
+  return `${trimmed}/${orcaDirName}/drops`
 }

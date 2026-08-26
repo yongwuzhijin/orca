@@ -8,6 +8,7 @@ import { requireSshFilesystemProvider } from '../providers/ssh-filesystem-dispat
 import { resolveLocalDroppedPathsForAgent } from './dropped-path-resolution'
 import { importExternalPathsSsh } from './filesystem-import-ssh'
 import type { SshMutationExpectation } from '../../shared/ssh-types'
+import { resolveWorkspaceOrcaDirName } from '../../shared/orca-dir-names'
 import { assertSshMutationExpectation } from '../ssh/ssh-connection-generation'
 import { renameLocalPathSerializedByDestination } from '../destination-serialized-local-rename'
 import { assertNotExists, rethrowWithUserMessage } from './filesystem-create-path-guards'
@@ -205,7 +206,8 @@ export function registerFilesystemMutationHandlers(store: Store): void {
 
   // Why: terminal drag-and-drop resolver. Local worktrees pass paths through
   // unchanged (reference-in-place; preserves zero-latency drop). SSH worktrees
-  // upload each path into `${worktreePath}/.orca/drops/` and return remote
+  // upload each path into the workspace's Orca scratch `drops/` directory first
+  // (that directory's name is `workspaceOrcaDirName`) and return remote
   // paths the remote agent can read. Kept as a separate IPC from
   // fs:importExternalPaths because terminal semantics differ from the
   // explorer's "copy into user-picked destDir". See docs/terminal-drop-ssh.md.
@@ -235,7 +237,7 @@ export function registerFilesystemMutationHandlers(store: Store): void {
         }
       }
       const worktreePath = args.worktreePath.replace(/\/+$/, '')
-      const destDir = `${worktreePath}/.orca/drops`
+      const destDir = `${worktreePath}/${resolveWorkspaceOrcaDirName(store.getSettings())}/drops`
       const { results } = await importExternalPathsSsh(args.paths, destDir, args.connectionId, {
         ensureDir: true,
         assertCurrent: () =>

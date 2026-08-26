@@ -13,6 +13,7 @@ import {
   type RuntimeFileOperationArgs
 } from '@/runtime/runtime-file-client'
 import type { GlobalSettings } from '../../../shared/global-settings-types'
+import { resolveWorkspaceOrcaDirName } from '../../../shared/orca-dir-names'
 import { translate } from '@/i18n/i18n'
 import type { WorktreeRuntimeOwnerState } from '@/lib/worktree-runtime-owner'
 import {
@@ -107,7 +108,10 @@ export function useGlobalFileDrop(): void {
           try {
             // Why: OS file drops provide client-local paths. Remote runtime and
             // SSH editors must upload into the server worktree before opening.
-            const destinationDir = joinPath(worktreePath, '.orca/drops')
+            const destinationDir = joinPath(
+              worktreePath,
+              `${resolveWorkspaceOrcaDirName(useAppStore.getState().settings)}/drops`
+            )
             const { results } = await importExternalPathsToRuntime(
               fileContext,
               data.paths,

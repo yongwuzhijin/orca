@@ -8,6 +8,7 @@ import { importExternalPathsToRuntime } from '@/runtime/runtime-file-client'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
 import { isWindowsAbsolutePathLike } from '../../../../shared/cross-platform-path'
+import { resolveWorkspaceOrcaDirName } from '../../../../shared/orca-dir-names'
 import { isWslUncPath, parseWslUncPath } from '../../../../shared/wsl-paths'
 import type { PtyTransport } from './pty-transport'
 import { recordTerminalUserInputForLeaf } from './terminal-input-activity'
@@ -177,7 +178,10 @@ async function uploadRuntimeDropPaths(
   }
 ): Promise<void> {
   const targetShell = getTerminalTargetShellForWorktreePath(args.worktreePath)
-  const destinationDir = joinRuntimeTerminalDropDir(args.worktreePath)
+  const destinationDir = joinRuntimeTerminalDropDir(
+    args.worktreePath,
+    resolveWorkspaceOrcaDirName(args.settings)
+  )
   const pending = toast.loading(
     translate(
       'auto.components.terminal.pane.terminal.drop.handler.29c031b49a',
