@@ -23,6 +23,25 @@ export const getGeneralWorkspaceSearchEntries = createLocalizedCatalog(() => [
   },
   {
     title: translate(
+      'auto.components.settings.general.search.orcaDirectoryNames',
+      'Orca Directory Names'
+    ),
+    description: translate(
+      'auto.components.settings.general.search.orcaDirectoryNamesDescription',
+      'Rename the directories Orca uses for its own state in a workspace and under your home directory.'
+    ),
+    keywords: [
+      ...translateSearchKeyword('auto.components.settings.general.search.orcaDir', 'orca dir'),
+      ...translateSearchKeyword(
+        'auto.components.settings.general.search.tempFolder',
+        'temp folder'
+      ),
+      ...translateSearchKeyword('auto.components.settings.general.search.scratch', 'scratch'),
+      ...translateSearchKeyword('auto.components.settings.general.search.dotOrca', '.orca')
+    ]
+  },
+  {
+    title: translate(
       'auto.components.settings.general.search.externalWorktrees',
       'External worktrees'
     ),

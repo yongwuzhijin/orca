@@ -8358,7 +8358,9 @@
             "editorFontFamily": "Fuente del editor",
             "editorFontFamilyDesc": "Fuente utilizada por los editores de archivos y vistas de diferencias. Dejar vacío para seguir la fuente de la terminal.",
             "externalWorktrees": "Worktrees externos",
-            "externalWorktreesDescription": "Elige si los worktrees creados fuera de Orca aparecen de forma predeterminada."
+            "externalWorktreesDescription": "Elige si los worktrees creados fuera de Orca aparecen de forma predeterminada.",
+            "orcaDirectoryNames": "Nombres de directorios de Orca",
+            "orcaDirectoryNamesDescription": "Cambia el nombre de los directorios que Orca usa para su propio estado dentro de un espacio de trabajo y en tu directorio personal."
           }
         },
         "git": {
@@ -10322,6 +10324,18 @@
         "todoDesignStageSkill": {
           "label": "Habilidad de diseño de solución",
           "description": "Se añade al inicio del prompt cuando una tarea entra en la etapa de diseño de solución. Déjalo vacío para desactivar la etapa."
+        },
+        "OrcaDirectoryNameSettings": {
+          "title": "Nombres de directorios de Orca",
+          "description": "Nombres de los directorios que Orca usa para su propio estado dentro de cada espacio de trabajo y en tu directorio personal.",
+          "workspaceLabel": "Directorio Orca del espacio de trabajo",
+          "resetWorkspace": "Restablecer el nombre del espacio de trabajo",
+          "workspaceInvalid": "Introduce un nombre de directorio relativo dentro del espacio de trabajo. No se permiten rutas absolutas, \"..\" ni caracteres especiales.",
+          "workspaceHelp": "Contiene los archivos arrastrados, las plantillas de documentos, los documentos de diseño y la anulación del comando de incidencias. Se aplica de inmediato.",
+          "homeLabel": "Directorio Orca personal",
+          "resetHome": "Restablecer el nombre del directorio personal",
+          "homeInvalid": "Introduce un único nombre de directorio dentro de tu directorio personal. No se permiten separadores ni caracteres especiales.",
+          "homeHelp": "Contiene las credenciales, los atajos de teclado y los scripts de hooks de agentes. Se aplica tras reiniciar; los archivos existentes no se mueven."
         }
       },
       "right": {

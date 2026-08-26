@@ -8355,7 +8355,9 @@
             "editorFontFamily": "编辑器字体",
             "editorFontFamilyDesc": "文件编辑器和差异视图使用的字体，留空则跟随终端字体。",
             "externalWorktrees": "外部工作树",
-            "externalWorktreesDescription": "选择是否默认显示在 Orca 外部创建的工作树。"
+            "externalWorktreesDescription": "选择是否默认显示在 Orca 外部创建的工作树。",
+            "orcaDirectoryNames": "Orca 目录名",
+            "orcaDirectoryNamesDescription": "重命名 Orca 在工作区内和主目录下用于存放自身状态的目录。"
           }
         },
         "git": {
@@ -10342,6 +10344,18 @@
         "todoDesignStageSkill": {
           "label": "方案设计技能",
           "description": "任务进入方案设计阶段时，作为前缀加到提示词开头。留空则关闭该阶段。"
+        },
+        "OrcaDirectoryNameSettings": {
+          "title": "Orca 目录名",
+          "description": "Orca 在每个工作区内和主目录下用于存放自身状态的目录名。",
+          "workspaceLabel": "工作区 Orca 目录",
+          "resetWorkspace": "重置工作区目录名",
+          "workspaceInvalid": "请输入工作区内的相对目录名。不允许绝对路径、“..”或特殊字符。",
+          "workspaceHelp": "用于存放拖入的文件、文档模板、设计文档以及 issue 命令覆写。立即生效。",
+          "homeLabel": "主目录 Orca 目录",
+          "resetHome": "重置主目录名",
+          "homeInvalid": "请输入主目录下的单个目录名。不允许路径分隔符或特殊字符。",
+          "homeHelp": "用于存放凭据、快捷键配置和 agent hook 脚本。重启后生效；已有文件不会被移动。"
         }
       },
       "right": {

@@ -8380,7 +8380,9 @@
             "editorFontFamily": "エディターフォント",
             "editorFontFamilyDesc": "ファイルエディターと差分ビューで使用されるフォント。空の場合はターミナルフォントに従います。",
             "externalWorktrees": "外部ワークツリー",
-            "externalWorktreesDescription": "Orca 外で作成されたワークツリーをデフォルトで表示するかどうかを選択します。"
+            "externalWorktreesDescription": "Orca 外で作成されたワークツリーをデフォルトで表示するかどうかを選択します。",
+            "orcaDirectoryNames": "Orca ディレクトリ名",
+            "orcaDirectoryNamesDescription": "Orca が自身の状態を保存するために使用する、ワークスペース内およびホームディレクトリ配下のディレクトリ名を変更します。"
           }
         },
         "git": {
@@ -10322,6 +10324,18 @@
         "todoDesignStageSkill": {
           "label": "ソリューション設計スキル",
           "description": "タスクがソリューション設計段階に入るとき、プロンプトの先頭に追加されます。空欄にするとこの段階を無効化します。"
+        },
+        "OrcaDirectoryNameSettings": {
+          "title": "Orca ディレクトリ名",
+          "description": "各ワークスペース内およびホームディレクトリ配下で Orca が自身の状態を保存するディレクトリの名前です。",
+          "workspaceLabel": "ワークスペースの Orca ディレクトリ",
+          "resetWorkspace": "ワークスペース名をリセット",
+          "workspaceInvalid": "ワークスペース内の相対ディレクトリ名を入力してください。絶対パス、「..」、特殊文字は使用できません。",
+          "workspaceHelp": "ドロップしたファイル、ドキュメントテンプレート、設計ドキュメント、issue コマンドの上書き設定を保存します。即座に反映されます。",
+          "homeLabel": "ホームの Orca ディレクトリ",
+          "resetHome": "ホーム名をリセット",
+          "homeInvalid": "ホームディレクトリ直下の単一のディレクトリ名を入力してください。区切り文字や特殊文字は使用できません。",
+          "homeHelp": "認証情報、キーバインド、Agent フックスクリプトを保存します。再起動後に反映され、既存のファイルは移動されません。"
         }
       },
       "right": {

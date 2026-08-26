@@ -9320,7 +9320,9 @@
             "editorFontFamily": "Editor Font Family",
             "editorFontFamilyDesc": "Font used by file editors and diff views. Leave empty to follow the terminal font.",
             "externalWorktrees": "External worktrees",
-            "externalWorktreesDescription": "Choose whether worktrees created outside Orca appear by default."
+            "externalWorktreesDescription": "Choose whether worktrees created outside Orca appear by default.",
+            "orcaDirectoryNames": "Orca Directory Names",
+            "orcaDirectoryNamesDescription": "Rename the directories Orca uses for its own state in a workspace and under your home directory."
           }
         },
         "git": {
@@ -11442,6 +11444,18 @@
         "todoDesignStageSkill": {
           "label": "Solution design skill",
           "description": "Prepended to the prompt when a task enters the solution design stage. Leave empty to disable the stage."
+        },
+        "OrcaDirectoryNameSettings": {
+          "title": "Orca Directory Names",
+          "description": "Names of the directories Orca uses for its own state inside each workspace and under your home directory.",
+          "workspaceLabel": "Workspace Orca directory",
+          "resetWorkspace": "Reset workspace name",
+          "workspaceInvalid": "Enter a relative directory name inside the workspace. No absolute paths, \"..\", or special characters.",
+          "workspaceHelp": "Holds dropped files, document templates, design docs, and the issue-command override. Applies immediately.",
+          "homeLabel": "Home Orca directory",
+          "resetHome": "Reset home name",
+          "homeInvalid": "Enter a single directory name under your home directory. No separators or special characters.",
+          "homeHelp": "Holds credentials, keybindings, and agent hook scripts. Takes effect after a restart; existing files are not moved."
         }
       },
       "right": {
