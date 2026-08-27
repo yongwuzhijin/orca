@@ -65,7 +65,6 @@ const {
   registerTerminalPreviewHandlersMock,
   registerSpeechHandlersMock,
   registerSkillsHandlersMock,
-  registerSkillDeleteIpcHandlersMock,
   registerWorkspaceSpaceHandlersMock,
   registerWorkspacePortHandlersMock,
   registerLocalhostWorktreeLabelHandlersMock,
@@ -137,7 +136,6 @@ const {
   registerTerminalPreviewHandlersMock: vi.fn(),
   registerSpeechHandlersMock: vi.fn(),
   registerSkillsHandlersMock: vi.fn(),
-  registerSkillDeleteIpcHandlersMock: vi.fn(),
   registerWorkspaceSpaceHandlersMock: vi.fn(),
   registerWorkspacePortHandlersMock: vi.fn(),
   registerLocalhostWorktreeLabelHandlersMock: vi.fn(),
@@ -172,7 +170,7 @@ vi.mock('../dashboard-popout', () => ({
   registerDashboardPopoutHandlers: registerDashboardPopoutHandlersMock
 }))
 
-vi.mock('../../window/dashboard-popout-window', () => ({
+vi.mock('../window/dashboard-popout-window', () => ({
   isDashboardPopoutRenderer: isDashboardPopoutRendererMock
 }))
 
@@ -240,10 +238,6 @@ vi.mock('../skills', () => ({
   registerSkillsHandlers: registerSkillsHandlersMock
 }))
 
-vi.mock('../skill-delete/handlers', () => ({
-  registerSkillDeleteIpcHandlers: registerSkillDeleteIpcHandlersMock
-}))
-
 vi.mock('../workspace-space', () => ({
   registerWorkspaceSpaceHandlers: registerWorkspaceSpaceHandlersMock
 }))
@@ -272,31 +266,31 @@ vi.mock('../shell', () => ({
   registerShellHandlers: registerShellHandlersMock
 }))
 
-vi.mock('./text-translation-ipc', () => ({
+vi.mock('../text-translation-ipc', () => ({
   registerTextTranslationHandlers: registerTextTranslationHandlersMock
 }))
 
-vi.mock('./todos', () => ({
+vi.mock('../todos', () => ({
   registerTodoHandlers: registerTodoHandlersMock
 }))
 
-vi.mock('./acp', () => ({
+vi.mock('../acp', () => ({
   registerAcpHandlers: registerAcpHandlersMock
 }))
 
-vi.mock('./todo-review', () => ({
+vi.mock('../todo-review', () => ({
   registerTodoReviewHandlers: registerTodoReviewHandlersMock
 }))
 
-vi.mock('./todo-merge', () => ({
+vi.mock('../todo-merge', () => ({
   registerTodoMergeHandlers: registerTodoMergeHandlersMock
 }))
 
-vi.mock('./todo-dashboard', () => ({
+vi.mock('../todo-dashboard', () => ({
   registerTodoDashboardHandlers: registerTodoDashboardHandlersMock
 }))
 
-vi.mock('./pet', () => ({
+vi.mock('../pet', () => ({
   registerPetHandlers: registerPetHandlersMock
 }))
 
@@ -373,11 +367,11 @@ vi.mock('../grok-accounts', () => ({
   registerGrokAccountHandlers: registerGrokAccountHandlersMock
 }))
 
-vi.mock('../../window/attach-main-window-services', () => ({
+vi.mock('../window/attach-main-window-services', () => ({
   registerUpdaterHandlers: registerUpdaterHandlersMock
 }))
 
-vi.mock('../../window/clipboard-ipc-handlers', () => ({
+vi.mock('../window/clipboard-ipc-handlers', () => ({
   registerClipboardHandlers: registerClipboardHandlersMock,
   setTrustedClipboardRendererWebContentsId: setTrustedClipboardRendererWebContentsIdMock
 }))
@@ -496,7 +490,6 @@ describe('registerCoreHandlers', () => {
     registerTerminalPreviewHandlersMock.mockReset()
     registerSpeechHandlersMock.mockReset()
     registerSkillsHandlersMock.mockReset()
-    registerSkillDeleteIpcHandlersMock.mockReset()
     registerWorkspaceSpaceHandlersMock.mockReset()
     registerWorkspacePortHandlersMock.mockReset()
     registerLocalhostWorktreeLabelHandlersMock.mockReset()
@@ -601,7 +594,6 @@ describe('registerCoreHandlers', () => {
     expect(registerTerminalPreviewHandlersMock).toHaveBeenCalledWith(runtime)
     expect(registerSettingsHandlersMock).toHaveBeenCalledWith(store, agentAwakeService)
     expect(registerSkillsHandlersMock).toHaveBeenCalledWith(store, runtime)
-    expect(registerSkillDeleteIpcHandlersMock).toHaveBeenCalledWith(store, runtime)
     expect(registerWorkspaceSpaceHandlersMock).toHaveBeenCalledWith(store)
     expect(registerWorkspacePortHandlersMock).toHaveBeenCalledWith(store)
     expect(registerLocalhostWorktreeLabelHandlersMock).toHaveBeenCalledWith(store)

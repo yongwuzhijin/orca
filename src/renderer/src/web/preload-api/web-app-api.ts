@@ -1,3 +1,4 @@
+import { DEFAULT_ORCA_DIR_NAME } from '../../../../shared/orca-dir-names'
 import type { PreloadApi } from '../../../../preload/api-types'
 import { sanitizeWebRuntimeWorkspaceSession } from '../web-workspace-session'
 import { sessionStorageKeyForHost } from './web-workspace-session-api'
@@ -16,7 +17,8 @@ export function createWebAppApi(): Partial<PreloadApi> {
           devBranch: null,
           devWorktreeName: null,
           devRepoRoot: null,
-          dockBadgeLabel: null
+          dockBadgeLabel: null,
+          orcaHomeDirName: DEFAULT_ORCA_DIR_NAME
         }),
       getFeatureWallAssetBaseUrl: () => Promise.resolve('/'),
       relaunch: () => Promise.resolve(window.location.reload()),

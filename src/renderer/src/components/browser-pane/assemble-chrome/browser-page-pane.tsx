@@ -245,7 +245,7 @@ export function BrowserPagePane({
   useBrowserNetworkToolsShortcut({
     browserPageId: browserTab.id,
     isActive,
-    shortcutScope: findShortcutScope
+    shortcutScope: chromeShortcutScope
   })
   useBrowserPageKeyboardShortcuts({
     browserTabId: browserTab.id,

@@ -1,5 +1,6 @@
 import type { TuiAgent } from './tui-agent'
 import type { TuiAgentConfig } from './tui-agent-config-types'
+export type { TuiAgentConfig } from './tui-agent-config-types'
 import { getOrcaCliCommandNameForPlatform } from './orca-cli-command-name'
 
 export const TUI_AGENT_CONFIG: Record<TuiAgent, TuiAgentConfig> = {

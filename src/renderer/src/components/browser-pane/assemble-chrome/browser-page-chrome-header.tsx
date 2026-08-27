@@ -99,7 +99,6 @@ export function BrowserPageChromeHeader({
         shareableArtifactFile={shareableArtifactFile}
         currentBrowserUrl={currentBrowserUrl}
         externalUrl={externalUrl}
-        worktreeId={browserTab.worktreeId}
         pageUrl={browserTab.url}
         pageTitle={browserTab.title}
       />

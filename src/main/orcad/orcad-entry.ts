@@ -11,6 +11,7 @@
  * the runtime factory, but only when an Electron serve sidecar or an operator-supplied
  * Chromium proves available at startup.
  */
+import { join } from 'node:path'
 import process from 'node:process'
 import { setAppEnvironment, type AppEnvironment } from '../../shared/app-environment'
 import { DEFAULT_ORCA_DIR_NAME, sanitizeHomeOrcaDirName } from '../../shared/orca-dir-names'
@@ -31,12 +32,7 @@ import {
   type OrcadInstanceLock
 } from './orcad-instance-lock'
 
-/**
- * XDG-ish data root. `$ORCA_USER_DATA` wins so a smoke test can isolate state.
- *
- * Why an env var and not the setting: settings live *inside* userData, so this one site
- * cannot read the value it would need. `ORCA_HOME_DIR_NAME` is the escape hatch.
- */
+/** Pure path resolver used by tests and callers that pass env/home explicitly. */
 export function resolveOrcadUserDataPath(
   env: Record<string, string | undefined>,
   home: string
@@ -52,8 +48,9 @@ export function resolveOrcadUserDataPath(
   return join(home, sanitizeHomeOrcaDirName(env.ORCA_HOME_DIR_NAME) ?? DEFAULT_ORCA_DIR_NAME)
 }
 
+let runOrcadQuitHandlers = (): void => {}
+
 function createNodeAppEnvironment(): AppEnvironment {
-  const userData = resolveOrcadUserDataPath(process.env, homedir())
   const quitHandlers: (() => void)[] = []
   // The main signal handler awaits runtime and browser teardown before process.exit.
   // Keep will-quit callbacks synchronous, but never let them pre-empt that async barrier.

@@ -8,6 +8,7 @@ import { parseOrcaYaml } from '../../hooks'
 import { readIssueCommand, writeIssueCommand } from '../../issue-command-file'
 import { resolveRepoForExecutionHost } from '../worktrees/repo-host-ownership'
 import type { WorktreeIpcContext } from '../worktrees/worktree-ipc-context'
+import { resolveWorkspaceOrcaDirName } from '../../../shared/orca-dir-names'
 
 export function registerWorktreeHookFileHandlers(context: WorktreeIpcContext): void {
   const { store } = context
@@ -75,7 +76,7 @@ export function registerWorktreeHookFileHandlers(context: WorktreeIpcContext): v
               : ('none' as const)
         }
       }
-      return readIssueCommand(repo.path)
+      return readIssueCommand(repo.path, resolveWorkspaceOrcaDirName(store.getSettings()))
     }
   )
 
@@ -120,7 +121,7 @@ export function registerWorktreeHookFileHandlers(context: WorktreeIpcContext): v
         await fsProvider.writeFile(issueCommandPath, `${trimmed}\n`)
         return
       }
-      writeIssueCommand(repo.path, args.content)
+      writeIssueCommand(repo.path, resolveWorkspaceOrcaDirName(store.getSettings()), args.content)
     }
   )
 }

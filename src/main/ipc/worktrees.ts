@@ -140,53 +140,1711 @@ import {
   registerWorktreeRootsForRepo
 } from './registered-worktree-roots-cache'
 import type { OrcaRuntimeService, RuntimeWorktreeLifecycleEvent } from '../runtime/orca-runtime'
+import { killAllProcessesForWorktree } from '../runtime/worktree-teardown'
+import { clearProviderPtyState, getLocalPtyProvider, getSshPtyProvider } from './pty'
+import { findExistingWorktreeSymlinkPaths, removeWorktreeLinkedPaths } from './worktree-symlinks'
+import { getWorktreeSharedLinkPaths } from '../git/worktree-shared-directories'
+import { track } from '../telemetry/client'
+import { getCohortAtEmit } from '../telemetry/cohort-classifier'
+import { workspaceSourceSchema, type WorkspaceSource } from '../../shared/telemetry-events'
+import {
+  finishAutomationWorkspaceProvenanceRequest,
+  releaseAutomationWorkspaceProvenanceRequest,
+  resolveAutomationWorkspaceProvenance
+} from '../automations/workspace-provenance'
+import { shouldEmitBoundedWarning } from './bounded-warning-dedupe'
+import {
+  getSshProviderAuthority,
+  isCurrentSshProviderAuthority,
+  registerSshProviderRequestAbort
+} from '../ssh/ssh-provider-authority'
 import { createSenderScopedRequestCancellations } from './sender-scoped-request-cancellation'
-import { registerWorktreeCreateHandlers } from './worktrees/create/register-worktree-create-handlers'
-import { registerWorktreePrefetchHandler } from './worktrees/create/register-worktree-prefetch-handler'
-import { registerReviewBaseHandlers } from './worktrees/create/register-review-base-handlers'
-import { registerWorktreeHookCheckHandler } from './hooks/register-worktree-hook-check-handler'
-import { registerWorktreeHookFileHandlers } from './hooks/register-worktree-hook-file-handlers'
-import { registerWorktreeHookInspectionHandler } from './hooks/register-worktree-hook-inspection-handler'
-import { registerWorktreeHookRunnerHandler } from './hooks/register-worktree-hook-runner-handler'
-import { registerDetectedWorktreeHandlers } from './worktrees/listing/register-detected-worktree-handlers'
-import { registerHostCatalogHandlers } from './worktrees/listing/register-host-catalog-handlers'
-import { registerWorktreeCatalogHandlers } from './worktrees/listing/register-worktree-catalog-handlers'
-import { registerDetectedWorktreeScanInvalidation } from './worktrees/listing/register-detected-worktree-scan-invalidation'
-import { registerWorktreeMetadataHandlers } from './worktrees/metadata/register-worktree-metadata-handlers'
-import { registerWorktreeForgetHandlers } from './worktrees/removal/register-worktree-forget-handlers'
-import { registerWorktreeRemovalHandlers } from './worktrees/removal/register-worktree-removal-handlers'
-import type { WorktreeIpcContext } from './worktrees/worktree-ipc-context'
+import { preservedBranchCleanupScopeKey } from '../../shared/preserved-branch-cleanup'
+import { adoptProvisionedRootSshCheckout } from '../provisioned-root-ssh-adoption'
 
-registerDetectedWorktreeScanInvalidation()
+type CreateWorktreeArgsWithSystemProvenance = CreateWorktreeArgs & {
+  automationProvenance?: AutomationWorkspaceProvenance
+  cliProvenance?: CliWorkspaceProvenance
+}
 
-const WORKTREE_HANDLER_CHANNELS = [
-  'worktrees:listAll',
-  'worktrees:list',
-  'worktrees:listRetiredNames',
-  'worktrees:listDetected',
-  'worktrees:listKnownForExecutionHost',
-  'worktrees:forgetRemovedForExecutionHost',
-  'worktrees:cancelListDetected',
-  'worktrees:create',
-  'worktrees:adoptProvisionedRoot',
-  'worktrees:prefetchCreateBase',
-  'worktrees:resolvePrBase',
-  'worktrees:resolveMrBase',
-  'worktrees:remove',
-  'worktrees:forgetLocal',
-  'worktrees:forceDeletePreservedBranch',
-  'worktrees:updateMeta',
-  'worktrees:listLineage',
-  'worktrees:listLineageForHost',
-  'worktrees:updateLineage',
-  'worktrees:persistSortOrder',
-  'worktrees:getBranchRenameFailureOutput',
-  'hooks:check',
-  'hooks:inspectSetupScriptImports',
-  'hooks:createIssueCommandRunner',
-  'hooks:readIssueCommand',
-  'hooks:writeIssueCommand'
-] as const
+type RemoveWorktreeArgs = {
+  worktreeId: string
+  hostId?: ExecutionHostId
+  force?: boolean
+  /** Explicit Force Delete only — `force` alone is set by the ordinary confirmation (#11960). */
+  allowUnverifiedPtyStop?: boolean
+  skipArchive?: boolean
+  snapshotPruneBatchId?: string
+}
+
+type DetectedWorktreeRequestArgs = { repoId: string } | ListDetectedWorktreesArgs
+
+async function stopPtysForDestructiveWorktreeRemoval(
+  runtime: OrcaRuntimeService,
+  worktreeId: string,
+  options: { connectionId?: string; allowUnverifiedStop?: boolean } = {}
+): Promise<void> {
+  const { connectionId, allowUnverifiedStop } = options
+  const provider = connectionId ? getSshPtyProvider(connectionId) : getLocalPtyProvider()
+  if (!provider) {
+    throw new Error(`PTY provider unavailable for worktree deletion: ${worktreeId}`)
+  }
+  const teardownResult = await killAllProcessesForWorktree(worktreeId, {
+    runtime,
+    // Why: `repoId::path` ids repeat across hosts, so an unfenced sweep stops a same-id
+    // workspace's terminals on another connection — and the selector lookup this replaces
+    // throws `selector_ambiguous` the moment two hosts own the id.
+    resolvedWorktreeId: worktreeId,
+    ...(connectionId ? { resolvedConnectionId: connectionId } : {}),
+    localProvider: provider,
+    onPtyStopped: clearProviderPtyState,
+    requirePhysicalStop: true,
+    // Why (#11960): set only by an explicit Force Delete, never by the ordinary
+    // confirmation — otherwise the gate would be off on the primary delete path.
+    ...(allowUnverifiedStop ? { allowUnverifiedStop: true } : {}),
+    ...(connectionId ? { includeLocalRegistry: false } : {})
+  })
+  const total =
+    teardownResult.runtimeStopped + teardownResult.providerStopped + teardownResult.registryStopped
+  if (total > 0) {
+    console.info(
+      `[worktree-teardown] ${worktreeId} killed runtime=${teardownResult.runtimeStopped} provider=${teardownResult.providerStopped} registry=${teardownResult.registryStopped}`
+    )
+  }
+}
+
+function getRepoForWorktreeRemoval(
+  store: Store,
+  repoId: string,
+  hostId?: ExecutionHostId
+): Repo | undefined {
+  // Why: deletion must never guess between host owners; legacy unscoped calls work only while the repo id has one unique owner.
+  const owner = resolveWorktreeRemovalRepoOwner(store, repoId, hostId)
+  return owner.kind === 'resolved' ? owner.repo : undefined
+}
+import {
+  hasWorktreeRemovalRepoOwnerOnOtherHost,
+  resolveWorktreeRemovalMetadata,
+  resolveWorktreeRemovalRepoOwner
+} from '../worktree-removal-repo-owner'
+import { classifyWorkspaceCreateError } from './workspace-create-error-classifier'
+import { advertisedUrlWatcher } from '../ports/advertised-url-watcher'
+import { localhostWorktreeLabelProxy } from '../localhost-worktree-label-proxy'
+import {
+  assertWorktreeDoesNotContainRegisteredWorktree,
+  canCleanupUnregisteredOrcaLeftoverDirectory,
+  canCleanupUnregisteredOrcaWorktreeDirectory,
+  canSafelyRemoveOrphanedWorktreeDirectory,
+  findRegisteredDeletableWorktree,
+  isDangerousWorktreeRemovalPath,
+  isWorktreePathMissing,
+  ORPHANED_WORKTREE_DIRECTORY_MESSAGE,
+  stripOrcaProvenanceMetaUpdates,
+  UNREGISTERED_MISSING_WORKTREE_MESSAGE
+} from '../worktree-removal-safety'
+import { DEFAULT_WORKSPACE_STATUS_ID } from '../../shared/workspace-statuses'
+import {
+  FOLDER_WORKSPACE_INSTANCE_SEPARATOR,
+  getRepoIdFromWorktreeId,
+  getWorktreePathBasenameFromId
+} from '../../shared/worktree/id'
+import { prefetchWorktreeCreateBase } from '../worktree-create-base-prefetch'
+import {
+  getLocalProjectGitExecOptions,
+  getLocalProjectWorktreeGitOptions
+} from '../project-runtime-git-options'
+import {
+  getLocalWorktreePathAccess,
+  removeLocalWorktreePath,
+  toLocalWorktreeRuntimePath
+} from '../local-worktree-filesystem'
+import {
+  removeStaleLocalWorktreeRegistrationAfterFilesystemRemoval,
+  recoverLocalWindowsWorktreeRemoval
+} from '../local-worktree-removal-recovery'
+import { deleteRemoteWorktreeHistory } from '../remote-worktree-history-cleanup'
+
+const NullableWorkspaceLinkedItemSchema = WorkspaceLinkedItemSchema.nullable()
+const NullableTaskSourceContextSchema = TaskSourceContextSchema.nullable()
+const WORKTREE_ARCHIVE_HOOK_TIMEOUT_MS = 120_000
+const WORKTREE_LIST_ALL_CONCURRENCY = 8
+
+function normalizeLinkedWorkItemFields<
+  T extends {
+    linkedWorkItem?: unknown
+    linkedTaskSourceContext?: unknown
+  }
+>(input: T): T {
+  const linkedWorkItem =
+    input.linkedWorkItem === undefined
+      ? undefined
+      : NullableWorkspaceLinkedItemSchema.parse(input.linkedWorkItem)
+  const linkedTaskSourceContext =
+    input.linkedTaskSourceContext === undefined
+      ? undefined
+      : NullableTaskSourceContextSchema.parse(input.linkedTaskSourceContext)
+  if (
+    linkedWorkItem &&
+    linkedTaskSourceContext &&
+    !isWorkspaceLinkedItemSourceContextMatch(linkedWorkItem, linkedTaskSourceContext)
+  ) {
+    throw new Error('Linked work item and source context identities must match')
+  }
+  return {
+    ...input,
+    ...(linkedWorkItem !== undefined ? { linkedWorkItem } : {}),
+    ...(linkedTaskSourceContext !== undefined ? { linkedTaskSourceContext } : {})
+  }
+}
+
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = []
+  let nextIndex = 0
+  const workerCount = Math.min(limit, items.length)
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < items.length) {
+        const index = nextIndex
+        nextIndex += 1
+        results[index] = await fn(items[index])
+      }
+    })
+  )
+  return results
+}
+
+// Why: the worktree's own persisted host outranks the repo fallback; teardown and metadata purge must resolve the same owner
+// or the purge lands on the local partition while the SSH/runtime one keeps the workspace's tabs forever.
+function resolveWorktreeRemovalOwnerHostId(
+  store: Store,
+  worktreeId: string,
+  repo: Repo | undefined,
+  fallbackHostId?: ExecutionHostId
+): ExecutionHostId | undefined {
+  return (
+    fallbackHostId ??
+    (repo ? getRepoExecutionHostId(repo) : store.getWorktreeMeta(worktreeId)?.hostId)
+  )
+}
+
+function removeWorktreeMetadataAndTransientState(
+  store: Store,
+  worktreeId: string,
+  hostId?: ExecutionHostId,
+  snapshotPruneBatchId?: string
+): void {
+  const persistedHostId = store.getWorktreeMeta(worktreeId)?.hostId
+  const repoId = getRepoIdFromWorktreeId(worktreeId)
+  const preservesSameIdOwner = Boolean(
+    hostId &&
+    ((persistedHostId && persistedHostId !== hostId) ||
+      hasWorktreeRemovalRepoOwnerOnOtherHost(store, repoId, hostId))
+  )
+  // Why: worktree IDs are path-derived and reusable; drop process-local caches before the same ID can map to a new workspace.
+  if (hostId) {
+    store.removeWorktreeMeta(worktreeId, hostId)
+  } else {
+    store.removeWorktreeMeta(worktreeId)
+  }
+  if (!preservesSameIdOwner) {
+    advertisedUrlWatcher.forgetWorktree(worktreeId)
+    // Why: drop this worktree's localhost label routes so they don't accumulate in the proxy's route maps all session.
+    localhostWorktreeLabelProxy.unregisterWorktree(worktreeId)
+    // Why: schedule async history tree removal — never recursive-rmSync on the delete critical path.
+    deleteWorktreeHistoryDir(worktreeId)
+    // Why: release the removed worktree's PR-refresh aliases so coalesced queue entries don't retain it all session (memory creep).
+    pruneWorktreePRRefreshAliases(worktreeId)
+  }
+  // Why: removed workspaces must never resurrect from the persisted cleanup/space scan snapshots.
+  const snapshotDirectory = store.getProfileStorageDirectory()
+  if (snapshotPruneBatchId) {
+    recordWorkspaceCleanupRemovalSnapshotPrune(snapshotDirectory, {
+      batchId: snapshotPruneBatchId,
+      worktreeId,
+      executionHostId: hostId
+    })
+    return
+  }
+  void pruneWorkspaceCleanupScanSnapshot(snapshotDirectory, worktreeId, hostId)
+  void pruneWorkspaceSpaceAnalysisSnapshot(snapshotDirectory, worktreeId, hostId)
+}
+
+function getProjectHostSetupMetaUpdates(
+  store: Store,
+  repo: Repo,
+  existing?: WorktreeMeta
+): Partial<Pick<WorktreeMeta, 'projectId' | 'hostId' | 'projectHostSetupId'>> {
+  const ownership = getProjectHostSetupWorktreeMeta(store.getProjectHostSetups(), repo)
+  const sameSetup =
+    existing?.projectHostSetupId === undefined ||
+    existing.projectHostSetupId === ownership.projectHostSetupId
+  return {
+    // Why: project IDs can upgrade from legacy repo IDs to provider-backed ones; repair ownership on discovery when the host setup matches.
+    ...(sameSetup && existing?.projectId !== ownership.projectId
+      ? { projectId: ownership.projectId }
+      : {}),
+    ...(sameSetup && existing?.hostId === undefined ? { hostId: ownership.hostId } : {}),
+    ...(existing?.projectHostSetupId === undefined
+      ? { projectHostSetupId: ownership.projectHostSetupId }
+      : {})
+  }
+}
+
+// Why: disk-discovered worktrees have no WorktreeMeta, so lastActivityAt=0 sinks them to the bottom of "Recent"; also backfill host-setup ownership here.
+function resolveWorktreeMetaWithDiscoveryBackfill(
+  store: Store,
+  repo: Repo,
+  worktreeId: string
+): WorktreeMeta {
+  const existing = store.getWorktreeMeta(worktreeId)
+  const ownershipUpdates = getProjectHostSetupMetaUpdates(store, repo, existing)
+  if (existing) {
+    const updates = {
+      ...(!existing.instanceId ? { instanceId: randomUUID() } : {}),
+      ...ownershipUpdates
+    }
+    if (Object.keys(updates).length > 0) {
+      // Why: pre-lineage profiles already have WorktreeMeta rows; backfill on discovery so upgraded workspaces get lineage and host routing.
+      return store.setWorktreeMeta(worktreeId, updates)
+    }
+    return existing
+  }
+  return store.setWorktreeMeta(worktreeId, {
+    lastActivityAt: Date.now(),
+    ...ownershipUpdates
+  })
+}
+
+async function isAlreadyRemovedWorktreePath(
+  repo: Repo,
+  worktreePath: string,
+  localWorktreeGitOptions: { wslDistro?: string } = {}
+): Promise<boolean> {
+  if (!repo.connectionId) {
+    const access = getLocalWorktreePathAccess(localWorktreeGitOptions)
+    return isWorktreePathMissing(
+      toLocalWorktreeRuntimePath(worktreePath, localWorktreeGitOptions),
+      access.statPath
+    )
+  }
+
+  const fsProvider = getSshFilesystemProvider(repo.connectionId)
+  if (!fsProvider) {
+    return false
+  }
+  return isWorktreePathMissing(worktreePath, (path) => fsProvider.stat(path))
+}
+
+async function isLocalGitRepository(
+  runtimeWorktreePath: string,
+  localWorktreeGitOptions: { wslDistro?: string } = {}
+): Promise<boolean> {
+  try {
+    await gitExecFileAsync(['status', '--short'], {
+      cwd: runtimeWorktreePath,
+      ...localWorktreeGitOptions
+    })
+    return true
+  } catch (error) {
+    return !gitStatusErrorMeansNotRepository(error)
+  }
+}
+
+function gitStatusErrorMeansNotRepository(error: unknown): boolean {
+  const message =
+    error instanceof Error
+      ? error.message
+      : error && typeof error === 'object' && 'message' in error
+        ? String((error as { message: unknown }).message)
+        : typeof error === 'string'
+          ? error
+          : ''
+  const stderr =
+    error && typeof error === 'object' && 'stderr' in error
+      ? String((error as { stderr: unknown }).stderr)
+      : ''
+  return /not a git repository/i.test(`${message}\n${stderr}`)
+}
+
+function getWorktreeRemovalOptionsKey(args: {
+  force?: boolean
+  allowUnverifiedPtyStop?: boolean
+  skipArchive?: boolean
+}): string {
+  const forceKey = args.force === true ? 'force' : 'normal'
+  const archiveKey = args.skipArchive === true ? 'skip-archive' : 'run-archive'
+  // Why: a Force Delete retry must not coalesce onto the in-flight attempt that
+  // just failed the PTY gate — it would inherit that failure instead of retrying.
+  const ptyKey = args.allowUnverifiedPtyStop === true ? 'allow-unverified-pty' : 'require-pty-stop'
+  return `${forceKey}:${archiveKey}:${ptyKey}`
+}
+
+function getWorktreeRemovalInFlightKey(worktreeId: string, hostId?: ExecutionHostId): string {
+  return `${hostId ?? ''}\0${worktreeId}`
+}
+
+async function getArchiveHooksForRemoval(repo: Repo): Promise<OrcaHooks | null> {
+  if (!repo.connectionId) {
+    return getEffectiveHooks(repo)
+  }
+
+  const fsProvider = getSshFilesystemProvider(repo.connectionId)
+  if (!fsProvider) {
+    return getEffectiveHooksFromConfig(repo, null)
+  }
+
+  try {
+    const result = await fsProvider.readFile(joinWorktreeRelativePath(repo.path, 'orca.yaml'))
+    const yamlHooks = result.isBinary ? null : parseOrcaYaml(result.content)
+    return getEffectiveHooksFromConfig(repo, yamlHooks)
+  } catch {
+    return getEffectiveHooksFromConfig(repo, null)
+  }
+}
+
+async function runRemoteArchiveHook(
+  repo: Repo,
+  worktreePath: string,
+  script: string
+): Promise<{ success: boolean; output: string }> {
+  if (!repo.connectionId) {
+    return { success: true, output: '' }
+  }
+
+  const provider = requireSshGitProvider(repo.connectionId)
+  const env = getSetupRunnerEnvVars(repo, worktreePath)
+  const isWindowsRemote = isWindowsAbsolutePathLike(worktreePath)
+  const result = await provider
+    .execNonInteractive(
+      isWindowsRemote ? 'cmd.exe' : '/bin/bash',
+      isWindowsRemote ? ['/d', '/s', '/c', script] : ['-lc', script],
+      worktreePath,
+      WORKTREE_ARCHIVE_HOOK_TIMEOUT_MS,
+      undefined,
+      env
+    )
+    .catch((error) => ({
+      stdout: '',
+      stderr: '',
+      exitCode: null,
+      timedOut: false,
+      spawnError: error instanceof Error ? error.message : String(error)
+    }))
+  const output = [
+    result.stdout,
+    result.stderr,
+    result.spawnError,
+    result.timedOut ? 'archive hook timed out' : null,
+    typeof result.exitCode === 'number' && result.exitCode !== 0
+      ? `archive hook exited ${result.exitCode}`
+      : null
+  ]
+    .filter((part): part is string => Boolean(part))
+    .join('\n')
+    .trim()
+
+  return {
+    success: !result.spawnError && !result.timedOut && result.exitCode === 0,
+    output
+  }
+}
+
+type WorktreeRemovalInFlight = {
+  optionsKey: string
+  promise: Promise<RemoveWorktreeResult>
+}
+
+type PreservedBranchCleanupTarget = {
+  worktreeId: string
+  hostId: ExecutionHostId
+  branchName: string
+  head: string
+  pushTarget?: GitPushTarget
+}
+
+const preservedBranchCleanupByScope = new Map<string, PreservedBranchCleanupTarget>()
+
+function rememberPreservedBranchCleanupTarget(
+  worktreeId: string,
+  hostId: ExecutionHostId,
+  result: RemoveWorktreeResult | undefined,
+  fallbackHead: string | undefined,
+  pushTarget: GitPushTarget | undefined
+): void {
+  if (result?.preservedBranch) {
+    const head = result.preservedBranch.head ?? fallbackHead
+    if (!head) {
+      throw new Error(
+        `Cannot safely offer force-delete for preserved branch "${result.preservedBranch.branchName}" without its saved commit.`
+      )
+    }
+    preservedBranchCleanupByScope.set(preservedBranchCleanupScopeKey({ worktreeId, hostId }), {
+      worktreeId,
+      hostId,
+      branchName: result.preservedBranch.branchName,
+      head,
+      ...(pushTarget ? { pushTarget } : {})
+    })
+    return
+  }
+  preservedBranchCleanupByScope.delete(preservedBranchCleanupScopeKey({ worktreeId, hostId }))
+}
+
+function preserveBranchHeadFallback(
+  result: RemoveWorktreeResult | undefined,
+  fallbackHead: string | undefined
+): RemoveWorktreeResult {
+  if (!result?.preservedBranch || result.preservedBranch.head || !fallbackHead) {
+    return result ?? {}
+  }
+  return {
+    ...result,
+    preservedBranch: {
+      ...result.preservedBranch,
+      head: fallbackHead
+    }
+  }
+}
+
+function getPreservedBranchCleanupTarget(
+  worktreeId: string,
+  branchName: string,
+  expectedHead: string,
+  hostId?: ExecutionHostId
+): PreservedBranchCleanupTarget {
+  const exactTarget = hostId
+    ? preservedBranchCleanupByScope.get(preservedBranchCleanupScopeKey({ worktreeId, hostId }))
+    : undefined
+  const legacyMatches = hostId
+    ? []
+    : [...preservedBranchCleanupByScope.values()].filter(
+        (target) =>
+          target.worktreeId === worktreeId &&
+          target.branchName === branchName &&
+          target.head === expectedHead
+      )
+  const target = exactTarget ?? (legacyMatches.length === 1 ? legacyMatches[0] : undefined)
+  if (!target || target.branchName !== branchName || target.head !== expectedHead) {
+    throw new Error(`No preserved branch cleanup is pending for "${branchName}".`)
+  }
+  return target
+}
+
+const loggedUnavailableSshGitProviders = new Set<string>()
+const loggedWorktreeListFailures = new Set<string>()
+const loggedMalformedWorktreeMetaKeys = new Set<string>()
+export const DETECTED_WORKTREE_PROVIDER_TIMEOUT_MS = 30_000
+export const LINEAGE_HYDRATION_TIMEOUT_MS = 5_000
+// Why: absorb renderer polling bursts while bounding external worktree-change lag to one short refresh window.
+const DETECTED_WORKTREE_SCAN_CACHE_TTL_MS = 5_000
+
+type DetectedWorktreeScanCacheEntry = {
+  expiresAt: number
+  worktrees: GitWorktreeInfo[]
+}
+
+type DetectedWorktreeScan = {
+  invalidated: boolean
+  promise: Promise<GitWorktreeInfo[]>
+}
+
+type DetectedWorktreeScanResult = {
+  gitWorktrees: GitWorktreeInfo[]
+  fresh: boolean
+}
+
+const detectedWorktreeScanCache = new Map<string, DetectedWorktreeScanCacheEntry>()
+const detectedWorktreeScanInFlight = new Map<string, DetectedWorktreeScan>()
+
+function invalidateDetectedWorktreeScanCache(repoId: string): void {
+  const keyPrefix = `${repoId}\0`
+  for (const key of new Set([
+    ...detectedWorktreeScanCache.keys(),
+    ...detectedWorktreeScanInFlight.keys()
+  ])) {
+    if (!key.startsWith(keyPrefix)) {
+      continue
+    }
+    detectedWorktreeScanCache.delete(key)
+    const inFlight = detectedWorktreeScanInFlight.get(key)
+    if (inFlight) {
+      // Why: the detached scan keeps this token so later scans settle without making an older result fresh again.
+      inFlight.invalidated = true
+      detectedWorktreeScanInFlight.delete(key)
+    }
+  }
+}
+
+registerWorktreeChangeInvalidator(invalidateDetectedWorktreeScanCache)
+
+export function __resetDetectedWorktreeScanCacheForTests(): void {
+  // Why: pending scans across a test reset must not repopulate the cache and leak state into the next test.
+  for (const scan of detectedWorktreeScanInFlight.values()) {
+    scan.invalidated = true
+  }
+  detectedWorktreeScanCache.clear()
+  detectedWorktreeScanInFlight.clear()
+}
+
+export function __getDetectedWorktreeScanCacheStatsForTests(): {
+  cacheSize: number
+  inFlightSize: number
+} {
+  return {
+    cacheSize: detectedWorktreeScanCache.size,
+    inFlightSize: detectedWorktreeScanInFlight.size
+  }
+}
+
+async function listDetectedGitWorktrees(
+  store: Store,
+  repo: Repo
+): Promise<DetectedWorktreeScanResult> {
+  const localWorktreeGitOptions = getLocalProjectWorktreeGitOptions(store, repo)
+  if (repo.connectionId || isFolderRepo(repo)) {
+    return {
+      gitWorktrees: await listRepoWorktrees(repo, localWorktreeGitOptions),
+      fresh: true
+    }
+  }
+
+  const cacheKey = getDetectedWorktreeScanCacheKey(repo.id, localWorktreeGitOptions)
+  const cached = detectedWorktreeScanCache.get(cacheKey)
+  if (cached && cached.expiresAt > Date.now()) {
+    return { gitWorktrees: cached.worktrees, fresh: false }
+  }
+
+  const inFlight = detectedWorktreeScanInFlight.get(cacheKey)
+  if (inFlight) {
+    return { gitWorktrees: await inFlight.promise, fresh: false }
+  }
+
+  const scan: DetectedWorktreeScan = {
+    invalidated: false,
+    promise: listRepoWorktrees(repo, localWorktreeGitOptions)
+  }
+  detectedWorktreeScanInFlight.set(cacheKey, scan)
+  try {
+    const gitWorktrees = await scan.promise
+    // Why: a create/remove notification can invalidate mid-scan; don't let that stale scan repopulate the cache afterward.
+    if (!scan.invalidated) {
+      detectedWorktreeScanCache.set(cacheKey, {
+        worktrees: gitWorktrees,
+        expiresAt: Date.now() + DETECTED_WORKTREE_SCAN_CACHE_TTL_MS
+      })
+    }
+    return { gitWorktrees, fresh: !scan.invalidated }
+  } finally {
+    if (detectedWorktreeScanInFlight.get(cacheKey) === scan) {
+      detectedWorktreeScanInFlight.delete(cacheKey)
+    }
+  }
+}
+
+function getDetectedWorktreeScanCacheKey(
+  repoId: string,
+  localWorktreeGitOptions: { wslDistro?: string } = {}
+): string {
+  return `${repoId}\0${localWorktreeGitOptions.wslDistro ?? 'host'}`
+}
+
+function warnOnce(keySet: Set<string>, key: string, message: string, error?: unknown): void {
+  if (!shouldEmitBoundedWarning(keySet, key)) {
+    return
+  }
+  if (error) {
+    console.warn(message, error)
+  } else {
+    console.warn(message)
+  }
+}
+
+function rememberLocalWorktreeRoots(
+  store: Store,
+  repo: Repo,
+  gitWorktrees: GitWorktreeInfo[]
+): void {
+  if (repo.connectionId) {
+    return
+  }
+  // Why: reuse the `git worktree list` result so later git/file IPC validation skips a second scan that can trigger macOS folder-permission prompts.
+  registerWorktreeRootsForRepo(store, repo.id, [
+    repo.path,
+    ...gitWorktrees.map((worktree) => worktree.path)
+  ])
+}
+
+type SshWorktreeMetaCandidate = {
+  id: string
+  path: string
+  meta: WorktreeMeta
+}
+
+type SshWorktreeMetaIndex = Map<string, SshWorktreeMetaCandidate[]>
+
+function createSshWorktreeMetaIndex(entries: [string, WorktreeMeta][]): SshWorktreeMetaIndex {
+  const index: SshWorktreeMetaIndex = new Map()
+  for (const [worktreeId, meta] of entries) {
+    let parsed: { repoId: string; worktreePath: string }
+    try {
+      parsed = parseWorktreeId(worktreeId)
+    } catch (err) {
+      warnOnce(
+        loggedMalformedWorktreeMetaKeys,
+        worktreeId,
+        `[worktrees] ignoring malformed persisted worktree metadata key "${worktreeId}"`,
+        err
+      )
+      continue
+    }
+
+    const candidates = index.get(parsed.repoId) ?? []
+    candidates.push({ id: worktreeId, path: parsed.worktreePath, meta })
+    index.set(parsed.repoId, candidates)
+  }
+  return index
+}
+
+// Why: scopes parseWorktreeId to one repo's keys. The entry list itself is still materialized for the whole
+// store, so this is cheaper per call than the unfiltered index, not free.
+function createSshWorktreeMetaIndexForRepo(
+  allMeta: Record<string, WorktreeMeta>,
+  repoId: string
+): SshWorktreeMetaIndex {
+  return createSshWorktreeMetaIndex(
+    Object.entries(allMeta).filter(([worktreeId]) => getRepoIdFromWorktreeId(worktreeId) === repoId)
+  )
+}
+
+function synthesizeSshGitWorktree(repo: Repo, path: string, meta: WorktreeMeta): GitWorktreeInfo {
+  return {
+    path,
+    head: '',
+    branch: '',
+    isBare: false,
+    isMainWorktree: areWorktreePathsEqual(path, repo.path),
+    ...(meta.sparseDirectories !== undefined ||
+    meta.sparseBaseRef !== undefined ||
+    meta.sparsePresetId !== undefined
+      ? { isSparse: true }
+      : {})
+  }
+}
+
+function listDisconnectedSshWorktrees(
+  store: Store,
+  repo: Repo,
+  metaIndex: SshWorktreeMetaIndex
+): ReturnType<typeof mergeWorktree>[] {
+  const byWorktreeId = new Map<string, ReturnType<typeof mergeWorktree>>()
+  const expectedHostId = getRepoExecutionHostId(repo)
+  const repoOwners = store.getRepos().filter((candidate) => candidate.id === repo.id)
+  for (const candidate of metaIndex.get(repo.id) ?? []) {
+    if (
+      (candidate.meta.hostId && candidate.meta.hostId !== expectedHostId) ||
+      (!candidate.meta.hostId && repoOwners.length > 1)
+    ) {
+      continue
+    }
+    const ownershipUpdates = getProjectHostSetupMetaUpdates(store, repo, candidate.meta)
+    const meta =
+      Object.keys(ownershipUpdates).length > 0
+        ? { ...candidate.meta, ...ownershipUpdates }
+        : candidate.meta
+    if (Object.keys(ownershipUpdates).length > 0) {
+      store.setWorktreeMeta(candidate.id, ownershipUpdates)
+    }
+    // Why: synthesized rows carry no branch, so the title would fall through to the DESKTOP's basename()
+    // applied to a REMOTE path — a Windows remote then renders its whole C:\... path as the name. Rows must
+    // stay per-directory (repo.displayName would title every row identically), so use the separator-agnostic
+    // basename instead.
+    const worktree = mergeWorktree(
+      repo.id,
+      synthesizeSshGitWorktree(repo, candidate.path, meta),
+      meta,
+      getWorktreePathBasenameFromId(candidate.id) ?? undefined
+    )
+    byWorktreeId.delete(worktree.id)
+    byWorktreeId.set(worktree.id, worktree)
+  }
+  return [...byWorktreeId.values()]
+}
+
+function buildDetectedGitWorktrees(
+  store: Store,
+  repo: Repo,
+  gitWorktrees: GitWorktreeInfo[]
+): DetectedWorktree[] {
+  const settings = store.getSettings()
+  const knownOrcaLayouts = buildKnownOrcaWorkspaceLayouts(settings, repo)
+  const isLegacyRepoForVisibility = isLegacyRepoForExternalWorktreeVisibility(repo)
+  // Why: a prunable registration has no working directory (issue #8389); only this listing omits it — cleanup flows list separately.
+  const liveWorktrees = dedupeWorktreesByPath(
+    gitWorktrees.filter((gitWorktree) => !gitWorktree.prunable)
+  )
+  const worktreeVisibilitySourceMatcher = createWorktreeVisibilitySourceMatcher(
+    [repo.path, ...liveWorktrees.map((worktree) => worktree.path)],
+    resolveCustomWorktreeVisibilitySources(repo, settings.worktreeVisibilityDefaults),
+    resolveConfiguredWorktreeBasePaths(repo)
+  )
+  const detected = liveWorktrees.map((gitWorktree) => {
+    const worktreeId = `${repo.id}::${gitWorktree.path}`
+    let meta = store.getWorktreeMeta(worktreeId)
+    const worktree = mergeWorktree(repo.id, gitWorktree, meta, repo.displayName)
+    const detected = toDetectedWorktree({
+      repo,
+      worktree,
+      meta,
+      settings,
+      knownOrcaLayouts,
+      isLegacyRepoForVisibility,
+      worktreeVisibilitySourceMatcher
+    })
+    if (!detected.visible) {
+      return detected
+    }
+
+    meta = resolveWorktreeMetaWithDiscoveryBackfill(store, repo, worktreeId)
+    return toDetectedWorktree({
+      repo,
+      worktree: mergeWorktree(repo.id, gitWorktree, meta, repo.displayName),
+      meta,
+      settings,
+      knownOrcaLayouts,
+      isLegacyRepoForVisibility,
+      worktreeVisibilitySourceMatcher
+    })
+  })
+  return projectResolvedWorktreeLineage(detected, store.getAllWorktreeLineage?.() ?? {})
+}
+
+function stampAndMergeVisibleDetectedWorktree(
+  store: Store,
+  repo: Repo,
+  detected: DetectedWorktree
+) {
+  const meta = resolveWorktreeMetaWithDiscoveryBackfill(store, repo, detected.id)
+  return mergeWorktree(repo.id, detected, meta, repo.displayName)
+}
+
+function getFolderWorkspaceRootId(repo: Repo): string {
+  return `${repo.id}::${repo.path}`
+}
+
+function getFolderWorkspaceInstanceId(repo: Repo, instanceId: string): string {
+  return `${getFolderWorkspaceRootId(repo)}${FOLDER_WORKSPACE_INSTANCE_SEPARATOR}${instanceId}`
+}
+
+function getFolderWorkspaceInstanceIdentity(repo: Repo, worktreeId: string): string {
+  const prefix = `${getFolderWorkspaceRootId(repo)}${FOLDER_WORKSPACE_INSTANCE_SEPARATOR}`
+  return worktreeId.startsWith(prefix) ? worktreeId.slice(prefix.length) : randomUUID()
+}
+
+function isFolderWorkspaceIdForRepo(repo: Repo, worktreeId: string): boolean {
+  const rootId = getFolderWorkspaceRootId(repo)
+  return (
+    worktreeId === rootId ||
+    worktreeId.startsWith(`${rootId}${FOLDER_WORKSPACE_INSTANCE_SEPARATOR}`)
+  )
+}
+
+function mergeFolderWorkspace(repo: Repo, worktreeId: string, meta: WorktreeMeta): Worktree {
+  return {
+    id: worktreeId,
+    ...(meta.instanceId !== undefined ? { instanceId: meta.instanceId } : {}),
+    repoId: repo.id,
+    ...(meta.projectId !== undefined ? { projectId: meta.projectId } : {}),
+    ...(meta.hostId !== undefined ? { hostId: meta.hostId } : {}),
+    ...(meta.projectHostSetupId !== undefined
+      ? { projectHostSetupId: meta.projectHostSetupId }
+      : {}),
+    path: repo.path,
+    head: '',
+    branch: '',
+    isBare: false,
+    isMainWorktree: worktreeId === getFolderWorkspaceRootId(repo),
+    displayName: meta.displayName || repo.displayName,
+    comment: meta.comment || '',
+    linkedIssue: meta.linkedIssue ?? null,
+    linkedPR: meta.linkedPR ?? null,
+    linkedLinearIssue: meta.linkedLinearIssue ?? null,
+    linkedLinearIssueWorkspaceId: meta.linkedLinearIssueWorkspaceId ?? null,
+    linkedLinearIssueOrganizationUrlKey: meta.linkedLinearIssueOrganizationUrlKey ?? null,
+    linkedGitLabMR: meta.linkedGitLabMR ?? null,
+    linkedGitLabIssue: meta.linkedGitLabIssue ?? null,
+    linkedBitbucketPR: meta.linkedBitbucketPR ?? null,
+    linkedAzureDevOpsPR: meta.linkedAzureDevOpsPR ?? null,
+    linkedGiteaPR: meta.linkedGiteaPR ?? null,
+    linkedWorkItem: meta.linkedWorkItem ?? null,
+    linkedTaskSourceContext: meta.linkedTaskSourceContext ?? null,
+    isArchived: meta.isArchived ?? false,
+    isUnread: meta.isUnread ?? false,
+    isPinned: meta.isPinned ?? false,
+    sortOrder: meta.sortOrder ?? 0,
+    ...(meta.manualOrder !== undefined ? { manualOrder: meta.manualOrder } : {}),
+    lastActivityAt: meta.lastActivityAt ?? 0,
+    ...(meta.createdAt !== undefined ? { createdAt: meta.createdAt } : {}),
+    ...(meta.createdWithAgent !== undefined ? { createdWithAgent: meta.createdWithAgent } : {}),
+    ...(meta.automationProvenance !== undefined
+      ? { automationProvenance: meta.automationProvenance }
+      : {}),
+    ...(meta.cliProvenance !== undefined ? { cliProvenance: meta.cliProvenance } : {}),
+    ...(meta.priorWorktreeIds !== undefined ? { priorWorktreeIds: meta.priorWorktreeIds } : {}),
+    workspaceStatus: meta.workspaceStatus ?? DEFAULT_WORKSPACE_STATUS_ID,
+    diffComments: meta.diffComments,
+    mobileDiffReview: meta.mobileDiffReview
+  }
+}
+
+function listFolderWorkspaces(store: Store, repo: Repo): Worktree[] {
+  const rootId = getFolderWorkspaceRootId(repo)
+  const allMeta = store.getAllWorktreeMeta()
+  const ids = Object.keys(allMeta).filter((worktreeId) =>
+    isFolderWorkspaceIdForRepo(repo, worktreeId)
+  )
+  if (!ids.includes(rootId)) {
+    ids.unshift(rootId)
+  }
+
+  return ids
+    .map((worktreeId) => {
+      const existing = allMeta[worktreeId]
+      const ownershipUpdates = getProjectHostSetupMetaUpdates(store, repo, existing)
+      const meta =
+        existing?.instanceId && Object.keys(ownershipUpdates).length === 0
+          ? existing
+          : store.setWorktreeMeta(worktreeId, {
+              instanceId:
+                existing?.instanceId ?? getFolderWorkspaceInstanceIdentity(repo, worktreeId),
+              ...ownershipUpdates,
+              ...(existing ? {} : { displayName: repo.displayName, lastActivityAt: Date.now() })
+            })
+      return mergeFolderWorkspace(repo, worktreeId, meta)
+    })
+    .sort((a, b) => {
+      if (a.id === rootId) {
+        return -1
+      }
+      if (b.id === rootId) {
+        return 1
+      }
+      return (b.createdAt ?? b.lastActivityAt) - (a.createdAt ?? a.lastActivityAt)
+    })
+}
+
+function buildFolderDetectedWorktrees(store: Store, repo: Repo): DetectedWorktree[] {
+  const settings = store.getSettings()
+  const worktrees = listFolderWorkspaces(store, repo)
+  const worktreeVisibilitySourceMatcher = createWorktreeVisibilitySourceMatcher(
+    [repo.path, ...worktrees.map((worktree) => worktree.path)],
+    resolveCustomWorktreeVisibilitySources(repo, settings.worktreeVisibilityDefaults),
+    resolveConfiguredWorktreeBasePaths(repo)
+  )
+  return worktrees.map((worktree) =>
+    toDetectedWorktree({
+      repo,
+      worktree,
+      meta: store.getWorktreeMeta(worktree.id),
+      settings,
+      knownOrcaLayouts: [],
+      isLegacyRepoForVisibility: true,
+      worktreeVisibilitySourceMatcher
+    })
+  )
+}
+
+function listVisibleFolderWorkspaces(store: Store, repo: Repo): Worktree[] {
+  return buildFolderDetectedWorktrees(store, repo)
+    .filter((worktree) => worktree.visible)
+    .map((worktree) => {
+      const meta = store.getWorktreeMeta(worktree.id)
+      const ownershipUpdates = getProjectHostSetupMetaUpdates(store, repo, meta)
+      const repairedMeta =
+        meta && Object.keys(ownershipUpdates).length === 0
+          ? meta
+          : store.setWorktreeMeta(worktree.id, ownershipUpdates)
+      return mergeFolderWorkspace(repo, worktree.id, repairedMeta)
+    })
+}
+
+function createFolderWorkspace(
+  args: CreateWorktreeArgsWithSystemProvenance,
+  repo: Repo,
+  store: Store
+): CreateWorktreeResult {
+  const now = Date.now()
+  const instanceId = randomUUID()
+  const worktreeId = getFolderWorkspaceInstanceId(repo, instanceId)
+  const meta = store.setWorktreeMeta(worktreeId, {
+    instanceId,
+    ...(store.getProjectHostSetups
+      ? getProjectHostSetupWorktreeMeta(store.getProjectHostSetups(), repo)
+      : {}),
+    displayName: args.displayName || args.name,
+    lastActivityAt: now,
+    createdAt: now,
+    orcaCreatedAt: now,
+    orcaCreationSource: 'desktop',
+    creatorProvenance: { kind: 'host' },
+    ...(args.automationProvenance ? { automationProvenance: args.automationProvenance } : {}),
+    ...(args.cliProvenance ? { cliProvenance: args.cliProvenance } : {}),
+    ...(args.createdWithAgent ? { createdWithAgent: args.createdWithAgent } : {}),
+    ...(args.linkedIssue !== undefined ? { linkedIssue: args.linkedIssue } : {}),
+    ...(args.linkedPR !== undefined ? { linkedPR: args.linkedPR } : {}),
+    ...(args.linkedLinearIssue !== undefined ? { linkedLinearIssue: args.linkedLinearIssue } : {}),
+    ...(args.linkedLinearIssueWorkspaceId !== undefined
+      ? { linkedLinearIssueWorkspaceId: args.linkedLinearIssueWorkspaceId }
+      : {}),
+    ...(args.linkedLinearIssueOrganizationUrlKey !== undefined
+      ? { linkedLinearIssueOrganizationUrlKey: args.linkedLinearIssueOrganizationUrlKey }
+      : {}),
+    ...(args.manualOrder !== undefined ? { manualOrder: args.manualOrder } : {}),
+    ...(args.workspaceStatus !== undefined ? { workspaceStatus: args.workspaceStatus } : {}),
+    ...(args.linkedGitLabIssue !== undefined ? { linkedGitLabIssue: args.linkedGitLabIssue } : {}),
+    ...(args.linkedGitLabMR !== undefined ? { linkedGitLabMR: args.linkedGitLabMR } : {}),
+    ...(args.linkedBitbucketPR !== undefined ? { linkedBitbucketPR: args.linkedBitbucketPR } : {}),
+    ...(args.linkedAzureDevOpsPR !== undefined
+      ? { linkedAzureDevOpsPR: args.linkedAzureDevOpsPR }
+      : {}),
+    ...(args.linkedGiteaPR !== undefined ? { linkedGiteaPR: args.linkedGiteaPR } : {}),
+    ...(args.linkedWorkItem !== undefined ? { linkedWorkItem: args.linkedWorkItem } : {}),
+    ...(args.linkedTaskSourceContext !== undefined
+      ? { linkedTaskSourceContext: args.linkedTaskSourceContext }
+      : {})
+  })
+  return { worktree: mergeFolderWorkspace(repo, worktreeId, meta) }
+}
+
+function buildDisconnectedDetectedWorktrees(
+  store: Store,
+  repo: Repo,
+  worktrees: Worktree[]
+): DetectedWorktree[] {
+  const settings = store.getSettings()
+  const worktreeVisibilitySourceMatcher = createWorktreeVisibilitySourceMatcher(
+    [repo.path, ...worktrees.map((worktree) => worktree.path)],
+    resolveCustomWorktreeVisibilitySources(repo, settings.worktreeVisibilityDefaults),
+    resolveConfiguredWorktreeBasePaths(repo)
+  )
+  const detected = worktrees.map((worktree) => {
+    const meta = store.getWorktreeMeta(worktree.id)
+    const detected = toDetectedWorktree({
+      repo,
+      worktree,
+      meta,
+      settings,
+      knownOrcaLayouts: [],
+      isLegacyRepoForVisibility: true,
+      worktreeVisibilitySourceMatcher
+    })
+    return applyMetadataFallbackVisibility(detected)
+  })
+  return projectResolvedWorktreeLineage(detected, store.getAllWorktreeLineage?.() ?? {})
+}
+
+function hasConflictingStoredWorktreeOwner(
+  store: Store,
+  repo: Repo,
+  worktreeIds: readonly string[]
+): boolean {
+  const expectedHostId = getRepoExecutionHostId(repo)
+  const repoOwnerCount = store.getRepos().filter((candidate) => candidate.id === repo.id).length
+  return worktreeIds.some((worktreeId) => {
+    const meta = store.getWorktreeMeta(worktreeId)
+    return !!meta && (meta.hostId ? meta.hostId !== expectedHostId : repoOwnerCount > 1)
+  })
+}
+
+type RepoOwnershipEvidence =
+  | { status: 'owned'; hostId: ExecutionHostId }
+  | { status: 'malformed' }
+  | { status: 'contradictory' }
+
+function resolveRepoOwnershipEvidence(repo: Repo): RepoOwnershipEvidence {
+  const hasExplicitHost = repo.executionHostId !== null && repo.executionHostId !== undefined
+  const explicitHost = hasExplicitHost ? parseExecutionHostId(repo.executionHostId) : null
+  if (hasExplicitHost && !explicitHost) {
+    return { status: 'malformed' }
+  }
+  const hasConnection = repo.connectionId !== null && repo.connectionId !== undefined
+  const connectionId = hasConnection ? repo.connectionId?.trim() : null
+  if (hasConnection && !connectionId) {
+    return { status: 'malformed' }
+  }
+  const connectionHostId = connectionId ? toSshExecutionHostId(connectionId) : null
+  if (explicitHost && connectionHostId && explicitHost.id !== connectionHostId) {
+    return { status: 'contradictory' }
+  }
+  return {
+    status: 'owned',
+    hostId: explicitHost?.id ?? connectionHostId ?? LOCAL_EXECUTION_HOST_ID
+  }
+}
+
+function findExactRepoOwner(
+  store: Store,
+  repoId: string,
+  executionHostId?: ExecutionHostId
+): Repo | undefined {
+  const candidates = store.getRepos().filter((repo) => repo.id === repoId)
+  const evidence = candidates.map(resolveRepoOwnershipEvidence)
+  if (evidence.some((owner) => owner.status !== 'owned')) {
+    return undefined
+  }
+  const matches = candidates.filter((_, index) => {
+    const owner = evidence[index]
+    return (
+      owner?.status === 'owned' &&
+      (executionHostId === undefined || owner.hostId === executionHostId)
+    )
+  })
+  return matches.length === 1 ? matches[0] : undefined
+}
+
+function isCapturedRepoCurrent(
+  store: Store,
+  repo: Repo,
+  executionHostId?: ExecutionHostId
+): boolean {
+  const current = findExactRepoOwner(store, repo.id, executionHostId)
+  return (
+    current !== undefined &&
+    current.path === repo.path &&
+    (current.connectionId ?? null) === (repo.connectionId ?? null) &&
+    (current.executionHostId ?? null) === (repo.executionHostId ?? null)
+  )
+}
+
+async function listDetectedWorktreesForCapturedRepo(
+  store: Store,
+  repo: Repo,
+  isCurrent: () => boolean,
+  capturedProvider = repo.connectionId ? getSshGitProvider(repo.connectionId) : undefined,
+  providerAbort?: { signal: AbortSignal; status: () => 'canceled' | 'timed-out' }
+): Promise<DetectedWorktreeListResult | { providerAbortStatus: 'canceled' | 'timed-out' } | null> {
+  const abortedResult = () =>
+    providerAbort?.signal.aborted
+      ? ({ providerAbortStatus: providerAbort.status() } as const)
+      : undefined
+  const sshWorktreeMetaIndex = repo.connectionId
+    ? createSshWorktreeMetaIndex(Object.entries(store.getAllWorktreeMeta()))
+    : new Map()
+
+  try {
+    let gitWorktrees: GitWorktreeInfo[]
+    let freshScan = true
+    if (isFolderRepo(repo)) {
+      if (!isCurrent()) {
+        return null
+      }
+      const folderWorkspaceIds = Object.keys(store.getAllWorktreeMeta()).filter((worktreeId) =>
+        isFolderWorkspaceIdForRepo(repo, worktreeId)
+      )
+      if (hasConflictingStoredWorktreeOwner(store, repo, folderWorkspaceIds)) {
+        return {
+          repoId: repo.id,
+          authoritative: false,
+          source: 'metadata-fallback',
+          worktrees: []
+        }
+      }
+      return {
+        repoId: repo.id,
+        authoritative: true,
+        source: 'git',
+        worktrees: projectResolvedWorktreeLineage(
+          buildFolderDetectedWorktrees(store, repo),
+          store.getAllWorktreeLineage?.() ?? {}
+        )
+      }
+    }
+    if (repo.connectionId) {
+      if (!capturedProvider) {
+        const aborted = abortedResult()
+        if (aborted) {
+          return aborted
+        }
+        if (!isCurrent()) {
+          return null
+        }
+        const worktrees = listDisconnectedSshWorktrees(store, repo, sshWorktreeMetaIndex)
+        return {
+          repoId: repo.id,
+          authoritative: false,
+          source: 'metadata-fallback',
+          worktrees: buildDisconnectedDetectedWorktrees(store, repo, worktrees)
+        }
+      }
+      gitWorktrees = await capturedProvider.listWorktrees(repo.path, {
+        signal: providerAbort?.signal
+      })
+    } else {
+      const scan = await listDetectedGitWorktrees(store, repo)
+      gitWorktrees = scan.gitWorktrees
+      freshScan = scan.fresh
+    }
+    const aborted = abortedResult()
+    if (aborted) {
+      return aborted
+    }
+    if (!isCurrent()) {
+      return null
+    }
+    const listedWorktreeIds = gitWorktrees.map((worktree) => `${repo.id}::${worktree.path}`)
+    if (hasConflictingStoredWorktreeOwner(store, repo, listedWorktreeIds)) {
+      return {
+        repoId: repo.id,
+        authoritative: false,
+        source: 'metadata-fallback',
+        worktrees: []
+      }
+    }
+    if (freshScan) {
+      rememberLocalWorktreeRoots(store, repo, gitWorktrees)
+      pruneLineageForMissingRepoWorktrees(store, repo, gitWorktrees)
+    }
+    loggedWorktreeListFailures.delete(`${repo.id}:${repo.path}`)
+    return {
+      repoId: repo.id,
+      authoritative: true,
+      source: 'git',
+      worktrees: buildDetectedGitWorktrees(store, repo, gitWorktrees)
+    }
+  } catch (err) {
+    const aborted = abortedResult()
+    if (aborted) {
+      return aborted
+    }
+    if (!isCurrent()) {
+      return null
+    }
+    warnOnce(
+      loggedWorktreeListFailures,
+      `${repo.id}:${repo.path}`,
+      `[worktrees] failed to list detected worktrees for repo "${repo.displayName}" (${repo.id}) at ${repo.path}`,
+      err
+    )
+    if (repo.connectionId) {
+      const worktrees = listDisconnectedSshWorktrees(store, repo, sshWorktreeMetaIndex)
+      return {
+        repoId: repo.id,
+        authoritative: false,
+        source: 'metadata-fallback',
+        worktrees: buildDisconnectedDetectedWorktrees(store, repo, worktrees)
+      }
+    }
+    return { repoId: repo.id, authoritative: false, source: 'metadata-fallback', worktrees: [] }
+  }
+}
+
+function hasValidDirectSshAuthority(
+  args: DirectSshDetectedWorktreeRequest
+): args is DirectSshDetectedWorktreeRequest {
+  return isAdmissibleDirectSshAuthority(args.expectedAuthority)
+}
+
+function hasValidLineageSshAuthority(
+  args: ListDesktopLineageForHostArgs
+): args is Extract<ListDesktopLineageForHostArgs, { expectedAuthority: unknown }> {
+  if (!('expectedAuthority' in args)) {
+    return false
+  }
+  return isAdmissibleDirectSshAuthority(args.expectedAuthority)
+}
+
+type LineageOwner =
+  | { status: 'owned'; hostId: ExecutionHostId }
+  | { status: 'ambiguous' | 'contradictory' | 'runtime' }
+
+type LineageFolder = ReturnType<Store['getFolderWorkspaces']>[number]
+type LineageGroup = ReturnType<Store['getProjectGroups']>[number]
+
+type LineageResolutionContext = {
+  store: Store
+  repos: Repo[]
+  groups: LineageGroup[]
+  reposById: Map<string, Repo[]>
+  foldersById: Map<string, LineageFolder[]>
+  groupsById: Map<string, LineageGroup[]>
+  groupSubtreeIdsByRoot: Map<string, Set<string>>
+  worktreeOwners: Map<string, LineageOwner>
+  folderOwners: Map<string, LineageOwner>
+  workspaceOwners: Map<string, LineageOwner>
+}
+
+function indexLineageEntriesById<T extends { id: string }>(
+  entries: readonly T[]
+): Map<string, T[]> {
+  const index = new Map<string, T[]>()
+  for (const entry of entries) {
+    const matching = index.get(entry.id) ?? []
+    matching.push(entry)
+    index.set(entry.id, matching)
+  }
+  return index
+}
+
+function createLineageResolutionContext(store: Store): LineageResolutionContext {
+  const repos = store.getRepos()
+  const folders = store.getFolderWorkspaces()
+  const groups = store.getProjectGroups()
+  return {
+    store,
+    repos,
+    groups,
+    reposById: indexLineageEntriesById(repos),
+    foldersById: indexLineageEntriesById(folders),
+    groupsById: indexLineageEntriesById(groups),
+    groupSubtreeIdsByRoot: new Map(),
+    worktreeOwners: new Map(),
+    folderOwners: new Map(),
+    workspaceOwners: new Map()
+  }
+}
+
+function resolveRepoLineageOwner(repo: Repo): LineageOwner {
+  const owner = resolveRepoOwnershipEvidence(repo)
+  if (owner.status === 'malformed') {
+    return { status: 'ambiguous' }
+  }
+  if (owner.status === 'contradictory') {
+    return { status: 'contradictory' }
+  }
+  return parseExecutionHostId(owner.hostId)?.kind === 'runtime' ? { status: 'runtime' } : owner
+}
+
+function resolveWorktreeLineageOwner(
+  context: LineageResolutionContext,
+  worktreeId: string
+): LineageOwner {
+  const cached = context.worktreeOwners.get(worktreeId)
+  if (cached) {
+    return cached
+  }
+  const remember = (owner: LineageOwner): LineageOwner => {
+    context.worktreeOwners.set(worktreeId, owner)
+    return owner
+  }
+  let repoId: string
+  try {
+    repoId = parseWorktreeId(worktreeId).repoId
+  } catch {
+    return remember({ status: 'ambiguous' })
+  }
+  const repos = context.reposById.get(repoId) ?? []
+  const meta = context.store.getWorktreeMeta(worktreeId)
+  const runtimeOwnerEnvironmentId = (
+    meta as (WorktreeMeta & { runtimeOwnerEnvironmentId?: string }) | undefined
+  )?.runtimeOwnerEnvironmentId?.trim()
+  if (runtimeOwnerEnvironmentId) {
+    return remember({ status: 'runtime' })
+  }
+  if (meta?.hostId) {
+    const explicitHost = parseExecutionHostId(meta.hostId)
+    if (!explicitHost) {
+      return remember({ status: 'ambiguous' })
+    }
+    if (explicitHost.kind === 'runtime') {
+      return remember({ status: 'runtime' })
+    }
+    const matchingRepos = repos.filter((repo) => {
+      const owner = resolveRepoLineageOwner(repo)
+      return owner.status === 'owned' && owner.hostId === explicitHost.id
+    })
+    if (matchingRepos.length === 1) {
+      return remember({ status: 'owned', hostId: explicitHost.id })
+    }
+    return remember(
+      matchingRepos.length > 1
+        ? { status: 'ambiguous' }
+        : { status: repos.length > 0 ? 'contradictory' : 'ambiguous' }
+    )
+  }
+  if (repos.length !== 1) {
+    return remember({ status: 'ambiguous' })
+  }
+  return remember(resolveRepoLineageOwner(repos[0]))
+}
+
+function getFolderLineageCandidateRepos(
+  context: LineageResolutionContext,
+  folder: LineageFolder
+): Repo[] {
+  let groupIds = context.groupSubtreeIdsByRoot.get(folder.projectGroupId)
+  if (!groupIds) {
+    groupIds = getProjectGroupSubtreeIds(context.groups, folder.projectGroupId)
+    context.groupSubtreeIdsByRoot.set(folder.projectGroupId, groupIds)
+  }
+  const grouped = context.repos.filter(
+    (repo) => typeof repo.projectGroupId === 'string' && groupIds.has(repo.projectGroupId)
+  )
+  const pathRepos = context.repos.filter(
+    (repo) =>
+      !(typeof repo.projectGroupId === 'string' && groupIds.has(repo.projectGroupId)) &&
+      isPathInsideOrEqual(folder.folderPath, repo.path)
+  )
+  const group = context.groupsById.get(folder.projectGroupId)?.[0]
+  const connectionId = folder.connectionId ?? group?.connectionId ?? null
+  return connectionId
+    ? [...grouped, ...pathRepos.filter((repo) => (repo.connectionId ?? null) === connectionId)]
+    : grouped.length > 0
+      ? [
+          ...grouped,
+          ...pathRepos.filter((repo) =>
+            new Set(grouped.map((candidate) => candidate.connectionId ?? null)).has(
+              repo.connectionId ?? null
+            )
+          )
+        ]
+      : pathRepos
+}
+
+function resolveFolderLineageOwner(
+  context: LineageResolutionContext,
+  folderWorkspaceId: string
+): LineageOwner {
+  const cached = context.folderOwners.get(folderWorkspaceId)
+  if (cached) {
+    return cached
+  }
+  const remember = (owner: LineageOwner): LineageOwner => {
+    context.folderOwners.set(folderWorkspaceId, owner)
+    return owner
+  }
+  const folders = context.foldersById.get(folderWorkspaceId) ?? []
+  if (folders.length !== 1) {
+    return remember({ status: 'ambiguous' })
+  }
+  const folder = folders[0]
+  const groups = context.groupsById.get(folder.projectGroupId) ?? []
+  if (groups.length !== 1) {
+    return remember({ status: 'ambiguous' })
+  }
+  const group = groups[0]
+  const hosts = new Set<ExecutionHostId>()
+  if (folder.connectionId) {
+    hosts.add(`ssh:${encodeURIComponent(folder.connectionId)}`)
+  }
+  if (group.connectionId) {
+    hosts.add(`ssh:${encodeURIComponent(group.connectionId)}`)
+  }
+  if (group.executionHostId) {
+    const parsed = parseExecutionHostId(group.executionHostId)
+    if (!parsed) {
+      return remember({ status: 'ambiguous' })
+    }
+    hosts.add(parsed.id)
+  }
+  for (const repo of getFolderLineageCandidateRepos(context, folder)) {
+    const owner = resolveRepoLineageOwner(repo)
+    if (owner.status !== 'owned') {
+      return remember(owner)
+    }
+    hosts.add(owner.hostId)
+  }
+  if (hosts.size > 1) {
+    return remember({ status: 'contradictory' })
+  }
+  const hostId = [...hosts][0] ?? LOCAL_EXECUTION_HOST_ID
+  return remember(
+    parseExecutionHostId(hostId)?.kind === 'runtime'
+      ? { status: 'runtime' }
+      : { status: 'owned', hostId }
+  )
+}
+
+function resolveWorkspaceLineageOwner(
+  context: LineageResolutionContext,
+  workspaceKey: string
+): LineageOwner {
+  const cached = context.workspaceOwners.get(workspaceKey)
+  if (cached) {
+    return cached
+  }
+  const workspace = parseWorkspaceKey(workspaceKey)
+  const owner = !workspace
+    ? { status: 'ambiguous' as const }
+    : workspace.type === 'worktree'
+      ? resolveWorktreeLineageOwner(context, workspace.worktreeId)
+      : resolveFolderLineageOwner(context, workspace.folderWorkspaceId)
+  context.workspaceOwners.set(workspaceKey, owner)
+  return owner
+}
+
+function filterLineageForHost(
+  store: Store,
+  executionHostId: ExecutionHostId
+): {
+  worktreeLineageById: Record<string, WorktreeLineage>
+  workspaceLineageByChildKey: Record<string, WorkspaceLineage>
+} | null {
+  const context = createLineageResolutionContext(store)
+  const worktreeLineageById: Record<string, WorktreeLineage> = {}
+  const workspaceLineageByChildKey: Record<string, WorkspaceLineage> = {}
+  for (const [worktreeId, lineage] of Object.entries(store.getAllWorktreeLineage())) {
+    const child = resolveWorktreeLineageOwner(context, worktreeId)
+    const parent = resolveWorktreeLineageOwner(context, lineage.parentWorktreeId)
+    if (child.status === 'ambiguous' || child.status === 'contradictory') {
+      return null
+    }
+    if (parent.status === 'ambiguous' || parent.status === 'contradictory') {
+      return null
+    }
+    if (
+      child.status === 'owned' &&
+      parent.status === 'owned' &&
+      child.hostId === executionHostId &&
+      parent.hostId === executionHostId
+    ) {
+      worktreeLineageById[worktreeId] = structuredClone(lineage)
+    } else if (
+      child.status === 'owned' &&
+      parent.status === 'owned' &&
+      child.hostId !== parent.hostId
+    ) {
+      return null
+    }
+  }
+  for (const [childKey, lineage] of Object.entries(store.getAllWorkspaceLineage())) {
+    const child = resolveWorkspaceLineageOwner(context, childKey)
+    const parent = resolveWorkspaceLineageOwner(context, lineage.parentWorkspaceKey)
+    if (child.status === 'ambiguous' || child.status === 'contradictory') {
+      return null
+    }
+    if (parent.status === 'ambiguous' || parent.status === 'contradictory') {
+      return null
+    }
+    if (
+      child.status === 'owned' &&
+      parent.status === 'owned' &&
+      child.hostId === executionHostId &&
+      parent.hostId === executionHostId
+    ) {
+      workspaceLineageByChildKey[childKey] = structuredClone(lineage)
+    } else if (
+      child.status === 'owned' &&
+      parent.status === 'owned' &&
+      child.hostId !== parent.hostId
+    ) {
+      return null
+    }
+  }
+  return { worktreeLineageById, workspaceLineageByChildKey }
+}
+
+async function hydrateLineageWithinDeadline(runtime: OrcaRuntimeService): Promise<boolean> {
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  const hydration = Promise.resolve()
+    .then(() => runtime.hydrateInferredWorktreeLineage())
+    .then(
+      () => true,
+      () => false
+    )
+  const deadline = new Promise<false>((resolve) => {
+    timeout = setTimeout(() => resolve(false), LINEAGE_HYDRATION_TIMEOUT_MS)
+  })
+  try {
+    return await Promise.race([hydration, deadline])
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout)
+    }
+  }
+}
+
+async function listDesktopLineageForHost(
+  store: Store,
+  runtime: OrcaRuntimeService,
+  args: ListDesktopLineageForHostArgs
+): Promise<HostLineageSnapshot> {
+  const parsedHost = parseExecutionHostId(args?.executionHostId)
+  const rejected = (
+    reason: Extract<HostLineageSnapshot, { authoritative: false }>['reason']
+  ): HostLineageSnapshot => ({
+    authoritative: false,
+    executionHostId: args.executionHostId,
+    reason
+  })
+  if (!parsedHost || parsedHost.kind === 'runtime') {
+    return rejected('rejected')
+  }
+  let provider: ReturnType<typeof getSshGitProvider> | undefined
+  let authority:
+    | Extract<ListDesktopLineageForHostArgs, { expectedAuthority: unknown }>['expectedAuthority']
+    | null = null
+  if (parsedHost.kind === 'local') {
+    if ('expectedAuthority' in args) {
+      return rejected('rejected')
+    }
+  } else {
+    if (
+      !hasValidLineageSshAuthority(args) ||
+      args.expectedAuthority.targetId !== parsedHost.targetId
+    ) {
+      return rejected('rejected')
+    }
+    authority = { ...args.expectedAuthority }
+    if (!isCurrentSshProviderAuthority(authority)) {
+      return rejected('stale')
+    }
+    provider = getSshGitProvider(parsedHost.targetId)
+    if (!provider) {
+      return rejected('unavailable')
+    }
+  }
+  if (!(await hydrateLineageWithinDeadline(runtime))) {
+    return rejected('unavailable')
+  }
+  if (
+    parsedHost.kind === 'ssh' &&
+    (!authority ||
+      getSshGitProvider(parsedHost.targetId) !== provider ||
+      !isCurrentSshProviderAuthority(authority))
+  ) {
+    return rejected('stale')
+  }
+  const lineage = filterLineageForHost(store, parsedHost.id)
+  if (!lineage) {
+    return rejected('ambiguous-owner')
+  }
+  if (parsedHost.kind === 'local') {
+    return {
+      authoritative: true,
+      authority: { kind: 'local', executionHostId: LOCAL_EXECUTION_HOST_ID },
+      ...lineage
+    }
+  }
+  if (!authority) {
+    return rejected('authority-unknown')
+  }
+  return {
+    authoritative: true,
+    authority: {
+      kind: 'direct-ssh',
+      executionHostId: parsedHost.id,
+      ...authority
+    },
+    ...lineage
+  }
+}
+
+async function listHostQualifiedDetectedWorktrees(
+  store: Store,
+  args: ListDetectedWorktreesArgs,
+  providerAbort?: { signal: AbortSignal; status: () => 'canceled' | 'timed-out' }
+): Promise<HostQualifiedDetectedWorktreeResult> {
+  const parsedHost = parseExecutionHostId(args.executionHostId)
+  const rejected = (status: 'rejected' | 'stale' | 'ambiguous-owner') => ({
+    providerRequestId: args.providerRequestId,
+    executionHostId: args.executionHostId,
+    status
+  })
+  if (
+    typeof args.providerRequestId !== 'string' ||
+    args.providerRequestId.length === 0 ||
+    Buffer.byteLength(args.providerRequestId, 'utf8') > PROVIDER_REQUEST_ID_MAX_UTF8_BYTES ||
+    !parsedHost ||
+    parsedHost.kind === 'runtime'
+  ) {
+    return rejected('rejected')
+  }
+  let capturedAuthority: DirectSshDetectedWorktreeRequest['expectedAuthority'] | null = null
+  if (parsedHost.kind === 'ssh') {
+    const directArgs = args as DirectSshDetectedWorktreeRequest
+    if (
+      !hasValidDirectSshAuthority(directArgs) ||
+      directArgs.expectedAuthority.targetId !== parsedHost.targetId
+    ) {
+      return rejected('rejected')
+    }
+    capturedAuthority = { ...directArgs.expectedAuthority }
+    if (!isCurrentSshProviderAuthority(capturedAuthority)) {
+      return rejected('stale')
+    }
+  }
+
+  const repoCandidates = store.getRepos().filter((candidate) => candidate.id === args.repoId)
+  if (
+    repoCandidates.some((candidate) => resolveRepoOwnershipEvidence(candidate).status !== 'owned')
+  ) {
+    return rejected('rejected')
+  }
+  const repo = findExactRepoOwner(store, args.repoId, args.executionHostId)
+  if (!repo) {
+    return rejected('ambiguous-owner')
+  }
+  if (
+    (parsedHost.kind === 'local' && repo.connectionId) ||
+    (parsedHost.kind === 'ssh' && repo.connectionId !== parsedHost.targetId)
+  ) {
+    return rejected('rejected')
+  }
+  const provider = parsedHost.kind === 'ssh' ? getSshGitProvider(parsedHost.targetId) : undefined
+  const isCurrent = (): boolean => {
+    if (!isCapturedRepoCurrent(store, repo, args.executionHostId)) {
+      return false
+    }
+    if (
+      (parsedHost.kind === 'local' && repo.connectionId) ||
+      (parsedHost.kind === 'ssh' && repo.connectionId !== parsedHost.targetId)
+    ) {
+      return false
+    }
+    if (parsedHost.kind !== 'ssh') {
+      return true
+    }
+    return (
+      capturedAuthority !== null &&
+      getSshGitProvider(parsedHost.targetId) === provider &&
+      isCurrentSshProviderAuthority(capturedAuthority)
+    )
+  }
+  const result = await listDetectedWorktreesForCapturedRepo(
+    store,
+    repo,
+    isCurrent,
+    provider,
+    providerAbort
+  )
+  if (!result) {
+    return rejected('stale')
+  }
+  if ('providerAbortStatus' in result) {
+    return {
+      providerRequestId: args.providerRequestId,
+      executionHostId: args.executionHostId,
+      status: result.providerAbortStatus
+    }
+  }
+  const status = result.authoritative ? 'complete' : 'non-authoritative'
+  if (parsedHost.kind === 'local') {
+    return {
+      status,
+      providerRequestId: args.providerRequestId,
+      repoId: repo.id,
+      authority: { kind: 'local', executionHostId: LOCAL_EXECUTION_HOST_ID },
+      result
+    }
+  }
+  if (!capturedAuthority) {
+    return rejected('rejected')
+  }
+  return {
+    status,
+    providerRequestId: args.providerRequestId,
+    repoId: repo.id,
+    authority: {
+      kind: 'direct-ssh',
+      executionHostId: args.executionHostId as `ssh:${string}`,
+      ...capturedAuthority
+    },
+    result
+  }
+}
 
 export function registerWorktreeHandlers(
   mainWindow: BrowserWindow,
@@ -194,19 +1852,40 @@ export function registerWorktreeHandlers(
   runtime: OrcaRuntimeService,
   options?: { onWorktreeLifecycle?: (event: RuntimeWorktreeLifecycleEvent) => void }
 ): void {
-  const context: WorktreeIpcContext = {
-    mainWindow,
-    store,
-    runtime,
-    ...(options ? { options } : {}),
-    detectedWorktreeCancellations: createSenderScopedRequestCancellations(),
-    worktreeRemovalsInFlight: new Map()
-  }
+  const detectedWorktreeCancellations = createSenderScopedRequestCancellations()
+  // Remove previously registered handlers so re-register works when macOS re-activates and creates a new window.
+  ipcMain.removeHandler('worktrees:listAll')
+  ipcMain.removeHandler('worktrees:list')
+  ipcMain.removeHandler('worktrees:listRetiredNames')
+  ipcMain.removeHandler('worktrees:listDetected')
+  ipcMain.removeHandler('worktrees:listKnownForExecutionHost')
+  ipcMain.removeHandler('worktrees:forgetRemovedForExecutionHost')
+  ipcMain.removeHandler('worktrees:cancelListDetected')
+  ipcMain.removeHandler('worktrees:create')
+  ipcMain.removeHandler('worktrees:adoptProvisionedRoot')
+  ipcMain.removeHandler('worktrees:prefetchCreateBase')
+  ipcMain.removeHandler('worktrees:resolvePrBase')
+  ipcMain.removeHandler('worktrees:resolveMrBase')
+  ipcMain.removeHandler('worktrees:remove')
+  ipcMain.removeHandler('worktrees:forgetLocal')
+  ipcMain.removeHandler('worktrees:forceDeletePreservedBranch')
+  ipcMain.removeHandler('worktrees:updateMeta')
+  ipcMain.removeHandler('worktrees:listLineage')
+  ipcMain.removeHandler('worktrees:listLineageForHost')
+  ipcMain.removeHandler('worktrees:updateLineage')
+  ipcMain.removeHandler('worktrees:persistSortOrder')
+  ipcMain.removeHandler('worktrees:getBranchRenameFailureOutput')
+  ipcMain.removeHandler('hooks:check')
+  ipcMain.removeHandler('hooks:inspectSetupScriptImports')
+  ipcMain.removeHandler('hooks:createIssueCommandRunner')
+  ipcMain.removeHandler('hooks:readIssueCommand')
+  ipcMain.removeHandler('hooks:writeIssueCommand')
 
-  // Remove all stale registrations before installing any replacement handler.
-  for (const channel of WORKTREE_HANDLER_CHANNELS) {
-    ipcMain.removeHandler(channel)
-  }
+  ipcMain.handle('worktrees:listAll', async () => {
+    const repos = store.getRepos()
+    const sshWorktreeMetaIndex = repos.some((repo) => repo.connectionId)
+      ? createSshWorktreeMetaIndex(Object.entries(store.getAllWorktreeMeta()))
+      : new Map()
 
     // Why: each local repo listing can spawn `git worktree list`; cap fan-out so large fleets don't start unbounded subprocesses.
     const results = await mapWithConcurrency(repos, WORKTREE_LIST_ALL_CONCURRENCY, async (repo) => {

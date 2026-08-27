@@ -9,8 +9,6 @@ import {
   normalizeWorktreeCardProperties,
   WORKTREE_CARD_PROPERTIES
 } from '../../../../shared/worktree/card-properties'
-import type { TaskProvider } from '../../../../shared/task-providers'
-import { isPluginPanelTabKey } from '../../../../shared/plugins/plugin-manifest'
 import { ClientUiWorkspaceFilterFields } from './client-ui-workspace-filter-fields'
 import { RightSidebarTabParam } from './right-sidebar-tab-schema'
 import { TaskResumeState } from './task-resume-state-schema'

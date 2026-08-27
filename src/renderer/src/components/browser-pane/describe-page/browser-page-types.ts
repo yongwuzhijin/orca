@@ -16,6 +16,8 @@ export type BrowserPageUrlSetter = (
 
 export type BrowserChromeShortcutScope = 'focused' | 'inactive' | 'owned-target'
 
+export type BrowserFindShortcutScope = BrowserChromeShortcutScope
+
 export type GrabIntent = 'copy' | 'annotate'
 
 export type BrowserPageContextMenuState = {

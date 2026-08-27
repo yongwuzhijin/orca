@@ -1,24 +1,57 @@
-import type { PreloadApi } from '../../../preload/api-types'
-import type { StatsSummary } from '../../../shared/process-stats-types'
-import { createWebE2EApi } from './preload-api/web-e2e-api'
+/* eslint-disable max-lines -- Why: browser-side Electron-preload replacement; compatibility surface centralizes here. */
+import type {
+  PreloadApi,
+  PreflightStatus,
+  RefreshAgentsResult,
+  NativeChatApi,
+  NativeChatAppendedMessages
+} from '../../../preload/api-types'
+import type { RuntimeRpcResponse } from '../../../shared/runtime-rpc-envelope'
+import { parseHostAccessLink } from '../../../shared/remote-pairing-address'
+import { verifyRemotePairingRuntimeStatus } from '../../../shared/remote-pairing-verification'
+import type { AiVaultDeleteSessionArgs } from '../../../shared/ai-vault-session-deletion'
+import type { AiVaultListArgs, AiVaultListResult } from '../../../shared/ai-vault-types'
+import type {
+  AiVaultSessionTitlesArgs,
+  AiVaultSessionTitlesResult
+} from '../../../shared/ai-vault-session-title'
+import type {
+  AiVaultPrepareSessionResumeArgs,
+  AiVaultPrepareSessionResumeResult
+} from '../../../shared/ai-vault-resume-preparation'
+import { buildNativeChatUnsubscribe } from '../../../shared/native-chat-stream-unsubscribe'
+import type {
+  ComputerUsePermissionSetupResult,
+  ComputerUsePermissionStatusResult
+} from '../../../shared/computer-use-permissions-types'
+import type { SearchResult } from '../../../shared/code-search-types'
+import type { DirEntry } from '../../../shared/filesystem-entry-types'
+import type {
+  GlobalSettings,
+  WorktreeVisibilityDefaults
+} from '../../../shared/global-settings-types'
+import type { OnboardingState } from '../../../shared/onboarding-state-types'
+import type { PersistedUIState } from '../../../shared/persisted-ui-state-types'
 import {
-  createAccountsApi,
-  createGrokAccountsApi,
-  createMiniMaxCredentialsApi
-} from './preload-api/web-agent-accounts-api'
-import { createAgentHooksApi } from './preload-api/web-agent-hooks-api'
-import { createWebAgentStatusApi } from './preload-api/web-agent-status-api'
-import { createWebAiVaultApi } from './preload-api/web-ai-vault-api'
-import { createWebAppApi } from './preload-api/web-app-api'
-import { createBrowserApi, createEmulatorApi } from './preload-api/web-browser-api'
-import { createCliApi } from './preload-api/web-cli-api'
-import { createWebDiagnosticsApi } from './preload-api/web-diagnostics-api'
-import { createFallbackProxy, withFallback } from './preload-api/web-fallback-api'
-import { createFileApi } from './preload-api/web-filesystem-api'
-import { createGitApi } from './preload-api/web-git-api'
-import { createWebGithubCacheApi } from './preload-api/web-github-cache-api'
-import { createGitHubApi } from './preload-api/web-github-api'
-import { createGitLabApi } from './preload-api/web-gitlab-api'
+  omitPairingLocalUiFields,
+  type PairedUiState,
+  type PairingLocalUiField
+} from '../../../shared/pairing-local-ui-fields'
+import type { MemorySnapshot, StatsSummary } from '../../../shared/process-stats-types'
+import type { Repo } from '../../../shared/repo-types'
+import type {
+  WorkspaceSessionPatch,
+  WorkspaceSessionState
+} from '../../../shared/workspace-session-state-types'
+import type {
+  ForceDeleteWorktreeBranchResult,
+  RemoveWorktreeResult
+} from '../../../shared/worktree/create-types'
+import type { WorkspaceLineage, WorktreeLineage } from '../../../shared/worktree/lineage-types'
+import type { DetectedWorktreeListResult, Worktree } from '../../../shared/worktree/types'
+import type { SkillDiscoveryResult } from '../../../shared/skills'
+import type { SkillFreshnessInventory } from '../../../shared/skill-freshness'
+import type { SshConnectionState, SshTarget } from '../../../shared/ssh-types'
 import {
   getDefaultOnboardingState,
   getDefaultSettings,
@@ -488,14 +521,43 @@ const WEB_KEYBINDING_PLATFORMS: readonly KeybindingPlatform[] = ['darwin', 'linu
 const webKeybindingListeners = new Set<(snapshot: KeybindingFileSnapshot) => void>()
 
 export function installWebPreloadApi(): void {
-  webRuntimeState.activeEnvironment = readStoredWebRuntimeEnvironment()
+  activeEnvironment = readStoredWebRuntimeEnvironment()
   const webWindow = window as unknown as { __ORCA_WEB_CLIENT__?: boolean }
   webWindow.__ORCA_WEB_CLIENT__ = true
   window.electron = createFallbackProxy(['electron']) as Window['electron']
   window.api = withFallback(createWebPreloadApi(), []) as PreloadApi
 }
 
+async function writeWebClipboardText(text: string): Promise<void> {
+  await assertClipboardTextWriteWithinLimitWithYield(text)
+  const clipboard = navigator.clipboard
+  if (typeof clipboard?.writeText === 'function') {
+    try {
+      await clipboard.writeText(text)
+      return
+    } catch (error) {
+      // Preserve the current user-activation turn for the synchronous fallback.
+      if (copyClipboardTextViaExecCommand(text)) {
+        return
+      }
+      throw error
+    }
+  }
+  if (!copyClipboardTextViaExecCommand(text)) {
+    throw new Error('Clipboard write is unavailable in this browser context')
+  }
+}
+
 function createWebPreloadApi(): Partial<PreloadApi> {
+  const webOrcaProfileAuthStatus = () =>
+    Promise.resolve({
+      activeProfileId: DEFAULT_LOCAL_ORCA_PROFILE_ID,
+      configured: false,
+      state: 'unconfigured' as const,
+      persistence: 'none' as const,
+      setupMessage: 'Orca Cloud sign-in is not available in the browser fallback.'
+    })
+
   return {
     app: {
       getIdentity: () =>
@@ -716,12 +778,93 @@ function createWebPreloadApi(): Partial<PreloadApi> {
     },
     keybindings: createWebKeybindingsApi(),
     ui: createWebUiApi(),
-    ...createWebDiagnosticsApi(),
-    ...createWebWorkspaceSessionApi(),
-    ...createWebOnboardingApi(),
-    ...createWebGithubCacheApi(),
-    runtime: createWebRuntimeApi(),
-    nativeChat: createWebNativeChatApi(),
+    crashReports: {
+      getLatestPending: () => Promise.resolve(null),
+      getLatestReport: () => Promise.resolve(null),
+      dismiss: () => Promise.resolve(null),
+      recordRendererError: () => Promise.resolve({ ok: true, report: null, deduped: true }),
+      recordBreadcrumb: () => {},
+      submit: () =>
+        Promise.resolve({
+          ok: false,
+          status: null,
+          error: translate('auto.web.web.preload.api.fb290366b2', 'Unavailable on web.')
+        }),
+      copyLatestDiagnostics: () =>
+        Promise.resolve({
+          ok: false,
+          error: translate('auto.web.web.preload.api.fb290366b2', 'Unavailable on web.')
+        }),
+      // Why: no Electron process on web; the caller falls back to performance.memory.
+      readHeapStatistics: () => null
+    },
+    diagnostics: {
+      getStatus: () =>
+        Promise.resolve({
+          localFileEnabled: false,
+          bundleEnabled: false,
+          traceFilePath: '',
+          traceFamilySize: 0
+        }),
+      collectBundle: () => Promise.reject(new Error('Review files are unavailable on web.')),
+      openBundlePreview: () => Promise.reject(new Error('Review files are unavailable on web.')),
+      discardBundlePreview: () => Promise.resolve(),
+      uploadBundle: () => Promise.reject(new Error('Sending diagnostics is unavailable on web.')),
+      deleteBundle: () => Promise.reject(new Error('Sent diagnostics are unavailable on web.'))
+    },
+    session: {
+      // Mirrors desktop bridge: non-local hosts persist under a host-suffixed key so their sessions stay isolated from local.
+      get: (hostId) => Promise.resolve(getStoredWorkspaceSession(hostId)),
+      set: async (session, hostId) => {
+        writeJson(sessionStorageKeyForHost(hostId), sanitizeWebRuntimeWorkspaceSession(session))
+      },
+      patch: async (patch: WorkspaceSessionPatch, hostId) => {
+        writeJson(
+          sessionStorageKeyForHost(hostId),
+          sanitizeWebRuntimeWorkspaceSession({
+            ...getStoredWorkspaceSession(hostId),
+            ...patch
+          })
+        )
+      },
+      // localStorage writes synchronously, so there is no deferred web flush.
+      flush: async () => {},
+      readTerminalScrollback: () => null,
+      setSync: (session, hostId) => {
+        writeJson(sessionStorageKeyForHost(hostId), sanitizeWebRuntimeWorkspaceSession(session))
+      }
+    },
+    onboarding: {
+      get: () => Promise.resolve(getStoredOnboarding()),
+      update: async (updates) => {
+        const current = getStoredOnboarding()
+        const next: OnboardingState = {
+          ...current,
+          ...updates,
+          flowVersion: ONBOARDING_FLOW_VERSION,
+          checklist: {
+            ...current.checklist,
+            ...updates.checklist
+          }
+        }
+        writeJson(ONBOARDING_STORAGE_KEY, next)
+        return next
+      }
+    },
+    cache: {
+      getGitHub: () =>
+        Promise.resolve(
+          readJson(GITHUB_CACHE_STORAGE_KEY, {
+            pr: {},
+            issue: {}
+          })
+        ),
+      setGitHub: async ({ cache }) => {
+        writeJson(GITHUB_CACHE_STORAGE_KEY, cache)
+      }
+    },
+    runtime: createRuntimeApi(),
+    nativeChat: createNativeChatApi(),
     runtimeEnvironments: createRuntimeEnvironmentsApi(),
     repos: createReposApi(),
     worktrees: createWorktreesApi(),
@@ -746,7 +889,7 @@ function createWebPreloadApi(): Partial<PreloadApi> {
     memory: {
       getSnapshot: () => Promise.resolve(createEmptyMemorySnapshot())
     },
-    aiVault: createWebAiVaultApi(),
+    aiVault: createAiVaultApi(),
     preflight: createPreflightApi(),
     notifications: createNotificationsApi(),
     rateLimits: createRateLimitsApi(),
@@ -757,6 +900,8 @@ function createWebPreloadApi(): Partial<PreloadApi> {
     cli: createCliApi(),
     agentHooks: createAgentHooksApi(),
     macosTccPrompts: createMacosTccPromptsApi(),
+    // Why: the desktop derives this from the host filesystem, which the web
+    // client has no view of; reporting synced keeps the warning banner silent.
     codexConfigSync: {
       status: () =>
         Promise.resolve({ state: 'synced', reason: null, systemConfigPath: '' } as const)
@@ -778,9 +923,46 @@ function createWebPreloadApi(): Partial<PreloadApi> {
     gitBash: {
       isAvailable: () => callRuntimeResult<boolean>('host.gitBash.isAvailable').catch(() => false)
     },
-    ...createWebAgentStatusApi(),
-    ...createWebMobileApi(),
-    ...createWebTelemetryApi()
+    agentStatus: {
+      onSet: () => noopUnsubscribe,
+      onClear: () => noopUnsubscribe,
+      getSnapshot: () => Promise.resolve([]),
+      inferInterrupt: () => Promise.resolve(false),
+      inferQuestionAnswered: () => Promise.resolve(false),
+      onMigrationUnsupported: () => noopUnsubscribe,
+      onMigrationUnsupportedClear: () => noopUnsubscribe,
+      onLegacyWorkerTerminalRecovery: () => noopUnsubscribe,
+      getMigrationUnsupportedSnapshot: () => Promise.resolve([]),
+      drop: () => {},
+      dropByTabPrefix: () => {},
+      retirePaneAuthority: () => {},
+      restorePaneAuthority: () => {},
+      reconcileEndedProcess: (_paneKey: string) => {},
+      transferPaneAuthority: () => {}
+    },
+    mobile: {
+      listNetworkInterfaces: () => Promise.resolve({ interfaces: [] }),
+      getPairingQR: () => Promise.resolve({ available: false }),
+      getWindowsFirewallStatus: () => Promise.resolve({ supported: false }),
+      repairWindowsFirewall: () => Promise.resolve({ ok: false, reason: 'unsupported' }),
+      openWindowsNetworkSettings: () => Promise.resolve(false),
+      getRuntimePairingUrl: () => Promise.resolve({ available: false }),
+      listDevices: () => Promise.resolve({ devices: [] }),
+      revokeDevice: () => Promise.resolve({ revoked: false }),
+      listRuntimeAccessGrants: () => Promise.resolve({ grants: [] }),
+      revokeRuntimeAccess: () => Promise.resolve({ revoked: false }),
+      isWebSocketReady: () =>
+        Promise.resolve({ ready: Boolean(activeEnvironment), endpoint: null }),
+      getRelayStatus: () => Promise.resolve({ status: 'offline' as const }),
+      onRelayStatusChanged: () => noopUnsubscribe,
+      consumePendingUnpairedDeviceAuthFailure: () => Promise.resolve(false),
+      onUnpairedDeviceAuthFailure: () => noopUnsubscribe
+    },
+    telemetryTrack: () => Promise.resolve(),
+    telemetrySetOptIn: () => Promise.resolve(),
+    telemetryGetConsentState: () =>
+      Promise.resolve({ optedIn: false, source: 'default', blockedByEnv: false } as never),
+    telemetryAcknowledgeBanner: () => Promise.resolve()
   }
 }
 
@@ -1246,6 +1428,8 @@ function createRuntimeApi(): NonNullable<Partial<PreloadApi>['runtime']> {
     onTerminalFitOverrideChanged: () => noopUnsubscribe,
     onTerminalDriverChanged: () => noopUnsubscribe,
     onNativeChatLaunchDraftResolved: () => noopUnsubscribe,
+    getClientHostedBrowserRows: async () => [],
+    onClientHostedBrowserRowsChanged: () => () => {},
     onBrowserDriverChanged: () => noopUnsubscribe
   }
 }
@@ -1403,6 +1587,7 @@ function createRuntimeEnvironmentsApi(): NonNullable<Partial<PreloadApi>['runtim
       callEnvironmentEnvelope<RuntimeStatus>(selector, 'status.get', undefined, timeoutMs),
     call: ({ selector, method, params, timeoutMs }) =>
       callEnvironmentEnvelope(selector, method, params, timeoutMs),
+    prepareBrowserClientHostPlacement: async () => ({ kind: 'server' as const }),
     subscribe: async ({ selector, method, params, timeoutMs }, callbacks) => {
       const environment = resolveEnvironment(selector)
       const client = getClientForEnvironment(environment)
@@ -2996,6 +3181,9 @@ function createSkillsApi(): NonNullable<Partial<PreloadApi>['skills']> {
     listWslDistros: () => Promise.resolve([]),
     onInstallProgress: () => () => {},
     onShareProgress: () => () => {},
+    deleteSupported: async () => false,
+    previewDelete: async () => ({ operationId: 'unsupported', skills: [] }),
+    delete: async () => ({ operationId: 'unsupported', skills: [] }),
     onUpdateRun: () => () => {}
   }
 }
@@ -3999,6 +4187,7 @@ function mergeHostWebUIState(local: PersistedUIState, incoming: PairedUiState): 
   // Why `satisfies Record<...>` rather than a `Pick<...>` annotation: every member is optional in
   // PersistedUIState, so Pick would accept a literal that silently skipped a newly added member.
   const pinned = {
+    automationHostFilter: undefined,
     hideWorkspacesFromOtherDevices: local.hideWorkspacesFromOtherDevices === true,
     manualRepoOrder: local.manualRepoOrder,
     workspaceHostOrder: local.workspaceHostOrder
