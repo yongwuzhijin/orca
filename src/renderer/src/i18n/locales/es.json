@@ -3570,18 +3570,6 @@
             "stoppingLabel": "Stopping update",
             "stoppingTooltip": "Stopping the skill update…",
             "stoppingAria": "Stopping the skill update. Click to open details."
-          },
-          "CaffeinateStatusSegment": {
-            "on": "Activado",
-            "auto": "Agente",
-            "off": "Desactivado",
-            "active": "Activo",
-            "inactive": "Inactivo",
-            "ariaLabel": "Mantener activo, {{status}}",
-            "title": "Mantener activo",
-            "onDescription": "Mantener este equipo despierto de forma continua",
-            "autoDescription": "Mantenerse despierto mientras un agente trabaja",
-            "offDescription": "Permitir el comportamiento normal de suspensión del sistema"
           }
         }
       },
@@ -3960,13 +3948,17 @@
           "viewDetails": "Ver detalles",
           "deleteSkill": "Eliminar…"
         },
-        "SkillsList": { "listLabel": "Skills" },
+        "SkillsList": {
+          "listLabel": "Skills"
+        },
         "sourceStatus": {
           "missing": "Carpeta no encontrada",
           "remoteRepo": "Repositorio remoto — sin analizar",
           "unavailable": "Sin analizar"
         },
-        "sources": { "heading": "Carpetas de skills" },
+        "sources": {
+          "heading": "Carpetas de skills"
+        },
         "sourceKind": {
           "home": "Inicio",
           "workspace": "Espacio de trabajo",

@@ -28,7 +28,8 @@ export function registerWorktreeHookFileHandlers(context: WorktreeIpcContext): v
         }
       }
       if (repo.connectionId) {
-        const issueCommandPath = joinWorktreeRelativePath(repo.path, '.orca/issue-command')
+        const orcaDirName = resolveWorkspaceOrcaDirName(store.getSettings())
+        const issueCommandPath = joinWorktreeRelativePath(repo.path, `${orcaDirName}/issue-command`)
         const fsProvider = getSshFilesystemProvider(repo.connectionId)
         if (!fsProvider) {
           return {
@@ -88,7 +89,8 @@ export function registerWorktreeHookFileHandlers(context: WorktreeIpcContext): v
         return
       }
       if (repo.connectionId) {
-        const issueCommandPath = joinWorktreeRelativePath(repo.path, '.orca/issue-command')
+        const orcaDirName = resolveWorkspaceOrcaDirName(store.getSettings())
+        const issueCommandPath = joinWorktreeRelativePath(repo.path, `${orcaDirName}/issue-command`)
         const fsProvider = getSshFilesystemProvider(repo.connectionId)
         if (!fsProvider) {
           throw new Error(
@@ -104,7 +106,7 @@ export function registerWorktreeHookFileHandlers(context: WorktreeIpcContext): v
           })
           return
         }
-        await fsProvider.createDir(joinWorktreeRelativePath(repo.path, '.orca'))
+        await fsProvider.createDir(joinWorktreeRelativePath(repo.path, orcaDirName))
         const gitignorePath = joinWorktreeRelativePath(repo.path, '.gitignore')
         try {
           const result = await fsProvider.readFile(gitignorePath)

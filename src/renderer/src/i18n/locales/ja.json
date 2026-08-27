@@ -3570,18 +3570,6 @@
             "stoppingLabel": "更新を停止しています",
             "stoppingTooltip": "スキルの更新を停止しています…",
             "stoppingAria": "スキルの更新を停止しています。クリックすると詳細を開きます。"
-          },
-          "CaffeinateStatusSegment": {
-            "on": "オン",
-            "auto": "Agent",
-            "off": "オフ",
-            "active": "アクティブ",
-            "inactive": "非アクティブ",
-            "ariaLabel": "スリープ防止、{{status}}",
-            "title": "スリープ防止",
-            "onDescription": "このコンピュータを常に起動状態に保つ",
-            "autoDescription": "Agent の作業中は起動状態を維持",
-            "offDescription": "システムの通常のスリープ動作を許可"
           }
         }
       },
@@ -3948,7 +3936,9 @@
           "searchLinks": "リンクを検索",
           "deleteSkills": "スキルを削除…"
         },
-        "SkillShareSelectionControls": { "01c5a15e02": "スキルを共有" },
+        "SkillShareSelectionControls": {
+          "01c5a15e02": "スキルを共有"
+        },
         "SkillRow": {
           "updatedUnknown": "日付なし",
           "pathCopied": "パスをコピーしました",
@@ -3958,13 +3948,17 @@
           "viewDetails": "詳細を表示",
           "deleteSkill": "削除…"
         },
-        "SkillsList": { "listLabel": "スキル" },
+        "SkillsList": {
+          "listLabel": "スキル"
+        },
         "sourceStatus": {
           "missing": "フォルダーが見つかりません",
           "remoteRepo": "リモートリポジトリ — 未スキャン",
           "unavailable": "未スキャン"
         },
-        "sources": { "heading": "スキルフォルダー" },
+        "sources": {
+          "heading": "スキルフォルダー"
+        },
         "sourceKind": {
           "home": "ホーム",
           "workspace": "ワークスペース",
@@ -3986,7 +3980,10 @@
           "linkOne": "{{count}} 件のリンク",
           "linkOther": "{{count}} 件のリンク"
         },
-        "filter": { "allAgents": "すべての Agent", "sharedAgent": "共有 (.agents)" },
+        "filter": {
+          "allAgents": "すべての Agent",
+          "sharedAgent": "共有 (.agents)"
+        },
         "SkillsSelectionHeader": {
           "exit": "選択を終了",
           "exitTooltip": "選択を終了 · Esc",
@@ -3995,7 +3992,11 @@
           "clear": "クリア",
           "deleteTitle": "削除するスキルを選択"
         },
-        "SkillDetailDialog": { "agents": "Agent", "updated": "更新日", "copy": "コピー" },
+        "SkillDetailDialog": {
+          "agents": "Agent",
+          "updated": "更新日",
+          "copy": "コピー"
+        },
         "SkillFreshnessNudge": {
           "titleOne": "インストール済みの Orca スキルが古くなっています",
           "titleMany": "インストール済みの Orca スキル {{value0}} 件が古くなっています",
