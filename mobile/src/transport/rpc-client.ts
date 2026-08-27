@@ -1,76 +1,17 @@
+import type { BrowserScreencastFrame } from './browser-screencast-protocol'
+import { DirectRpcClient } from './direct-rpc-client'
 import type {
-  RpcResponse,
-  RpcSuccess,
-  ConnectionState,
-  ConnectionLogLevel,
   ConnectionLogSink,
-  ForegroundNudgeReason
+  ConnectionState,
+  ForegroundNudgeReason,
+  RpcResponse
 } from './types'
-import {
-  generateKeyPair,
-  deriveSharedKey,
-  publicKeyFromBase64,
-  publicKeyToBase64,
-  encrypt,
-  decrypt,
-  decryptBytes
-} from './e2ee'
-import {
-  handleTerminalBinaryFrame,
-  type TerminalSnapshotState
-} from './rpc-client-terminal-binary-frame'
-import {
-  decodeBrowserScreencastFrame,
-  type BrowserScreencastFrame
-} from './browser-screencast-protocol'
-import {
-  buildStreamUnsubscribe,
-  buildTerminalUnsubscribeParams,
-  updateTerminalSubscriptionViewport as updateCachedTerminalSubscriptionViewport
-} from './rpc-client-terminal-subscription'
-import { describeSocketEvent, redactSocketEndpoint } from './socket-event-debug'
-import {
-  isStaleRpcSocketEvent,
-  logRpcSocketClose,
-  RpcSynthesizedCloseIndex
-} from './rpc-socket-close-evidence'
-import { markRpcDeliveryUnknown } from './rpc-delivery-ambiguity'
-import { openRpcRequestBudget, resolvePostConnectRequestTimeout } from './rpc-request-budget'
-import { isRpcResponse } from './rpc-response-shape'
-import {
-  isStreamingSubscriptionReadyResult,
-  isTerminalSubscribedResult
-} from './rpc-subscription-result-shapes'
-import {
-  RpcSessionLivenessWatchdog,
-  type RpcSessionIdentity
-} from './rpc-session-liveness-watchdog'
-import { isStaleForegroundDial } from './rpc-stale-dial'
-import { websocketPayloadToUint8 } from './websocket-payload-bytes'
-
-type PendingRequest = {
-  resolve: (response: RpcResponse) => void
-  reject: (error: Error) => void
-}
-
-type ConnectWaiter = {
-  resolve: () => void
-  reject: (error: Error) => void
-  timeout: ReturnType<typeof setTimeout> | null
-}
 
 export type SendRequestOptions = {
   timeoutMs?: number
-  /** Spend `timeoutMs` across connect-wait AND the request instead of giving each
-   *  phase its own. Interactive chat writes need it: they run as sequential loops
-   *  under one shared budget, so a per-phase clock lets the composer sit `sending`
-   *  for a multiple of the stated ceiling. Off by default — the long-running
-   *  callers (worktree create, dictation finish, credit reset) sized their budgets
-   *  against the post-connect clock, and squeezing them to the floor after a slow
-   *  reconnect would fail sends that used to land. */
+  /** Include the connect wait in the caller's timeout budget. */
   budgetSpansConnect?: boolean
-  /** Reject immediately when not connected — a send parked in the connect wait
-   *  replays stale terminal bytes into the PTY after reconnect. */
+  /** Reject instead of replaying the request after reconnect. */
   failWhenDisconnected?: boolean
 }
 
@@ -79,16 +20,6 @@ type SubscribeOptions = {
 }
 
 type StreamingListener = (result: unknown) => void
-
-type StreamRequest = {
-  method: string
-  params: unknown
-  listener: StreamingListener
-  onBinaryFrame?: (frame: BrowserScreencastFrame) => void
-  subscriptionId?: string
-  cancelled?: boolean
-  sent?: boolean
-}
 
 export type RpcClient = {
   sendRequest: (
@@ -107,44 +38,16 @@ export type RpcClient = {
     viewport: { cols: number; rows: number }
   ) => void
   getState: () => ConnectionState
-  // 0 means never failed (reset once the handshake authenticates); the UI escalates "Reconnecting…" to "Can't connect" past a threshold.
   getReconnectAttempt: () => number
-  // Last 'connected' timestamp (ms epoch); null = never connected. Lets the UI tell "never reachable" from "transient blip".
   getLastConnectedAt: () => number | null
-  // Wall-clock stamp of the last inbound frame on the current session, or null when the
-  // transport can't vouch for one. Optional so older/foreign RpcClient shapes stay valid;
-  // callers must treat absent/null as "unknown" and fall back to a safe bound.
   getLastInboundAt?: () => number | null
   onStateChange: (listener: (state: ConnectionState) => void) => () => void
-  // Why: app-resume hook — iOS/Android can kill the TCP path while backgrounded; call on AppState 'active' to recover.
-  // The reason routes relay handling (probe vs replace); the direct socket probes regardless.
   notifyForeground: (reason?: ForegroundNudgeReason) => void
   close: () => void
 }
 
-// Why: tiered backoff — fast early entries recover blips; the slow tail avoids burning a SYN every 4s on an unreachable desktop.
-const RECONNECT_DELAYS = [500, 1000, 2000, 4000, 8000, 15_000, 30_000, 60_000]
-// Why: ≈6 min of failure before the re-pair banner; MUST stay aligned with connection-health.ts UNREACHABLE_ATTEMPTS.
-const GIVE_UP_AFTER_ATTEMPTS = 12
-// Why: never park past the cap — a wedged VPN fires no AppState/network nudge to revive it, so trickle-dial every 90s to self-heal.
-const TRICKLE_RECONNECT_DELAY_MS = 90_000
-// Why: one unauthorized isn't proof the pairing is dead (issue #5200) — retry the handshake this many times before latching auth-failed.
-const AUTH_RETRY_BUDGET = 3
-// Why: a desktop that regenerated its E2EE keypair sends an e2ee_error we can't decrypt — the 4001 close code is the only surviving auth-failure signal.
-const UNAUTHORIZED_CLOSE_CODE = 4001
-const REQUEST_TIMEOUT_MS = 30_000
-// Why: an explicit `timeoutMs` is one budget for the whole call. If the connect wait
-// ate nearly all of it, still give the written frame a moment to be answered rather
-// than arming a 1ms timer.
-const CONNECT_TIMEOUT_MS = 12_000
-const HANDSHAKE_TIMEOUT_MS = 5_000
-// Why: RN may not expose WebSocket.readyState constants, but the CONNECTING protocol value (0) is stable across runtimes.
-const WEBSOCKET_CONNECTING_STATE = 0
-const LIVENESS_REQUEST_ID_PREFIX = 'mobile-liveness-'
-
 export type ConnectOptions = {
   onStateChange?: (state: ConnectionState) => void
-  // Fires for every lifecycle event so the UI can show where 'Connecting…' is stuck (e.g. broken Tailscale route).
   onLog?: ConnectionLogSink
 }
 
@@ -154,7 +57,6 @@ export function connect(
   serverPublicKeyB64: string,
   optionsOrLegacy?: ConnectOptions | ((state: ConnectionState) => void)
 ): RpcClient {
-  // Why: keep backward-compat with callers that pass a bare onStateChange fn.
   const options: ConnectOptions =
     typeof optionsOrLegacy === 'function'
       ? { onStateChange: optionsOrLegacy }

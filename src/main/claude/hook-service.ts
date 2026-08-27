@@ -18,6 +18,7 @@ import { refreshManagedScriptIfPresent } from '../agent-hooks/managed-hook-scrip
 import { remoteHomeAgentHookScriptPath } from '../agent-hooks/remote-home-hook-script-path'
 import {
   buildPosixHookPayloadCapture,
+  buildPosixHookSpoolLines,
   buildWindowsHookEnvironmentGuardLines,
   buildWindowsHookStdinDrainEpilogue,
   WINDOWS_HOOK_STDIN_DRAIN_LABEL
@@ -97,6 +98,7 @@ function getManagedScript(
     // Why: Claude-compatible permission hooks fail closed on empty stdout (#14818).
     'printf "{}\\n"',
     ...buildPosixHookPayloadCapture(),
+    ...buildPosixHookSpoolLines('claude'),
     ...(options.skipWhenDevinImportsClaude
       ? [
           // Why: Devin imports .claude hooks by default; skip Orca's managed hook there so status posts stay attributed to Devin.
@@ -116,6 +118,7 @@ function getManagedScript(
     '  . "$ORCA_AGENT_HOOK_ENDPOINT" 2>/dev/null || :',
     'fi',
     'if [ -z "$ORCA_AGENT_HOOK_PORT" ] || [ -z "$ORCA_AGENT_HOOK_TOKEN" ] || [ -z "$ORCA_PANE_KEY" ]; then',
+    '  spool_hook_event',
     '  exit 0',
     'fi',
     // Why: post form fields because path-bearing payloads are unsafe in hand-built JSON.
@@ -130,7 +133,7 @@ function getManagedScript(
     '  --data-urlencode "worktreeId=${ORCA_WORKTREE_ID}" \\',
     '  --data-urlencode "env=${ORCA_AGENT_HOOK_ENV}" \\',
     '  --data-urlencode "version=${ORCA_AGENT_HOOK_VERSION}" \\',
-    '  --data-urlencode "payload@-" >/dev/null 2>&1 || true',
+    '  --data-urlencode "payload@-" >/dev/null 2>&1 || spool_hook_event',
     'exit 0',
     ''
   ].join('\n')

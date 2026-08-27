@@ -23,28 +23,28 @@
   {
     "filePath": "src/renderer/src/components/settings/appearance-search.ts",
     "kind": "object-property:keywords",
-    "text": "语言",
+    "text": "\u8bed\u8a00",
     "dynamic": false,
     "count": 1
   },
   {
     "filePath": "src/renderer/src/components/settings/appearance-search.ts",
     "kind": "object-property:keywords",
-    "text": "語言",
+    "text": "\u8a9e\u8a00",
     "dynamic": false,
     "count": 1
   },
   {
     "filePath": "src/renderer/src/components/settings/appearance-search.ts",
     "kind": "object-property:keywords",
-    "text": "언어",
+    "text": "\uc5b8\uc5b4",
     "dynamic": false,
     "count": 1
   },
   {
     "filePath": "src/renderer/src/components/settings/appearance-search.ts",
     "kind": "object-property:keywords",
-    "text": "言語",
+    "text": "\u8a00\u8a9e",
     "dynamic": false,
     "count": 1
   },
@@ -87,6 +87,20 @@
     "filePath": "src/renderer/src/web/web-preload-api.ts",
     "kind": "object-property:message",
     "text": "API testing is unavailable in the browser client.",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "src/renderer/src/components/automations/automations-page-fixtures.ts",
+    "kind": "object-property:title",
+    "text": "Nightly #1",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "src/renderer/src/components/automations/automations-page-fixtures.ts",
+    "kind": "object-property:label",
+    "text": "Hermes",
     "dynamic": false,
     "count": 1
   }

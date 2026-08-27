@@ -203,7 +203,7 @@ export function BrowserToolbarMenu({
                 value1: browser?.label ?? browserFamily
               }
             ),
-        result.executionHostLabel
+        result
       )
     } else {
       toast.error(result.reason)
@@ -220,7 +220,7 @@ export function BrowserToolbarMenu({
           'Imported {{value0}} cookies from file.',
           { value0: result.summary.importedCookies }
         ),
-        result.executionHostLabel
+        result
       )
     } else if (result.reason !== 'canceled') {
       toast.error(result.reason)

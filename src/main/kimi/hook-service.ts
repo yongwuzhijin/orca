@@ -25,7 +25,10 @@ import {
   writeManagedScriptRemote,
   writeTextFileRemoteAtomic
 } from '../agent-hooks/installer-utils-remote'
-import { buildPosixHookPayloadCapture } from '../agent-hooks/hook-stdin-contract'
+import {
+  buildPosixHookPayloadCapture,
+  buildPosixHookSpoolLines
+} from '../agent-hooks/hook-stdin-contract'
 import {
   applyManagedKimiHooks,
   KIMI_HOOK_EVENTS,
@@ -72,14 +75,25 @@ function getManagedScript(target: 'local' | 'posix' = 'local'): string {
     '  . "$ORCA_AGENT_HOOK_ENDPOINT" 2>/dev/null || :',
     'fi',
     'if [ -z "$ORCA_AGENT_HOOK_PORT" ] || [ -z "$ORCA_AGENT_HOOK_TOKEN" ] || [ -z "$ORCA_PANE_KEY" ]; then',
+    // Why: the windows-local ordering runs this guard before stdin is read and before
+    // spool_hook_event is defined, so only the payload-first ordering may spool here.
+    ...(windowsLocal ? [] : ['  spool_hook_event']),
     '  exit 0',
     'fi'
   ]
   return [
     '#!/bin/sh',
     ...(windowsLocal
-      ? [...endpointRefreshAndGuard, ...buildPosixHookPayloadCapture()]
-      : [...buildPosixHookPayloadCapture(), ...endpointRefreshAndGuard]),
+      ? [
+          ...endpointRefreshAndGuard,
+          ...buildPosixHookPayloadCapture(),
+          ...buildPosixHookSpoolLines('kimi')
+        ]
+      : [
+          ...buildPosixHookPayloadCapture(),
+          ...buildPosixHookSpoolLines('kimi'),
+          ...endpointRefreshAndGuard
+        ]),
     // Why: worktreeId embeds a filesystem path, so hand-building JSON in POSIX
     // shell is not safe once a path contains quotes or newlines. Post the raw
     // hook payload plus metadata as form fields and let the receiver parse it.
@@ -96,7 +110,7 @@ function getManagedScript(target: 'local' | 'posix' = 'local'): string {
     '  --data-urlencode "worktreeId=${ORCA_WORKTREE_ID}" \\',
     '  --data-urlencode "env=${ORCA_AGENT_HOOK_ENV}" \\',
     '  --data-urlencode "version=${ORCA_AGENT_HOOK_VERSION}" \\',
-    '  --data-urlencode "payload@-" >/dev/null 2>&1 || true',
+    '  --data-urlencode "payload@-" >/dev/null 2>&1 || spool_hook_event',
     'exit 0',
     ''
   ].join('\n')
