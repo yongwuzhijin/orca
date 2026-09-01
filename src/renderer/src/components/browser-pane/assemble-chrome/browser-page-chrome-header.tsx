@@ -101,7 +101,6 @@ export function BrowserPageChromeHeader({
         shareableArtifactFile={shareableArtifactFile}
         currentBrowserUrl={currentBrowserUrl}
         externalUrl={externalUrl}
-        pageUrl={browserTab.url}
         pageTitle={browserTab.title}
       />
       <BrowserPageDownloadList

@@ -53,6 +53,7 @@ export function resumableStateFactoryFor(
         : null
     case 'antigravity':
       return () => createAntigravitySessionResumeState(candidate.file)
+    case 'cline':
     case 'devin':
     case 'grok':
     case 'hermes':

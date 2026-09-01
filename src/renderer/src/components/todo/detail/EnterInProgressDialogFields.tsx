@@ -149,7 +149,7 @@ export function EnterInProgressDialogFields({
             {translate('auto.components.todo.detail.EnterInProgressDialog.engine', 'Agent')}
           </Label>
           <AgentCombobox
-            agents={visibleTerminalAgents}
+            agents={[...visibleTerminalAgents]}
             value={terminalAgent}
             onValueChange={onTerminalAgentChange}
             allowBlankTerminal={false}

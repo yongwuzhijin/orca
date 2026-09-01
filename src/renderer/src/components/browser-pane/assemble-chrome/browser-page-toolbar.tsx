@@ -4,7 +4,6 @@ import { translate } from '@/i18n/i18n'
 import type { BrowserReloadTrigger } from '../navigate/browser-reload-action'
 import BrowserAddressBar from './BrowserAddressBar'
 import { BrowserChromeToolbar } from './browser-chrome-toolbar'
-import { BrowserImportHintButton } from './BrowserImportHintButton'
 import { BrowserReloadControl } from './browser-reload-control'
 import { BrowserToolbarMenu } from './BrowserToolbarMenu'
 import { SshEgressIndicator } from './browser-egress-indicator'
@@ -60,7 +59,8 @@ export function BrowserPageToolbar({
   browserAnnotationsLength,
   shareableArtifactFile,
   currentBrowserUrl,
-  externalUrl
+  externalUrl,
+  pageTitle
 }: {
   browserPageId: string
   workspaceId: string
@@ -101,6 +101,7 @@ export function BrowserPageToolbar({
   shareableArtifactFile: { filePath: string } | null
   currentBrowserUrl: string
   externalUrl: string | null
+  pageTitle: string
 }): React.JSX.Element {
   return (
     <BrowserChromeToolbar
@@ -161,7 +162,7 @@ export function BrowserPageToolbar({
           onHardReload={() => runReloadTrigger('hard-reload')}
         />
       }
-      importControl={<BrowserImportHintButton profileId={sessionProfileId} />}
+      importControl={null}
       elementTools={{
         activeIntent: grab.state !== 'idle' ? grabIntent : null,
         onStartIntent: startGrabIntent,
@@ -212,6 +213,9 @@ export function BrowserPageToolbar({
           viewportPresetId={viewportPresetId}
           onDestroyWebview={() => destroyPersistentWebview(browserPageId)}
           isActive={isActive}
+          worktreeId={worktreeId}
+          pageUrl={currentBrowserUrl}
+          pageTitle={pageTitle}
         />
       }
     />

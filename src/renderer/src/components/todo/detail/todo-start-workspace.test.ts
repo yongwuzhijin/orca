@@ -17,7 +17,12 @@ const mockState = {
       updatedAt: 1
     }
   ],
-  repos: [{ id: 'repo-1', kind: 'git' as const, name: 'repo', path: '/repo' }]
+  repos: [{ id: 'repo-1', kind: 'git' as const, name: 'repo', path: '/repo' }] as {
+    id: string
+    kind: 'git' | 'folder'
+    name: string
+    path: string
+  }[]
 }
 
 vi.mock('@/store', () => ({

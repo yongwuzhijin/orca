@@ -1,4 +1,8 @@
 import type { GlobalSettings } from '../../../shared/global-settings-types'
+import type { OrcaDirNameSettingsSlice } from '../../../shared/orca-dir-names'
+
+export type RuntimeFileSettingsSlice = Pick<GlobalSettings, 'activeRuntimeEnvironmentId'> &
+  OrcaDirNameSettingsSlice
 
 export type RuntimeReadableFileContent = {
   content: string
@@ -9,7 +13,7 @@ export type RuntimeReadableFileContent = {
 }
 
 export type RuntimeFileReadArgs = {
-  settings: Pick<GlobalSettings, 'activeRuntimeEnvironmentId'> | null | undefined
+  settings: RuntimeFileSettingsSlice | null | undefined
   filePath: string
   relativePath?: string
   worktreeId?: string
@@ -19,7 +23,7 @@ export type RuntimeFileReadArgs = {
 }
 
 export type RuntimeFileOperationArgs = {
-  settings: Pick<GlobalSettings, 'activeRuntimeEnvironmentId'> | null | undefined
+  settings: RuntimeFileSettingsSlice | null | undefined
   worktreeId: string | null | undefined
   worktreePath: string | null | undefined
   connectionId?: string

@@ -17,6 +17,7 @@ import { RuntimeGitHubIssueCommentCommands } from './runtime-github-issue-commen
 import { RuntimeGitHubProjectCommands } from './runtime-github-project-commands'
 import { RuntimeRepositoryHooksCommands } from './runtime-repository-hooks-commands'
 import { RuntimeRepositoryIssueCommand } from './runtime-repository-issue-command'
+import { resolveWorkspaceOrcaDirName } from '../../shared/orca-dir-names'
 import type { AgentSessionPtyWriteAdmittance } from './agent-session-pty-write-gate'
 import { ClientHostedBrowserRowPublisher } from './client-hosted-browser-row-publication'
 import { getRuntimeBrowserPageRegistry } from './runtime-browser-page-registry'
@@ -190,7 +191,8 @@ export class OrcaRuntimeWithFileCommands extends OrcaRuntimeWithPreservedBranchC
   })
 
   protected readonly repositoryIssueCommand = new RuntimeRepositoryIssueCommand({
-    resolveRepo: (selector) => this.resolveRepoSelector(selector)
+    resolveRepo: (selector) => this.resolveRepoSelector(selector),
+    getWorkspaceOrcaDirName: () => resolveWorkspaceOrcaDirName(this.requireStore().getSettings())
   })
 
   protected readonly orchestrationPointerAdmissionByPtyId = new Map<

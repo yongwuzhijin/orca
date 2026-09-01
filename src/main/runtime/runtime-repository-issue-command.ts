@@ -9,6 +9,7 @@ import { joinWorktreeRelativePath } from './runtime-relative-paths'
 
 type RuntimeRepositoryIssueCommandDeps = {
   resolveRepo: (selector: string) => Promise<Repo>
+  getWorkspaceOrcaDirName: () => string
 }
 
 export class RuntimeRepositoryIssueCommand {
@@ -26,7 +27,7 @@ export class RuntimeRepositoryIssueCommand {
       }
     }
     if (!repo.connectionId) {
-      return readIssueCommand(repo.path)
+      return readIssueCommand(repo.path, this.deps.getWorkspaceOrcaDirName())
     }
     const issueCommandPath = joinWorktreeRelativePath(repo.path, '.orca/issue-command')
     const fsProvider = getSshFilesystemProvider(repo.connectionId)
@@ -60,7 +61,7 @@ export class RuntimeRepositoryIssueCommand {
       return { ok: true }
     }
     if (!repo.connectionId) {
-      writeIssueCommand(repo.path, content)
+      writeIssueCommand(repo.path, this.deps.getWorkspaceOrcaDirName(), content)
       return { ok: true }
     }
     const issueCommandPath = joinWorktreeRelativePath(repo.path, '.orca/issue-command')

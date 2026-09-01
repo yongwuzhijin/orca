@@ -76,6 +76,7 @@ function makeShellProps(activeFile: OpenFile): React.ComponentProps<typeof Edito
       gitStatusEntries: undefined,
       gitBranchEntries: undefined,
       markdownViewMode: {},
+      markdownRichModeSizeOverridden: false,
       isChangesMode: false,
       canOpenWorkspaceFileBrowser: false
     }),

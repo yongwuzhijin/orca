@@ -304,7 +304,7 @@ export function BrowserPagePane({
     browserZoomIndicatorState
   } = buildBrowserPagePaneUrlDisplayState({
     browserTab,
-    workspaceConnectionId,
+    workspaceConnectionId: workspaceConnectionId ?? null,
     browserZoomFeedbackVisible: zoom.browserZoomFeedbackVisible,
     browserZoomPercent: zoom.browserZoomPercent,
     browserDefaultZoomPercent: zoom.browserDefaultZoomPercent
