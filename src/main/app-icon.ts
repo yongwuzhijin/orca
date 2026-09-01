@@ -12,17 +12,29 @@ import watercolorIcon from '../../resources/app-icons/orca-watercolor.png?asset'
 import watercolorMacDockIcon from '../../resources/app-icons/orca-watercolor.png?asset&asarUnpack'
 import blueIcon from '../../resources/app-icons/orca-blue.png?asset'
 import blueMacDockIcon from '../../resources/app-icons/orca-blue.png?asset&asarUnpack'
+import bellIcon from '../../resources/app-icons/orca-bell.png?asset'
+import bellMacDockIcon from '../../resources/app-icons/orca-bell.png?asset&asarUnpack'
+import bellDarkIcon from '../../resources/app-icons/orca-bell-dark.png?asset'
+import bellDarkMacDockIcon from '../../resources/app-icons/orca-bell-dark.png?asset&asarUnpack'
+import bellDarkAuroraIcon from '../../resources/app-icons/orca-bell-dark-aurora.png?asset'
+import bellDarkAuroraMacDockIcon from '../../resources/app-icons/orca-bell-dark-aurora.png?asset&asarUnpack'
 import { normalizeAppIconId, type AppIconId } from '../shared/app-icon'
 
 const APP_ICON_PATHS = {
   classic: is.dev ? classicDevIcon : classicIcon,
   watercolor: watercolorIcon,
-  blue: blueIcon
+  blue: blueIcon,
+  bell: bellIcon,
+  'bell-dark': bellDarkIcon,
+  'bell-dark-aurora': bellDarkAuroraIcon
 } satisfies Record<AppIconId, string>
 
 const MAC_DOCK_ICON_PATHS = {
   watercolor: watercolorMacDockIcon,
-  blue: blueMacDockIcon
+  blue: blueMacDockIcon,
+  bell: bellMacDockIcon,
+  'bell-dark': bellDarkMacDockIcon,
+  'bell-dark-aurora': bellDarkAuroraMacDockIcon
 } satisfies Record<Exclude<AppIconId, 'classic'>, string>
 
 type ExecFile = (

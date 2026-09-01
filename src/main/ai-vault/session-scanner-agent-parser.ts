@@ -14,7 +14,16 @@ import { parseCopilotSessionFile } from './session-scanner-copilot-parser'
 import { parseCursorSessionFile } from './session-scanner-cursor-parser'
 import { parseHermesSessionFile } from './session-scanner-hermes-parser'
 import { parseOpenCodeSessionFile } from './session-scanner-opencode-parser'
+import { macosQoderTranscriptAgentOverride } from '../native-chat/macos-qoder-transcript-paths'
 import type { SessionFileCandidate } from './session-scanner-types'
+
+function normalizeSessionFileCandidate(
+  candidate: SessionFileCandidate,
+  platform: NodeJS.Platform
+): SessionFileCandidate {
+  const agent = macosQoderTranscriptAgentOverride(candidate.file.path, platform) ?? candidate.agent
+  return agent === candidate.agent ? candidate : { ...candidate, agent }
+}
 
 /**
  * Parse a single agent session file into an `AiVaultSession`. Routes to the
@@ -29,6 +38,7 @@ export async function parseAgentSessionFile(
   candidate: SessionFileCandidate,
   platform: NodeJS.Platform
 ): Promise<AiVaultSession | null> {
+  candidate = normalizeSessionFileCandidate(candidate, platform)
   switch (candidate.agent) {
     case 'claude':
       return parseClaudeSessionFile(candidate.file, platform)

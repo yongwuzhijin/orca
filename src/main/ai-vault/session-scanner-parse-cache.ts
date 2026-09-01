@@ -3,19 +3,15 @@ import {
   readTranscriptSlice
 } from '../native-chat/wsl-transcript-fs-access'
 import type { AiVaultSession } from '../../shared/ai-vault-types'
-import { createAntigravitySessionResumeState } from './session-scanner-antigravity-parser'
 import { parseAgentSessionFile } from './session-scanner-agent-parser'
-import { createCodexSessionResumeState } from './session-scanner-codex-parser'
-import { createDroidSessionResumeState } from './session-scanner-droid-parser'
-import { createMessageGraphSessionResumeState } from './session-scanner-graph-parsers'
-import { createClaudeSessionResumeState } from './session-scanner-primary-parsers'
-import { createGeminiJsonlSessionResumeState } from './session-scanner-gemini-parsers'
-import { createCopilotSessionResumeState } from './session-scanner-copilot-parser'
-import { createCursorSessionResumeState } from './session-scanner-cursor-parser'
+import { refreshCachedCodexTitle } from './session-scanner-codex-cached-title'
+import {
+  normalizeSessionFileCandidate,
+  resumableStateFactoryFor
+} from './session-scanner-parse-cache-resume'
 import { countSubagentTranscripts } from './session-scanner-subagent-transcripts'
 import { countOmpSubagentTranscripts } from './session-scanner-omp-subagent-transcripts'
 import type { ResumableSessionParseState, SessionFileCandidate } from './session-scanner-types'
-import { refreshCachedCodexTitle } from './session-scanner-codex-cached-title'
 
 // Sized past the default recency cap (1000) plus the in-scope cap (2000) so a
 // full steady-state result set stays resident between forced rescans.
@@ -37,52 +33,6 @@ type SessionParseCacheEntry = {
   platform: NodeJS.Platform
   session: AiVaultSession | null
   resume: ResumePoint | null
-}
-
-// Incremental append-parsing applies only to transcripts that are append-only
-// JSONL line-folds. Whole-JSON documents (grok/rovo/devin/hermes/gemini-json)
-// are rewritten in place, Kimi reads a state doc plus a sibling wire file, and
-// OpenCode reads SQLite rows or a doc plus a message dir — those formats keep
-// unchanged-file reuse only and re-parse whole when they change.
-// Returns a factory (not a state) so steady-state resumes, which clone the
-// cached state instead, never pay for a throwaway accumulator.
-function resumableStateFactoryFor(
-  candidate: SessionFileCandidate
-): (() => ResumableSessionParseState) | null {
-  switch (candidate.agent) {
-    case 'claude':
-      return () => createClaudeSessionResumeState(candidate.file)
-    case 'qoder':
-      return () => createClaudeSessionResumeState(candidate.file, 'qoder')
-    case 'codex':
-      return () => createCodexSessionResumeState(candidate.file, candidate.codexHome)
-    case 'cursor':
-      return () => createCursorSessionResumeState(candidate.file)
-    case 'copilot':
-      return () => createCopilotSessionResumeState(candidate.file)
-    case 'droid':
-      return () => createDroidSessionResumeState(candidate.file)
-    case 'openclaw':
-    case 'pi':
-    case 'omp':
-    case 'prime-agent': {
-      const agent = candidate.agent
-      return () => createMessageGraphSessionResumeState(agent, candidate.file)
-    }
-    case 'gemini':
-      return candidate.file.path.endsWith('.jsonl')
-        ? () => createGeminiJsonlSessionResumeState(candidate.file)
-        : null
-    case 'antigravity':
-      return () => createAntigravitySessionResumeState(candidate.file)
-    case 'devin':
-    case 'grok':
-    case 'hermes':
-    case 'kimi':
-    case 'opencode':
-    case 'rovo':
-      return null
-  }
 }
 
 export type SessionParseStats = {
@@ -179,6 +129,7 @@ export async function parseAgentSessionFileCached(
   platform: NodeJS.Platform,
   stats?: SessionParseStats
 ): Promise<AiVaultSession | null> {
+  candidate = normalizeSessionFileCandidate(candidate, platform)
   const { file } = candidate
   const entry = cache.get(file.path)
 
@@ -186,7 +137,10 @@ export async function parseAgentSessionFileCached(
     entry !== undefined &&
     entry.platform === platform &&
     entry.mtimeMs === file.mtimeMs &&
-    (entry.sizeBytes === null || file.sizeBytes === undefined || entry.sizeBytes === file.sizeBytes)
+    (entry.sizeBytes === null ||
+      file.sizeBytes === undefined ||
+      entry.sizeBytes === file.sizeBytes) &&
+    (entry.session === null || entry.session.agent === candidate.agent)
   if (unchanged) {
     if (stats) {
       stats.reused++

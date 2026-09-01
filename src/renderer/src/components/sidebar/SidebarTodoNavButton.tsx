@@ -26,7 +26,7 @@ export function SidebarTodoNavButton(): React.JSX.Element {
         strokeWidth={todosActive ? 2.25 : 1.75}
       />
       <span className="flex-1">
-        {translate('auto.components.sidebar.SidebarTodoNavButton.title', 'TODO')}
+        {translate('auto.components.sidebar.SidebarTodoNavButton.title', 'Requirements')}
       </span>
     </button>
   )

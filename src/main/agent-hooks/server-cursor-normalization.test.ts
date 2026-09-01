@@ -59,6 +59,32 @@ describe('Cursor hook normalization', () => {
     expect(result?.payload.interrupted).toBe(true)
   })
 
+  it('stop with error after a delivered response stays done without interrupted', () => {
+    _internals.normalizeHookPayload(
+      'cursor',
+      buildBody({ hook_event_name: 'afterAgentResponse', text: 'All set.' }),
+      'production'
+    )
+    const result = _internals.normalizeHookPayload(
+      'cursor',
+      buildBody({ hook_event_name: 'stop', status: 'error', error: 'WritableIterable is closed' }),
+      'production'
+    )
+    expect(result?.payload.state).toBe('done')
+    expect(result?.payload.interrupted).toBeUndefined()
+    expect(result?.payload.lastAssistantMessage).toBe('All set.')
+  })
+
+  it('stop with error and no delivered response marks the turn interrupted', () => {
+    const result = _internals.normalizeHookPayload(
+      'cursor',
+      buildBody({ hook_event_name: 'stop', status: 'error', error: 'request failed' }),
+      'production'
+    )
+    expect(result?.payload.state).toBe('done')
+    expect(result?.payload.interrupted).toBe(true)
+  })
+
   it('beforeShellExecution maps to working with the pending command as toolInput', () => {
     const result = _internals.normalizeHookPayload(
       'cursor',

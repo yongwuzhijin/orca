@@ -285,4 +285,36 @@ describe('activateFileExplorerNode', () => {
       { preview: true, focusEditor: true, suppressActiveRuntimeFallback: true }
     )
   })
+
+  it('routes file activation to onFileActivate when provided', async () => {
+    const fileNode: TreeNode = {
+      name: 'README.md',
+      path: '/repo/README.md',
+      relativePath: 'README.md',
+      isDirectory: false,
+      depth: 0
+    }
+    const onFileActivate = vi.fn()
+    const openFile = vi.fn()
+
+    await activateFileExplorerNode({
+      node: fileNode,
+      activeWorktreeId: 'wt-1',
+      openFile,
+      onFileActivate,
+      toggleDir: vi.fn(),
+      loadDir: vi.fn(),
+      statPath: vi.fn(),
+      authorizeExternalPath: vi.fn(),
+      markPathAsDirectory: vi.fn(),
+      setSelectedPath: vi.fn()
+    })
+
+    expect(onFileActivate).toHaveBeenCalledWith({
+      filePath: '/repo/README.md',
+      relativePath: 'README.md',
+      fileName: 'README.md'
+    })
+    expect(openFile).not.toHaveBeenCalled()
+  })
 })

@@ -20,6 +20,7 @@ import { useFileExplorerTreeLoadEffects } from './use-file-explorer-tree-load-ef
 import { useFileExplorerWatch } from './useFileExplorerWatch'
 import type { useFileExplorerSelection } from './useFileExplorerSelection'
 import type { useFileExplorerTree } from './useFileExplorerTree'
+import { useReviewFilePreviewActivate } from '@/components/todo/detail/review-file-preview-context'
 
 type UseFileExplorerTreePaneStateParams = {
   activeWorktreeId: string | null
@@ -116,6 +117,7 @@ export function useFileExplorerTreePaneState({
     getRuntimeEnvironmentIdForWorktree(s, activeWorktreeId)
   )
   const toggleDir = useAppStore((s) => s.toggleDir)
+  const onFileActivate = useReviewFilePreviewActivate()
   const openFile = useAppStore((s) => s.openFile)
   const makePreviewFilePermanent = useAppStore((s) => s.makePreviewFilePermanent)
   const gitStatusByWorktree = useAppStore((s) => s.gitStatusByWorktree)
@@ -225,6 +227,7 @@ export function useFileExplorerTreePaneState({
   const handlers = useFileExplorerHandlers({
     activeWorktreeId,
     runtimeEnvironmentId: activeRuntimeEnvironmentId,
+    onFileActivate: onFileActivate ?? undefined,
     openFile,
     makePreviewFilePermanent,
     toggleDir: hasNameFilter ? handleToggleNameFilterDir : toggleDir,

@@ -49,6 +49,30 @@ vi.mock('../../resources/app-icons/orca-blue.png?asset&asarUnpack', () => ({
   default: 'blue-icon-unpacked'
 }))
 
+vi.mock('../../resources/app-icons/orca-bell.png?asset', () => ({
+  default: 'bell-icon'
+}))
+
+vi.mock('../../resources/app-icons/orca-bell.png?asset&asarUnpack', () => ({
+  default: 'bell-icon-unpacked'
+}))
+
+vi.mock('../../resources/app-icons/orca-bell-dark.png?asset', () => ({
+  default: 'bell-dark-icon'
+}))
+
+vi.mock('../../resources/app-icons/orca-bell-dark.png?asset&asarUnpack', () => ({
+  default: 'bell-dark-icon-unpacked'
+}))
+
+vi.mock('../../resources/app-icons/orca-bell-dark-aurora.png?asset', () => ({
+  default: 'bell-dark-aurora-icon'
+}))
+
+vi.mock('../../resources/app-icons/orca-bell-dark-aurora.png?asset&asarUnpack', () => ({
+  default: 'bell-dark-aurora-icon-unpacked'
+}))
+
 import { applyAppIcon, getAppIconPath, persistMacDockIcon } from './app-icon'
 
 function waitForQueuedPersistence(): Promise<void> {
@@ -82,10 +106,13 @@ describe('app icon selection', () => {
     vi.useRealTimers()
   })
 
-  it('resolves classic, watercolor, blue, and invalid icon ids', () => {
+  it('resolves every selectable icon id, and falls back for an invalid one', () => {
     expect(getAppIconPath('classic')).toBe('classic-icon')
     expect(getAppIconPath('watercolor')).toBe('watercolor-icon')
     expect(getAppIconPath('blue')).toBe('blue-icon')
+    expect(getAppIconPath('bell')).toBe('bell-icon')
+    expect(getAppIconPath('bell-dark')).toBe('bell-dark-icon')
+    expect(getAppIconPath('bell-dark-aurora')).toBe('bell-dark-aurora-icon')
     expect(getAppIconPath('missing')).toBe('classic-icon')
   })
 

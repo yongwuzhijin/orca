@@ -12,10 +12,12 @@ import {
   getFileExplorerOwnerUnresolvedMessage,
   requireMatchingFileExplorerOperationRoute
 } from './file-explorer-operation-owner'
+import type { ReviewFilePreviewTarget } from '@/components/todo/detail/review-file-preview-context'
 
 type UseFileExplorerHandlersParams = {
   activeWorktreeId: string | null
   runtimeEnvironmentId?: string | null
+  onFileActivate?: (target: ReviewFilePreviewTarget) => void
   openFile: (
     params: {
       filePath: string
@@ -61,6 +63,7 @@ export async function activateFileExplorerNode(args: {
   activeWorktreeId: string | null
   runtimeEnvironmentId?: string | null
   openFile: (params: OpenFileParams, options?: OpenFileOptions) => void
+  onFileActivate?: (target: ReviewFilePreviewTarget) => void
   toggleDir: (worktreeId: string, dirPath: string) => void
   canToggleDirectories?: boolean
   loadDir: UseFileExplorerHandlersParams['loadDir']
@@ -73,6 +76,7 @@ export async function activateFileExplorerNode(args: {
     node,
     activeWorktreeId,
     openFile,
+    onFileActivate,
     toggleDir,
     canToggleDirectories = true,
     loadDir,
@@ -129,6 +133,14 @@ export async function activateFileExplorerNode(args: {
       return
     }
   }
+  if (onFileActivate) {
+    onFileActivate({
+      filePath: node.path,
+      relativePath: node.relativePath,
+      fileName: node.name
+    })
+    return
+  }
   let fileRuntimeEnvironmentId: string | null
   try {
     const route = requireMatchingFileExplorerOperationRoute(activeWorktreeId, node.operationOwner)
@@ -161,6 +173,7 @@ export async function activateFileExplorerNode(args: {
 export function useFileExplorerHandlers({
   activeWorktreeId,
   runtimeEnvironmentId,
+  onFileActivate,
   openFile,
   makePreviewFilePermanent,
   toggleDir,
@@ -216,6 +229,7 @@ export function useFileExplorerHandlers({
         activeWorktreeId,
         runtimeEnvironmentId,
         openFile,
+        onFileActivate,
         toggleDir:
           dirToggle === 'deferred'
             ? (worktreeId, dirPath) => {
@@ -241,6 +255,7 @@ export function useFileExplorerHandlers({
     [
       activeWorktreeId,
       runtimeEnvironmentId,
+      onFileActivate,
       canToggleDirectories,
       settlePendingDirToggle,
       loadDir,

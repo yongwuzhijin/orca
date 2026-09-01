@@ -6,6 +6,36 @@ import type { HookListenerState } from '../listener-state'
 import { resolvePrompt, resolveToolState } from '../prompt-fields'
 import { extractToolFields, isNewTurnEvent } from '../provider-event-routing'
 
+function cursorDeliveredAssistantMessage(
+  snapshotMessage: string | null | undefined,
+  previousStatus: ParsedAgentStatusPayload | undefined
+): string | null {
+  const fromSnapshot = snapshotMessage?.trim()
+  if (fromSnapshot) {
+    return fromSnapshot
+  }
+  const fromPrevious = previousStatus?.lastAssistantMessage?.trim()
+  return fromPrevious || null
+}
+
+// Why: Cursor stop.status is not only user cancellation — post-stream cleanup can emit
+// `error` after the answer is already on screen (e.g. WritableIterable is closed).
+export function isCursorStopInterrupted(
+  status: unknown,
+  deliveredAssistantMessage: string | null
+): boolean | undefined {
+  if (typeof status !== 'string' || status === 'completed') {
+    return undefined
+  }
+  if (status === 'cancelled' || status === 'aborted') {
+    return true
+  }
+  if (deliveredAssistantMessage) {
+    return undefined
+  }
+  return true
+}
+
 export function normalizeCursorEvent(
   state: HookListenerState,
   eventName: unknown,
@@ -45,10 +75,11 @@ export function normalizeCursorEvent(
   )
 
   const interrupted =
-    eventName === 'stop' &&
-    typeof hookPayload.status === 'string' &&
-    hookPayload.status !== 'completed'
-      ? true
+    eventName === 'stop'
+      ? isCursorStopInterrupted(
+          hookPayload.status,
+          cursorDeliveredAssistantMessage(snapshot.lastAssistantMessage, previousStatus)
+        )
       : undefined
 
   return normalizeAgentStatusPayload({

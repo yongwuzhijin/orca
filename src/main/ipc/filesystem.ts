@@ -135,6 +135,8 @@ import { getRuntimePathBasename } from '../../shared/cross-platform-path'
 import type { LocalProjectWorktreeGitOptions } from '../project-runtime-git-options'
 import { registerLocalLogTailHandlers } from './local-log-tail'
 import { localLogFileIdentity } from '../ai-vault/local-log-tail-reader'
+import { isMacosQoderTranscriptPath } from '../native-chat/macos-qoder-transcript-paths'
+import { readMacosQoderTranscriptFile } from '../native-chat/macos-qoder-transcript-read'
 import { sanitizeLocalDownloadFilename } from '../local-download-filename'
 import { registerFilesystemDownloadFolderHandlers } from './filesystem-download-folder'
 import { getWorktreeSharedLinkPaths } from '../git/worktree-shared-directories'
@@ -169,14 +171,25 @@ async function readLocalLogSnapshot(filePath: string): Promise<{
   isBinary: boolean
   fileIdentity?: string
 }> {
+  const stats = await stat(filePath)
+  if (stats.size > MAX_TEXT_FILE_SIZE) {
+    throw new Error(
+      `File too large: ${(stats.size / 1024 / 1024).toFixed(1)}MB exceeds ${MAX_TEXT_FILE_SIZE / 1024 / 1024}MB limit`
+    )
+  }
+  if (isMacosQoderTranscriptPath(filePath)) {
+    const content = await readMacosQoderTranscriptFile(filePath, 'utf-8')
+    if (isBinaryBuffer(Buffer.from(content))) {
+      return { content: '', isBinary: true }
+    }
+    return {
+      content,
+      isBinary: false,
+      fileIdentity: localLogFileIdentity(stats)
+    }
+  }
   const handle = await open(filePath, 'r')
   try {
-    const stats = await handle.stat()
-    if (stats.size > MAX_TEXT_FILE_SIZE) {
-      throw new Error(
-        `File too large: ${(stats.size / 1024 / 1024).toFixed(1)}MB exceeds ${MAX_TEXT_FILE_SIZE / 1024 / 1024}MB limit`
-      )
-    }
     const buffer = await handle.readFile()
     if (buffer.byteLength > MAX_TEXT_FILE_SIZE) {
       throw new Error(
@@ -607,7 +620,9 @@ export function registerFilesystemHandlers(
       }
 
       if (mimeType) {
-        const buffer = await readFile(filePath)
+        const buffer = isMacosQoderTranscriptPath(filePath)
+          ? Buffer.from(await readMacosQoderTranscriptFile(filePath, 'utf-8'))
+          : await readFile(filePath)
         return {
           content: buffer.toString('base64'),
           isBinary: true,
@@ -618,16 +633,22 @@ export function registerFilesystemHandlers(
       }
 
       // Why: probe large unknown files first so archives aren't fully buffered only to discover they aren't editable text.
-      if (stats.size > BINARY_PROBE_BYTES && (await isBinaryFilePrefix(filePath))) {
+      if (
+        stats.size > BINARY_PROBE_BYTES &&
+        !isMacosQoderTranscriptPath(filePath) &&
+        (await isBinaryFilePrefix(filePath))
+      ) {
         return { content: '', isBinary: true }
       }
 
-      const buffer = await readFile(filePath)
-      if (isBinaryBuffer(buffer)) {
+      const content = isMacosQoderTranscriptPath(filePath)
+        ? await readMacosQoderTranscriptFile(filePath, 'utf-8')
+        : (await readFile(filePath)).toString('utf-8')
+      if (isBinaryBuffer(Buffer.from(content))) {
         return { content: '', isBinary: true }
       }
 
-      return { content: buffer.toString('utf-8'), isBinary: false }
+      return { content, isBinary: false }
     }
   )
 

@@ -1,8 +1,10 @@
-import { open } from 'node:fs/promises'
+import { open, stat } from 'node:fs/promises'
 import {
   LOCAL_LOG_TAIL_CHUNK_BYTES,
   type LocalLogTailReadResult
 } from '../../shared/local-log-tail-types'
+import { isMacosQoderTranscriptPath } from '../native-chat/macos-qoder-transcript-paths'
+import { readMacosQoderTranscriptSlice } from '../native-chat/macos-qoder-transcript-read'
 
 export function localLogFileIdentity(stats: {
   dev: number
@@ -21,6 +23,52 @@ export async function readLocalLogTailRange(
 ): Promise<LocalLogTailReadResult> {
   if (!Number.isSafeInteger(fromByteOffset) || fromByteOffset < 0) {
     throw new Error('Invalid local log tail byte offset')
+  }
+
+  if (isMacosQoderTranscriptPath(filePath)) {
+    const initialStats = await stat(filePath)
+    if (!initialStats.isFile()) {
+      throw new Error('Local log tail target is not a file')
+    }
+    const fileIdentity = localLogFileIdentity(initialStats)
+    if (
+      fromByteOffset > initialStats.size ||
+      (expectedIdentity !== undefined && expectedIdentity !== fileIdentity)
+    ) {
+      return {
+        contentBase64: '',
+        nextByteOffset: 0,
+        fileSize: initialStats.size,
+        fileIdentity,
+        hasMore: initialStats.size > 0,
+        reset: true
+      }
+    }
+    const bytesToRead = Math.min(LOCAL_LOG_TAIL_CHUNK_BYTES, initialStats.size - fromByteOffset)
+    const buffer =
+      bytesToRead > 0
+        ? await readMacosQoderTranscriptSlice(filePath, fromByteOffset, bytesToRead)
+        : Buffer.alloc(0)
+    const nextByteOffset = fromByteOffset + buffer.byteLength
+    const finalStats = await stat(filePath)
+    if (nextByteOffset > finalStats.size) {
+      return {
+        contentBase64: '',
+        nextByteOffset: 0,
+        fileSize: finalStats.size,
+        fileIdentity,
+        hasMore: finalStats.size > 0,
+        reset: true
+      }
+    }
+    return {
+      contentBase64: buffer.toString('base64'),
+      nextByteOffset,
+      fileSize: finalStats.size,
+      fileIdentity,
+      hasMore: nextByteOffset < finalStats.size,
+      reset: false
+    }
   }
 
   const handle = await open(filePath, 'r')

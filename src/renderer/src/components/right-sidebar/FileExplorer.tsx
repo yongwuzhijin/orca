@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react'
 import { useAppStore } from '@/store'
-import { useActiveWorktree, useRepoById } from '@/store/selectors'
+import { useRepoById } from '@/store/selectors'
 import { basename } from '@/lib/path'
 import { cn } from '@/lib/utils'
 import { isGitRepoKind } from '../../../../shared/repo-kind'
@@ -27,14 +27,22 @@ import { useFileExplorerNameFilter } from './use-file-explorer-name-filter'
 import { useFileExplorerTreePaneState } from './use-file-explorer-tree-pane-state'
 import { translate } from '@/i18n/i18n'
 import type { RightSidebarExplorerView } from '../../../../shared/ui-chrome-types'
+import { useReviewEmbeddedWorktreeId } from '@/components/todo/detail/review-embedded-worktree-context'
 
 function FileExplorerFiles(): React.JSX.Element {
   const explorerView = useAppStore((s) => s.rightSidebarExplorerView)
   const showRightSidebarFiles = useAppStore((s) => s.showRightSidebarFiles)
   const showRightSidebarSearch = useAppStore((s) => s.showRightSidebarSearch)
   const searchPanel = useFileSearchPanel(explorerView)
-  const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
-  const activeWorktree = useActiveWorktree()
+  const embeddedWorktreeId = useReviewEmbeddedWorktreeId()
+  const storeActiveWorktreeId = useAppStore((s) => s.activeWorktreeId)
+  const activeWorktreeId = embeddedWorktreeId ?? storeActiveWorktreeId
+  const activeWorktree = useAppStore((s) =>
+    activeWorktreeId
+      ? (s.getKnownWorktreeById(activeWorktreeId, s.activeWorkspaceExecutionHostId ?? undefined) ??
+        null)
+      : null
+  )
   const activeRepo = useRepoById(activeWorktree?.repoId ?? null)
   const expandedDirs = useAppStore((s) => s.expandedDirs)
   const collapseAllDirs = useAppStore((s) => s.collapseAllDirs)
@@ -48,11 +56,14 @@ function FileExplorerFiles(): React.JSX.Element {
 
   const worktreePath = activeWorktree?.path ?? null
   const isFilesViewActive = explorerView === 'files'
-  const visibleFilesWorktreePath = getVisibleFileExplorerWorktreePath({
-    explorerView,
-    rightSidebarOpen,
-    worktreePath
-  })
+  const visibleFilesWorktreePath =
+    embeddedWorktreeId !== null
+      ? worktreePath
+      : getVisibleFileExplorerWorktreePath({
+          explorerView,
+          rightSidebarOpen,
+          worktreePath
+        })
   const repoName = activeRepo?.displayName ?? (worktreePath ? basename(worktreePath) : '')
   const activeRepoSupportsGit = activeRepo ? isGitRepoKind(activeRepo) : false
 

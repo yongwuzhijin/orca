@@ -22,6 +22,10 @@ import {
   extractString,
   parseJsonObject
 } from './session-scanner-values'
+import {
+  extractWorkingDirectoryFromCursorRecord,
+  resolveCursorSessionCwdFromPath
+} from './cursor-project-workspace-path'
 
 type ParserSessionOptions = {
   executionHostId?: ExecutionHostId
@@ -59,6 +63,9 @@ function consumeCursorRecordLine(accumulator: SessionAccumulator, line: string):
   if (!record) {
     return
   }
+  if (accumulator.cwd === null) {
+    accumulator.cwd = extractWorkingDirectoryFromCursorRecord(record) ?? accumulator.cwd
+  }
   updateTimeline(accumulator, extractString(record.timestamp))
   const role = extractString(record.role)
   if (role === 'user' || role === 'assistant') {
@@ -76,10 +83,13 @@ function consumeCursorRecordLine(accumulator: SessionAccumulator, line: string):
 }
 
 export function createCursorSessionResumeState(file: FileWithMtime): ResumableSessionParseState {
-  return accumulatorFoldResumeState(
-    createAccumulator({ agent: 'cursor', file, sessionId: sessionIdFromFileName(file.path) }),
-    consumeCursorRecordLine
-  )
+  const accumulator = createAccumulator({
+    agent: 'cursor',
+    file,
+    sessionId: sessionIdFromFileName(file.path)
+  })
+  accumulator.cwd = resolveCursorSessionCwdFromPath(file.path)
+  return accumulatorFoldResumeState(accumulator, consumeCursorRecordLine)
 }
 
 async function parseCursorSessionLines(args: {

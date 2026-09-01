@@ -161,6 +161,49 @@ describe('scanRemoteAiVaultSessions', () => {
     })
   })
 
+  it('discovers Qoder transcripts under the remote home projects root', async () => {
+    const provider = new MemoryRemoteProvider()
+    provider.addFile(
+      '/home/ada/.qoder/projects/-home-ada-repo/qoder-session.jsonl',
+      jsonLines([
+        {
+          sessionId: 'qoder-session',
+          timestamp: '2026-07-04T05:00:00.000Z',
+          type: 'user',
+          cwd: '/home/ada/repo',
+          message: { content: [{ type: 'text', text: 'Rebase the remote branch' }] }
+        },
+        {
+          sessionId: 'qoder-session',
+          timestamp: '2026-07-04T05:00:01.000Z',
+          type: 'assistant',
+          message: { model: 'auto', content: 'On it.' }
+        }
+      ]),
+      50
+    )
+
+    const result = await scanRemoteAiVaultSessions({
+      provider,
+      executionHostId: 'ssh:dev-box',
+      remoteHome: '/home/ada',
+      hostPlatform: getRemoteHostPlatform('linux-x64')
+    })
+
+    expect(result.issues).toEqual([])
+    expect(result.sessions).toHaveLength(1)
+    expect(result.sessions[0]).toMatchObject({
+      executionHostId: 'ssh:dev-box',
+      executionHostPlatform: 'linux',
+      agent: 'qoder',
+      sessionId: 'qoder-session',
+      title: 'Rebase the remote branch',
+      filePath: '/home/ada/.qoder/projects/-home-ada-repo/qoder-session.jsonl',
+      // Resume is by id, not transcript path.
+      resumeCommand: "cd '/home/ada/repo' && qodercli --resume 'qoder-session'"
+    })
+  })
+
   it('discovers Prime Agent transcripts under the remote home sessions root', async () => {
     const provider = new MemoryRemoteProvider()
     const fixture = primeAgentFixture()

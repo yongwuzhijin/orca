@@ -108,6 +108,7 @@ export function remoteSessionSources(
       remotePrimeAgentSessionsSegments(),
       primeAgentParser
     ),
+    jsonlSource('qoder', remoteHome, hostPlatform, remoteQoderProjectsSegments(), qoderParser),
     jsonlSource(
       'droid',
       remoteHome,
@@ -281,6 +282,18 @@ function primeAgentParser(
   return parseMessageGraphSessionContent('prime-agent', file, content, platform, options, signal)
 }
 
+// Why: Qoder writes Claude-shaped JSONL under its own home (verified against
+// qodercli v1.1.3), so the Claude parser is reused with the qoder agent label.
+function qoderParser(
+  file: FileWithMtime,
+  content: string,
+  platform: NodeJS.Platform,
+  options: RemoteParserOptions,
+  signal?: AbortSignal
+): Promise<AiVaultSession | null> {
+  return parseClaudeSessionContent(file, content, platform, options, signal, 'qoder')
+}
+
 function openClawParser(
   file: FileWithMtime,
   content: string,
@@ -303,9 +316,13 @@ function remoteOmpSessionsSegments(): string[] {
   return normalizeAgentSessionsDir('/.omp/agent/sessions', '.omp').split('/').filter(Boolean)
 }
 
-// Why: remote roots are posix regardless of the client platform, so these stay literal
-// rather than round-tripping through a local-platform path join that would emit
-// backslashes on a Windows client and collapse into a single bogus segment.
+// Why: remote roots are posix regardless of the client platform, so the segments below
+// stay literal rather than round-tripping through a local-platform path join that would
+// emit backslashes on a Windows client and collapse into a single bogus segment.
 function remotePrimeAgentSessionsSegments(): string[] {
   return ['.prime', 'agent', 'sessions']
+}
+
+function remoteQoderProjectsSegments(): string[] {
+  return ['.qoder', 'projects']
 }

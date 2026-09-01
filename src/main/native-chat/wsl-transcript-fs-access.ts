@@ -3,6 +3,14 @@ import { access, lstat, open, readdir, readFile, stat, type FileHandle } from 'n
 import { Readable } from 'node:stream'
 import { StringDecoder } from 'node:string_decoder'
 import { isWslUncPath } from '../../shared/wsl-paths'
+import { isMacosQoderTranscriptPath } from './macos-qoder-transcript-paths'
+import {
+  createMacosQoderTranscriptHandle,
+  isMacosQoderTranscriptHandle,
+  readMacosQoderTranscriptFile,
+  readMacosQoderTranscriptSlice,
+  type MacosQoderTranscriptHandle
+} from './macos-qoder-transcript-read'
 import { runWslTranscriptFsTask, type WslTranscriptFsTaskPriority } from './wsl-transcript-fs-gate'
 import {
   closeWslTranscriptFsProcess,
@@ -21,7 +29,10 @@ import { wslTranscriptFsLaneKey } from './wsl-transcript-fs-route'
 // healthy-but-slow transcript is not false-failed by a whole-file timeout.
 export const WSL_TRANSCRIPT_READ_CHUNK_BYTES = 1024 * 1024
 
-export type TranscriptFileHandle = FileHandle | WslTranscriptFsProcessHandle
+export type TranscriptFileHandle =
+  | FileHandle
+  | WslTranscriptFsProcessHandle
+  | MacosQoderTranscriptHandle
 
 // One request object drives both the gate's dedupe/route key and the child
 // call, so the two can never disagree on the operation or path.
@@ -87,6 +98,9 @@ export function wslGatedReadFile(
   priority: WslTranscriptFsTaskPriority,
   signal?: AbortSignal
 ): Promise<string> {
+  if (isMacosQoderTranscriptPath(path)) {
+    return readMacosQoderTranscriptFile(path, encoding)
+  }
   return runReusableFsOperation({ operation: 'readfile', path, encoding }, priority, signal, () =>
     readFile(path, encoding)
   )
@@ -98,6 +112,9 @@ export function wslGatedOpen(
   priority: WslTranscriptFsTaskPriority,
   signal?: AbortSignal
 ): Promise<TranscriptFileHandle> {
+  if (isMacosQoderTranscriptPath(path)) {
+    return Promise.resolve(createMacosQoderTranscriptHandle(path))
+  }
   if (!isWslUncPath(path)) {
     return open(path, 'r')
   }
@@ -121,7 +138,7 @@ export function wslGatedOpen(
  * buffer: a joiner would receive the first caller's buffer while its own
  * (often `Buffer.allocUnsafe`) stays uninitialized.
  */
-export function wslGatedRead(
+export async function wslGatedRead(
   handle: TranscriptFileHandle,
   path: string,
   buffer: Buffer,
@@ -131,6 +148,12 @@ export function wslGatedRead(
   priority: WslTranscriptFsTaskPriority,
   signal?: AbortSignal
 ): Promise<{ bytesRead: number; buffer: Buffer }> {
+  if (isMacosQoderTranscriptHandle(handle)) {
+    signal?.throwIfAborted()
+    const body = await readMacosQoderTranscriptSlice(handle.path, position, length)
+    buffer.set(body, offset)
+    return { bytesRead: body.byteLength, buffer }
+  }
   // Handle kind decides before path spelling: a process-owned handle must never
   // hit the FileHandle branch even if a caller re-derives the path off-UNC.
   if (!isWslUncPath(path) && !isWslTranscriptFsProcessHandle(handle)) {
@@ -152,8 +175,10 @@ export function wslGatedRead(
 
 /** Never gated; process-owned handles retire on the client's bounded deadline. */
 export function closeTranscriptHandle(handle: TranscriptFileHandle, path: string): Promise<void> {
-  if (isWslTranscriptFsProcessHandle(handle)) {
-    void closeWslTranscriptFsProcess(handle).catch(() => {})
+  if (isWslTranscriptFsProcessHandle(handle) || isMacosQoderTranscriptHandle(handle)) {
+    if (isWslTranscriptFsProcessHandle(handle)) {
+      void closeWslTranscriptFsProcess(handle).catch(() => {})
+    }
     return Promise.resolve()
   }
   if (!isWslUncPath(path)) {
@@ -275,10 +300,10 @@ export function openTranscriptReadStream(
   priority: WslTranscriptFsTaskPriority,
   signal?: AbortSignal
 ): Readable {
-  if (!isWslUncPath(path)) {
-    // Node destroys the stream with an AbortError on abort, matching how the
-    // gated branch surfaces cancellation to the same consumers.
-    return createReadStream(path, { ...options, signal })
+  if (isWslUncPath(path) || isMacosQoderTranscriptPath(path)) {
+    return Readable.from(gatedChunks(path, options, priority, signal))
   }
-  return Readable.from(gatedChunks(path, options, priority, signal))
+  // Node destroys the stream with an AbortError on abort, matching how the
+  // gated branch surfaces cancellation to the same consumers.
+  return createReadStream(path, { ...options, signal })
 }

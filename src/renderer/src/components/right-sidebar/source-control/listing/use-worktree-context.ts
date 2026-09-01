@@ -5,13 +5,14 @@ import { getRepoOwnerRoutedSettings } from '@/lib/repo-runtime-owner'
 import { resolveSourceControlLaunchPlatform } from '@/lib/source-control-launch-platform'
 import { getWorktreeGitIdentityDisplay } from '@/lib/worktree-git-identity-display'
 import { useAppStore } from '@/store'
-import { useActiveWorktree, useRepoById, useWorktreeMap } from '@/store/selectors'
+import { useRepoById, useWorktreeMap } from '@/store/selectors'
 import { getGitHubPRCacheKey } from '@/store/slices/github-cache-key'
 import { getHostedReviewCacheKey } from '@/store/slices/hosted-review'
 import type { GitBranchChangeEntry } from '../../../../../../shared/git-diff-compare-types'
 import type { GitStatusEntry } from '../../../../../../shared/git-status-types'
 import { isFolderRepo } from '../../../../../../shared/repo-kind'
 import { selectReviewCacheData, selectReviewCacheEntry } from '../../review-cache-entry-selection'
+import { useReviewEmbeddedWorktreeId } from '@/components/todo/detail/review-embedded-worktree-context'
 
 const EMPTY_GIT_STATUS_ENTRIES: GitStatusEntry[] = []
 const EMPTY_BRANCH_CHANGE_ENTRIES: GitBranchChangeEntry[] = []
@@ -22,8 +23,15 @@ const EMPTY_BRANCH_CHANGE_ENTRIES: GitBranchChangeEntry[] = []
  * the repo-owner-routed settings that every git call must be pinned to.
  */
 export function useSourceControlWorktreeContext() {
-  const activeWorktree = useActiveWorktree()
-  const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
+  const embeddedWorktreeId = useReviewEmbeddedWorktreeId()
+  const storeActiveWorktreeId = useAppStore((s) => s.activeWorktreeId)
+  const activeWorktreeId = embeddedWorktreeId ?? storeActiveWorktreeId
+  const activeWorktree = useAppStore((s) =>
+    activeWorktreeId
+      ? (s.getKnownWorktreeById(activeWorktreeId, s.activeWorkspaceExecutionHostId ?? undefined) ??
+        null)
+      : null
+  )
   const activeWorktreeInstanceId = activeWorktree?.instanceId
   const activeGroupId = useAppStore((s) =>
     activeWorktreeId ? s.activeGroupIdByWorktree[activeWorktreeId] : undefined
@@ -137,7 +145,8 @@ export function useSourceControlWorktreeContext() {
       : getLocalProjectExecutionRuntimeContext(useAppStore.getState(), activeWorktreeId)
   })
   // Why: the sidebar stays mounted when closed, so gate polling on tab AND open or branchCompare/PR fetch would run with no visible consumer.
-  const isBranchVisible = rightSidebarTab === 'source-control' && rightSidebarOpen
+  const isBranchVisible =
+    embeddedWorktreeId !== null || (rightSidebarTab === 'source-control' && rightSidebarOpen)
   const hasUncommittedEntries = entries.length > 0
 
   return {
