@@ -33,6 +33,7 @@ export type AiVaultScanOptions = {
   primeAgentSessionsDir?: string
   droidSessionsDir?: string
   droidProjectsDir?: string
+  clineSessionsDir?: string
   kimiSessionsDir?: string
   /** Override the Qoder projects root (`~/.qoder/projects`) for tests / isolated scans. */
   qoderProjectsDir?: string

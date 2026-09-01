@@ -99,7 +99,7 @@ export function SshStatusSegment({
         hasStatusEntry: Boolean(statusEntry),
         status: statusEntry?.status ?? null,
         active: settings?.activeRuntimeEnvironmentId === environment.id,
-        remoteControl: statusEntry?.status?.remoteControl ?? null
+        remoteControl: statusEntry?.remoteControl ?? statusEntry?.status?.remoteControl ?? null
       }
     })
   const runtimeHostRows = runtimeHosts.map((host) => ({
@@ -260,6 +260,7 @@ export function SshStatusSegment({
             label={host.label}
             state={host.state}
             detail={runtimeHostConnectionDetail(host.remoteControl)}
+            diagnostics={host.remoteControl}
             onConnect={() => connectRuntimeHost(host.id)}
             onDisconnect={() => disconnectRuntimeHost(host.id)}
           />
@@ -279,6 +280,7 @@ export function SshStatusSegment({
             label={host.label}
             state={host.state}
             detail={runtimeHostConnectionDetail(host.remoteControl)}
+            diagnostics={host.remoteControl}
             onConnect={() => connectRuntimeHost(host.id)}
             onDisconnect={() => disconnectRuntimeHost(host.id)}
           />

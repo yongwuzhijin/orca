@@ -209,9 +209,10 @@ export function createRuntimeHome(): RuntimeHomeStub {
   return {
     syncForCurrentSelection: vi.fn(),
     clearLastWrittenAuthJson: vi.fn(),
-    prepareForRateLimitFetch: vi.fn(
-      (): CodexRateLimitHomeResolution => ({ kind: 'ready', codexHomePath: null })
-    )
+    prepareForRateLimitFetch: vi.fn((): CodexRateLimitHomeResolution => ({
+      kind: 'ready',
+      codexHomePath: null
+    }))
   }
 }
 

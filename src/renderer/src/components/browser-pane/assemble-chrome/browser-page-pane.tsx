@@ -4,16 +4,15 @@ import { cn } from '@/lib/utils'
 import { getConnectionIdFromState } from '@/lib/connection-context'
 import { useAppStore } from '@/store'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
-import { ORCA_BROWSER_BLANK_URL } from '../../../../../shared/constants'
 import type { BrowserPage as BrowserPageState } from '../../../../../shared/browser-workspace-types'
-import { normalizeExternalBrowserUrl } from '../../../../../shared/browser-url'
-import { getLiveBrowserUrl } from '../describe-page/live-browser-url-registry'
-import { ensureBrowserPageViewport } from '../host-guest/browser-page-viewport'
+import { getBrowserViewportPreset } from '../../../../../shared/browser-viewport-presets'
+import {
+  ensureBrowserPageViewport,
+  scrollBrowserPageViewport,
+  setBrowserPageViewportPresetSize
+} from '../host-guest/browser-page-viewport'
 import { isBrowserPagePanePaintable } from '../host-guest/browser-page-paintability'
-import { getShareableBrowserArtifactFile } from '../describe-page/browser-artifact-upload'
 import { useGrabMode } from '../annotate/useGrabMode'
-import { getBrowserPageZoomIndicatorState } from '../host-guest/browser-page-zoom'
-import { getOpenableExternalUrl, toDisplayUrl } from '../describe-page/browser-page-url-display'
 import type { BrowserOverlayViewport } from '../describe-page/browser-annotation-geometry'
 import type {
   BrowserChromeShortcutScope,
@@ -39,6 +38,9 @@ import { useBrowserPageWebviewLifecycle } from '../host-guest/use-browser-page-w
 import { useBrowserPageWebviewPartition } from '../host-guest/use-browser-page-webview-partition'
 import { useBrowserPageWebviewUrlSync } from '../navigate/use-browser-page-webview-url-sync'
 import { useBrowserPageZoomFeedback } from '../host-guest/use-browser-page-zoom-feedback'
+import { useBrowserPageViewportScrollReporting } from '../host-guest/use-browser-page-viewport-scroll-reporting'
+import { buildBrowserPagePaneUrlDisplayState } from './browser-page-pane-url-display-state'
+import { useBrowserPageGuestVisibility } from './use-browser-page-guest-visibility'
 
 export function BrowserPagePane({
   browserTab,
@@ -77,10 +79,35 @@ export function BrowserPagePane({
   })
   const pageViewport = ensureBrowserPageViewport(browserTab.id, workspaceId)
   const pageViewportContainer = pageViewport?.container ?? null
+  const pageViewportScroller = pageViewport?.scroller ?? null
   const containerRef = useRef<HTMLDivElement | null>(pageViewportContainer)
   useLayoutEffect(() => {
     containerRef.current = pageViewportContainer
   }, [pageViewportContainer])
+  useLayoutEffect(() => {
+    const preset = getBrowserViewportPreset(browserTab.viewportPresetId ?? null)
+    setBrowserPageViewportPresetSize(
+      browserTab.id,
+      preset ? { width: preset.width, height: preset.height } : null
+    )
+  }, [browserTab.id, browserTab.viewportPresetId])
+  useBrowserPageViewportScrollReporting(
+    browserTab.id,
+    pageViewportScroller,
+    browserTab.viewportPresetId ?? null
+  )
+  useEffect(() => {
+    const subscribe = window.api.ui.onScrollBrowserPage
+    if (!subscribe || !pageViewportScroller || !browserTab.viewportPresetId) {
+      return
+    }
+    return subscribe((event) => {
+      if (event.browserPageId !== browserTab.id) {
+        return
+      }
+      scrollBrowserPageViewport(browserTab.id, event.deltaX, event.deltaY)
+    })
+  }, [browserTab.id, browserTab.viewportPresetId, pageViewportScroller])
   const chromeHeaderRef = useRef<HTMLDivElement | null>(null)
   const webviewRef = useRef<Electron.WebviewTag | null>(null)
   const addressBarInputRef = useRef<HTMLInputElement | null>(null)
@@ -141,12 +168,14 @@ export function BrowserPagePane({
     worktreeId
   })
   const grab = useGrabMode(browserTab.id)
-  const markup = useBrowserPageMarkupCapture(webviewRef, containerRef)
+  const markup = useBrowserPageMarkupCapture(webviewRef)
   const grabAnnotations = useBrowserPageGrabAnnotations({
     browserTabId: browserTab.id,
     isActive,
     grab,
     containerRef,
+    trackingContainer: pageViewport?.container ?? null,
+    trackingScroller: pageViewport?.scroller ?? null,
     webviewRef,
     setBrowserOverlayViewport,
     browserAnnotationsLength: annotationSend.browserAnnotations.length,
@@ -172,6 +201,7 @@ export function BrowserPagePane({
   useBrowserPageWebviewLifecycle({
     browserTabId: browserTab.id,
     browserTabUrl: browserTab.url,
+    browserTabLoading: browserTab.loading,
     browserTabLoadError: browserTab.loadError,
     workspaceId,
     worktreeId,
@@ -232,6 +262,7 @@ export function BrowserPagePane({
   const reload = useBrowserPageReloadActions({
     browserTab,
     webviewRef,
+    trackNextLoadingEventRef,
     retryGuestRecoveryRef,
     onUpdatePageStateRef
   })
@@ -262,39 +293,23 @@ export function BrowserPagePane({
     grabIsInteractive: grab.state !== 'idle' && grab.state !== 'error'
   })
 
-  // Why: a blank tab reads as 'about:blank' or the resolved data: URL, so match both to keep the "New Browser Tab" overlay visible.
-  const isBlankTab = browserTab.url === 'about:blank' || browserTab.url === ORCA_BROWSER_BLANK_URL
-  // Why: synchronous webview URL access blocks render; navigation handlers update this cache before their store writes can re-render the pane.
-  const liveBrowserUrl = getLiveBrowserUrl(browserTab.id) ?? browserTab.url
-  const externalUrl = getOpenableExternalUrl(liveBrowserUrl)
-  const currentBrowserUrl = toDisplayUrl(liveBrowserUrl)
-  const shareableArtifactFile =
-    workspaceConnectionId === null ? getShareableBrowserArtifactFile(currentBrowserUrl) : null
-  const failedNavigationUrl = browserTab.loadError?.validatedUrl ?? currentBrowserUrl
-  const failureExternalUrl = normalizeExternalBrowserUrl(failedNavigationUrl)
-  const showFailureOverlay = Boolean(browserTab.loadError) && !isBlankTab
-  const browserZoomIndicatorState = getBrowserPageZoomIndicatorState({
-    feedbackVisible: zoom.browserZoomFeedbackVisible,
-    isDefaultZoom: zoom.browserZoomPercent === zoom.browserDefaultZoomPercent
+  const {
+    isBlankTab,
+    externalUrl,
+    currentBrowserUrl,
+    shareableArtifactFile,
+    failedNavigationUrl,
+    failureExternalUrl,
+    showFailureOverlay,
+    browserZoomIndicatorState
+  } = buildBrowserPagePaneUrlDisplayState({
+    browserTab,
+    workspaceConnectionId,
+    browserZoomFeedbackVisible: zoom.browserZoomFeedbackVisible,
+    browserZoomPercent: zoom.browserZoomPercent,
+    browserDefaultZoomPercent: zoom.browserDefaultZoomPercent
   })
-
-  useEffect(() => {
-    const webview = webviewRef.current
-    if (!webview) {
-      return
-    }
-    // Why: Electron webviews keep receiving native input under a React overlay unless their own hit testing is disabled.
-    webview.style.pointerEvents = inputLocked ? 'none' : 'auto'
-  }, [inputLocked])
-
-  useEffect(() => {
-    const webview = webviewRef.current
-    if (!webview) {
-      return
-    }
-    // Why: some Electron builds keep painting a hidden guest layer, so drop it from layout (display:none) instead of just hiding it.
-    webview.style.display = showFailureOverlay ? 'none' : 'flex'
-  }, [showFailureOverlay])
+  useBrowserPageGuestVisibility(webviewRef, inputLocked, showFailureOverlay)
 
   return (
     <div
@@ -367,6 +382,7 @@ export function BrowserPagePane({
               sshRouted={Boolean(sessionPartition?.startsWith('persist:orca-browser-v1-'))}
               isBlankTab={isBlankTab}
               containerRef={containerRef}
+              markupPortalContainer={pageViewport?.content ?? null}
               browserOverlayViewport={browserOverlayViewport}
               worktreeId={worktreeId}
               sessionProfileId={sessionProfileId}

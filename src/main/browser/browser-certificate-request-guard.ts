@@ -1,8 +1,8 @@
 import type { Session } from 'electron'
 
 import { toSecureCertificateEndpoint } from '../../shared/browser-url'
+import { getProxySessionApplicationReadiness } from '../network/proxy-settings'
 import { MAX_CERTIFICATE_GRANTS, type CertificateTrustGrant } from './browser-certificate-challenge'
-import { setBrowserBeforeRequestStage } from './browser-session-request-pipeline'
 
 type CertificateIdentity = Pick<
   CertificateTrustGrant,
@@ -44,10 +44,19 @@ export class BrowserCertificateRequestGuard {
     if (this.guardedSessions.has(session)) {
       return
     }
-    // Why: Chromium caches cert continuations per session; restore the per-WebContents gate.
-    setBrowserBeforeRequestStage(session, 'certificate-guard', (details) =>
-      this.shouldBlockRequest(session, details) ? { cancel: true } : undefined
-    )
+    // Why: Chromium caches certificate continuations at session scope. This
+    // request gate restores the narrower per-WebContents approval boundary.
+    session.webRequest.onBeforeRequest((details, callback) => {
+      const readiness = getProxySessionApplicationReadiness(session)
+      const answer = (ready: boolean): void => {
+        callback(!ready || this.shouldBlockRequest(session, details) ? { cancel: true } : {})
+      }
+      if (typeof readiness === 'boolean') {
+        answer(readiness)
+      } else {
+        void readiness.then(answer)
+      }
+    })
     this.guardedSessions.add(session)
   }
 
@@ -55,7 +64,7 @@ export class BrowserCertificateRequestGuard {
     if (!this.guardedSessions.delete(session)) {
       return
     }
-    setBrowserBeforeRequestStage(session, 'certificate-guard', null)
+    session.webRequest.onBeforeRequest(null)
     this.acceptedIdentityBySession.delete(session)
     for (const [webContentsId, grantSession] of this.grantSessionByGuestId) {
       if (grantSession === session) {
