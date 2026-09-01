@@ -3,6 +3,10 @@ import type Database from '../sqlite/sync-database'
 import type { CreateTodoItemInput } from '../../shared/todo/todo-item'
 import { DEFAULT_TODO_PROJECT_ID } from '../../shared/todo/todo-default-project'
 import { orderKeyBetween } from '../../shared/todo/order-key'
+import {
+  normalizeWorkspaceProjectIds,
+  primaryWorkspaceProjectId
+} from '../../shared/todo/workspace-project-ids'
 import { isTerminalTodoStatus, type TodoStatus } from '../../shared/todo/todo-status'
 import { ensureDefaultTodoProject } from './todo-project-store'
 import type { TodoProjectRow } from './todo-row-mapping'
@@ -41,12 +45,22 @@ export function insertTodoItem(db: Database.Database, input: CreateTodoItemInput
   const scheduledDate = input.scheduledDate ?? null
   const estimate = input.estimate ?? null
   const templateId = input.templateId ?? null
-  const workspaceProjectId = input.workspaceProjectId ?? null
+  const workspaceProjectIds = normalizeWorkspaceProjectIds(
+    input.workspaceProjectIds,
+    input.workspaceProjectId ?? null
+  )
+  const workspaceProjectId = primaryWorkspaceProjectId(
+    workspaceProjectIds,
+    input.workspaceProjectId ?? null
+  )
   const workspaceName = input.workspaceName?.trim() ? input.workspaceName.trim() : null
+  const prdLink = input.prdLink?.trim() ? input.prdLink.trim() : null
   const preferredAgent = input.preferredAgent ?? null
+  const executionMode = input.executionMode ?? null
   const autoPilotEnabled = input.autoPilotEnabled ?? false
   const autoPilotMaxTurns = input.autoPilotMaxTurns ?? null
   const designStageEnabled = input.designStageEnabled ?? false
+  const boundWorktreeId = input.boundWorktreeId?.trim() ? input.boundWorktreeId.trim() : null
   const { startedAt, completedAt } = deriveTodoItemTimestamps(status, null, null, timestamp)
 
   db.exec('BEGIN')
@@ -80,9 +94,9 @@ export function insertTodoItem(db: Database.Database, input: CreateTodoItemInput
         id, identifier, project_id, title, description, status, priority,
         scheduled_date, estimate, labels, template_id, order_key,
         created_at, updated_at, started_at, completed_at, session_id,
-        workspace_project_id, workspace_name, preferred_agent, auto_pilot_enabled, auto_pilot_max_turns,
-        design_stage_enabled
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        workspace_project_id, workspace_project_ids, workspace_name, preferred_agent, auto_pilot_enabled, auto_pilot_max_turns,
+        design_stage_enabled, prd_link, execution_mode, bound_worktree_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       id,
       identifier,
@@ -103,11 +117,15 @@ export function insertTodoItem(db: Database.Database, input: CreateTodoItemInput
       // New items start with no ACP session; setSessionId links one later.
       null,
       workspaceProjectId,
+      JSON.stringify(workspaceProjectIds),
       workspaceName,
       preferredAgent,
       autoPilotEnabled ? 1 : 0,
       autoPilotMaxTurns,
-      designStageEnabled ? 1 : 0
+      designStageEnabled ? 1 : 0,
+      prdLink,
+      executionMode,
+      boundWorktreeId
     )
 
     db.exec('COMMIT')

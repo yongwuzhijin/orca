@@ -16,10 +16,8 @@ import { useAppStore } from '@/store'
 import type { CreateTodoItemInput } from '../../../../shared/todo/todo-item'
 import type { TodoPriority } from '../../../../shared/todo/todo-priority'
 import type { TodoStatus } from '../../../../shared/todo/todo-status'
-import { ACP_ENGINES, type AcpEngine } from '../../../../shared/acp/acp-session'
 import { TODO_STATUS_CATALOG } from './todo-status-catalog'
 import { TODO_PRIORITY_CATALOG } from './todo-priority-catalog'
-import { TodoTemplatePicker } from './todo-template-picker'
 import {
   TodoCreateWorkspaceFields,
   type TodoCreateWorkspaceFieldsValue
@@ -29,15 +27,14 @@ export type CreateTodoFormValues = {
   projectId: string
   title: string
   description?: string
+  prdLink?: string
   status?: TodoStatus
   priority?: TodoPriority
   scheduledDate?: string | null
   estimate?: number | null
   labels?: string[]
-  templateId?: string | null
-  workspaceProjectId?: string | null
+  workspaceProjectIds?: string[]
   workspaceName?: string | null
-  preferredAgent?: AcpEngine | null
 }
 
 const TEXTAREA_CLASS =
@@ -46,8 +43,6 @@ const TEXTAREA_CLASS =
 const SELECT_CLASS =
   'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
 
-// Pure payload builder: trims the title and includes optional fields only when
-// they carry a meaningful value, so we never send empty strings to the backend.
 export function buildCreateTodoPayload(values: CreateTodoFormValues): CreateTodoItemInput {
   const payload: CreateTodoItemInput = {
     projectId: values.projectId,
@@ -55,6 +50,9 @@ export function buildCreateTodoPayload(values: CreateTodoFormValues): CreateTodo
   }
   if (values.description !== undefined && values.description.length > 0) {
     payload.description = values.description
+  }
+  if (values.prdLink?.trim()) {
+    payload.prdLink = values.prdLink.trim()
   }
   if (values.status !== undefined) {
     payload.status = values.status
@@ -71,17 +69,12 @@ export function buildCreateTodoPayload(values: CreateTodoFormValues): CreateTodo
   if (values.labels !== undefined && values.labels.length > 0) {
     payload.labels = values.labels
   }
-  if (values.templateId) {
-    payload.templateId = values.templateId
-  }
-  if (values.workspaceProjectId) {
-    payload.workspaceProjectId = values.workspaceProjectId
+  if (values.workspaceProjectIds !== undefined && values.workspaceProjectIds.length > 0) {
+    payload.workspaceProjectIds = values.workspaceProjectIds
+    payload.workspaceProjectId = values.workspaceProjectIds[0] ?? null
   }
   if (values.workspaceName?.trim()) {
     payload.workspaceName = values.workspaceName.trim()
-  }
-  if (values.preferredAgent) {
-    payload.preferredAgent = values.preferredAgent
   }
   return payload
 }
@@ -99,23 +92,20 @@ export function TodoCreateDialog({
 }: TodoCreateDialogProps): React.JSX.Element {
   const createTodoItem = useAppStore((s) => s.createTodoItem)
   const [title, setTitle] = React.useState('')
+  const [prdLink, setPrdLink] = React.useState('')
   const [description, setDescription] = React.useState('')
   const [status, setStatus] = React.useState<TodoStatus>(initialStatus ?? 'todo')
   const [priority, setPriority] = React.useState<TodoPriority>('none')
   const [scheduledDate, setScheduledDate] = React.useState('')
-  const [templateId, setTemplateId] = React.useState<string | null>(null)
   const [workspaceFields, setWorkspaceFields] = React.useState<TodoCreateWorkspaceFieldsValue>(
     () => ({
-      workspaceProjectId: null,
-      workspaceName: '',
-      preferredAgent: ACP_ENGINES[0]
+      workspaceProjectIds: [],
+      workspaceName: ''
     })
   )
 
   const canSubmit = title.trim().length > 0
 
-  // Keep the dialog open and preserve entered values if the IPC call rejects,
-  // so a transient failure never silently discards the user's input.
   const handleSubmit = async (): Promise<void> => {
     if (!canSubmit) {
       return
@@ -125,21 +115,23 @@ export function TodoCreateDialog({
         buildCreateTodoPayload({
           projectId,
           title,
+          prdLink,
           description,
           status,
           priority,
           scheduledDate,
-          templateId,
-          workspaceProjectId: workspaceFields.workspaceProjectId,
-          workspaceName: workspaceFields.workspaceName,
-          preferredAgent: workspaceFields.preferredAgent
+          workspaceProjectIds: workspaceFields.workspaceProjectIds,
+          workspaceName: workspaceFields.workspaceName
         })
       )
       onClose()
     } catch (error) {
       console.error('[TodoCreateDialog] createTodoItem failed', error)
       toast.error(
-        translate('auto.components.todo.TodoCreateDialog.createError', 'Failed to create task')
+        translate(
+          'auto.components.todo.TodoCreateDialog.createError',
+          'Failed to create requirement'
+        )
       )
     }
   }
@@ -149,7 +141,7 @@ export function TodoCreateDialog({
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>
-            {translate('auto.components.todo.TodoCreateDialog.title', 'New task')}
+            {translate('auto.components.todo.TodoCreateDialog.title', 'New requirement')}
           </DialogTitle>
         </DialogHeader>
 
@@ -173,18 +165,18 @@ export function TodoCreateDialog({
           <TodoCreateWorkspaceFields value={workspaceFields} onChange={setWorkspaceFields} />
 
           <div className="flex flex-col gap-1.5">
-            <Label>
-              {translate('auto.components.todo.TodoCreateDialog.templateLabel', 'Template')}
+            <Label htmlFor="todo-create-prd-link">
+              {translate('auto.components.todo.TodoCreateDialog.prdLinkLabel', 'PRD link')}
             </Label>
-            <TodoTemplatePicker
-              value={templateId}
-              onSelect={(template) => {
-                setTemplateId(template?.id ?? null)
-                // Prefill the description from the template body for a quick start.
-                if (template) {
-                  setDescription(template.body)
-                }
-              }}
+            <Input
+              id="todo-create-prd-link"
+              type="url"
+              value={prdLink}
+              onChange={(e) => setPrdLink(e.target.value)}
+              placeholder={translate(
+                'auto.components.todo.TodoCreateDialog.prdLinkPlaceholder',
+                'https://…'
+              )}
             />
           </div>
 
@@ -265,7 +257,7 @@ export function TodoCreateDialog({
             }}
             disabled={!canSubmit}
           >
-            {translate('auto.components.todo.TodoCreateDialog.create', 'Create task')}
+            {translate('auto.components.todo.TodoCreateDialog.create', 'Create requirement')}
           </Button>
         </DialogFooter>
       </DialogContent>

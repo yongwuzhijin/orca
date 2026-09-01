@@ -28,6 +28,10 @@ import {
 } from './todo-project-store'
 import { deriveTodoItemTimestamps, insertTodoItem } from './todo-item-store'
 import {
+  normalizeWorkspaceProjectIds,
+  primaryWorkspaceProjectId
+} from '../../shared/todo/workspace-project-ids'
+import {
   rowToTemplate,
   rowToTodoItem,
   type TodoItemRow,
@@ -160,14 +164,33 @@ export class TodoRepository {
     const templateId = patch.templateId !== undefined ? patch.templateId : current.templateId
     const labels = patch.labels ?? current.labels
     const status = patch.status ?? current.status
-    const workspaceProjectId =
+    const workspaceProjectIds =
+      patch.workspaceProjectIds !== undefined || patch.workspaceProjectId !== undefined
+        ? normalizeWorkspaceProjectIds(
+            patch.workspaceProjectIds ?? current.workspaceProjectIds,
+            patch.workspaceProjectId !== undefined
+              ? patch.workspaceProjectId
+              : current.workspaceProjectId
+          )
+        : current.workspaceProjectIds
+    const workspaceProjectId = primaryWorkspaceProjectId(
+      workspaceProjectIds,
       patch.workspaceProjectId !== undefined ? patch.workspaceProjectId : current.workspaceProjectId
+    )
     const workspaceName =
       patch.workspaceName !== undefined
         ? patch.workspaceName?.trim()
           ? patch.workspaceName.trim()
           : null
         : current.workspaceName
+    const prdLink =
+      patch.prdLink !== undefined
+        ? patch.prdLink?.trim()
+          ? patch.prdLink.trim()
+          : null
+        : current.prdLink
+    const executionMode =
+      patch.executionMode !== undefined ? patch.executionMode : current.executionMode
     const preferredAgent =
       patch.preferredAgent !== undefined ? patch.preferredAgent : current.preferredAgent
     const autoPilotEnabled =
@@ -176,6 +199,12 @@ export class TodoRepository {
       patch.autoPilotMaxTurns !== undefined ? patch.autoPilotMaxTurns : current.autoPilotMaxTurns
     const designStageEnabled =
       patch.designStageEnabled !== undefined ? patch.designStageEnabled : current.designStageEnabled
+    const boundWorktreeId =
+      patch.boundWorktreeId !== undefined
+        ? patch.boundWorktreeId?.trim()
+          ? patch.boundWorktreeId.trim()
+          : null
+        : current.boundWorktreeId
 
     // Only re-derive lifecycle stamps when the status actually changes; a plain
     // field edit must not disturb startedAt/completedAt.
@@ -189,8 +218,9 @@ export class TodoRepository {
         `UPDATE todo_items SET
           title = ?, description = ?, status = ?, priority = ?,
           scheduled_date = ?, estimate = ?, labels = ?, template_id = ?,
-          workspace_project_id = ?, workspace_name = ?, preferred_agent = ?,
+          workspace_project_id = ?, workspace_project_ids = ?, workspace_name = ?, preferred_agent = ?,
           auto_pilot_enabled = ?, auto_pilot_max_turns = ?, design_stage_enabled = ?,
+          prd_link = ?, execution_mode = ?, bound_worktree_id = ?,
           updated_at = ?, started_at = ?, completed_at = ?
         WHERE id = ?`
       )
@@ -204,11 +234,15 @@ export class TodoRepository {
         JSON.stringify(labels),
         templateId,
         workspaceProjectId,
+        JSON.stringify(workspaceProjectIds),
         workspaceName,
         preferredAgent,
         autoPilotEnabled ? 1 : 0,
         autoPilotMaxTurns,
         designStageEnabled ? 1 : 0,
+        prdLink,
+        executionMode,
+        boundWorktreeId,
         timestamp,
         timestamps.startedAt,
         timestamps.completedAt,

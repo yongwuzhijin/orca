@@ -5868,7 +5868,8 @@
               "682ed5d551": "Closed",
               "7c2f009786": "In progress",
               "6798dc7c94": "In review",
-              "5076efc3d2": "Done"
+              "5076efc3d2": "Done",
+              "requirements": "Requirements"
             }
           }
         },
@@ -6236,7 +6237,7 @@
           "useGlobal": "Use global"
         },
         "SidebarTodoNavButton": {
-          "title": "TODO"
+          "title": "Requirements"
         }
       },
       "shared": {
@@ -16551,7 +16552,7 @@
           "urgent": "Urgent"
         },
         "TodoPage": {
-          "newTask": "New task",
+          "newTask": "New requirement",
           "empty": "Create a project to get started",
           "tabBoard": "Board",
           "tabData": "Data"
@@ -16579,16 +16580,18 @@
           "prefixPlaceholder": "ENG"
         },
         "TodoCreateDialog": {
-          "title": "New task",
+          "title": "New requirement",
           "titleLabel": "Title",
           "descriptionLabel": "Description",
           "statusLabel": "Status",
           "priorityLabel": "Priority",
           "scheduledLabel": "Scheduled",
           "templateLabel": "Template",
-          "create": "Create task",
+          "prdLinkLabel": "PRD link",
+          "prdLinkPlaceholder": "https://…",
+          "create": "Create requirement",
           "cancel": "Cancel",
-          "createError": "Failed to create task",
+          "createError": "Failed to create requirement",
           "titlePlaceholder": "What needs to be done?",
           "descriptionPlaceholder": "Add more detail (Markdown supported)"
         },
@@ -16631,18 +16634,38 @@
         "detail": {
           "EnterInProgressDialog": {
             "title": "Start task",
-            "engine": "Engine",
-            "cwd": "Working directory",
-            "browse": "Browse…",
+            "executionMode": "Execution mode",
+            "acpMode": "ACP",
+            "terminalMode": "Terminal",
+            "engine": "Agent",
+            "noInstalledAgents": "No installed agents",
+            "noInstalledAcpAgents": "No installed ACP agents (Cursor / Qoder)",
+            "noBoundProject": "Bind a project on this requirement before starting.",
+            "starting": "Starting…",
             "basePrompt": "Base prompt",
             "extra": "Additional prompt",
             "cancel": "Cancel",
             "start": "Start",
-            "cwdPlaceholder": "/path/to/repo",
             "autoPilot": "AutoPilot (advance autonomously)",
             "maxTurns": "Max turns",
             "designStage": "Design the solution first",
             "designStageUnset": "Set a solution design skill in Settings to enable this stage"
+          },
+          "todoStartWorkspace": {
+            "noProject": "Bind a project on this requirement before starting.",
+            "unsupportedFolder": "Folder projects cannot auto-create a worktree yet.",
+            "createFailed": "Failed to create workspace"
+          },
+          "todoTerminalTaskStart": {
+            "noWorkspace": "No workspace found for this path. Create or open a workspace first.",
+            "startupFailed": "Could not build an agent launch plan for this agent."
+          },
+          "TodoDetailWorkspaceMeta": {
+            "workspaceName": "Workspace",
+            "projectPath": "Project path",
+            "workspacePath": "Workspace path",
+            "notSet": "Not set",
+            "noProject": "No project bound"
           },
           "TodoDetailView": {
             "startTask": "Start task",
@@ -16689,7 +16712,10 @@
             "forward": "Forward",
             "reload": "Reload",
             "desktop": "Desktop",
-            "mobile": "Mobile"
+            "mobile": "Mobile",
+            "title": "Review",
+            "noWorktree": "Start the task in a workspace to reuse the embedded browser here.",
+            "portLabel": "Port"
           },
           "ReviewDecisionBar": {
             "reject": "Reject",
@@ -16709,7 +16735,21 @@
             "empty": "No design documents yet. They appear here once the skill writes them.",
             "refresh": "Refresh"
           },
-          "startImplementation": "Start implementation"
+          "startImplementation": "Start implementation",
+          "ReviewLeftPane": {
+            "tabBrowser": "Browser",
+            "tabChanges": "Changes",
+            "tabFiles": "Files",
+            "noWorktree": "Start the task in a workspace to review changes and files here."
+          },
+          "ReviewFilePreviewDialog": {
+            "description": "File preview",
+            "loadingEditor": "Loading editor…",
+            "fullscreen": "Full screen",
+            "exitFullscreen": "Exit full screen",
+            "close": "Close",
+            "openInEditor": "Open in workspace editor"
+          }
         },
         "dashboard": {
           "CycleTimeCard": {
@@ -16739,6 +16779,10 @@
             "coverage": "Attributed",
             "unavailable": "n/a"
           }
+        },
+        "TodoWorkspaceMultiProjectPicker": {
+          "removeProject": "Remove project",
+          "addProjectPlaceholder": "Add project to task"
         }
       },
       "jsonFormatter": {

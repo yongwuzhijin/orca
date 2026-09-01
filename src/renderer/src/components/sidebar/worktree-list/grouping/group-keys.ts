@@ -94,6 +94,18 @@ export const ALL_GROUP_META = {
   icon: List
 } as const
 
+export const REQUIREMENTS_GROUP_META = {
+  get label() {
+    return translate('auto.components.sidebar.worktree.list.groups.requirements', 'Requirements')
+  },
+  tone: 'text-foreground',
+  icon: List
+} as const
+
+export function getRequirementsGroupKey(parentGroupKey: string): string {
+  return `${parentGroupKey}:requirements`
+}
+
 export const LINEAGE_GROUP_PREFIX = 'lineage:'
 
 export function getLineageGroupKey(worktreeId: string): string {

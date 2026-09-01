@@ -1,7 +1,7 @@
 import type { TodoItem } from '../../shared/todo/todo-item'
 import type { TodoStatus } from '../../shared/todo/todo-status'
 import type { AcpEngine } from '../../shared/acp/acp-session'
-import { ACP_ENGINES } from '../../shared/acp/acp-session'
+import { isTodoAcpEngine, TODO_ACP_ENGINES } from '../../shared/todo/todo-execution-mode'
 import type { TodoOrchestratorConfig } from '../../shared/todo/todo-orchestrator-config'
 import { buildBasePrompt } from '../../shared/todo/todo-base-prompt'
 import {
@@ -77,13 +77,19 @@ export class TodoOrchestratorService {
         this.deps.listCandidates().filter((c) => !this.liveSessions.has(c.id))
       ).slice(0, slots)
       for (const candidate of candidates) {
+        if (candidate.executionMode === 'terminal') {
+          continue
+        }
         const cwd = this.deps.resolveCwd(candidate)
         if (!cwd) {
           // Not launchable yet (no ready host / no default dir) — retry next tick.
           continue
         }
         this.liveSessions.add(candidate.id)
-        const engine: AcpEngine = candidate.preferredAgent ?? ACP_ENGINES[0]
+        const engine: AcpEngine =
+          candidate.preferredAgent && isTodoAcpEngine(candidate.preferredAgent)
+            ? candidate.preferredAgent
+            : TODO_ACP_ENGINES[0]
         // Why: autoPilotRunner.run() resolves only at loop-end, so this promise's
         // lifetime == one AutoPilot run. Free the slot on either settle path and
         // re-evaluate to refill it. On reject the task stays in whichever stage it was

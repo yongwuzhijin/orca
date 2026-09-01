@@ -16,6 +16,7 @@ function item(over: Partial<TodoItem>): TodoItem {
     labels: [],
     templateId: null,
     workspaceProjectId: null,
+    workspaceProjectIds: [],
     workspaceName: null,
     preferredAgent: null,
     orderKey: 'm',
@@ -26,6 +27,9 @@ function item(over: Partial<TodoItem>): TodoItem {
     sessionId: null,
     autoPilotEnabled: true,
     autoPilotMaxTurns: null,
+    prdLink: null,
+    executionMode: null,
+    boundWorktreeId: null,
     designStageEnabled: false,
     ...over
   }

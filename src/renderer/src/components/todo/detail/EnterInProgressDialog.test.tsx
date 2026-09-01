@@ -12,6 +12,16 @@ import {
   buildDesignStagePrompt
 } from '../../../../../shared/todo/todo-design-prompt'
 
+const startTodoWorkspace = vi.fn()
+
+vi.mock('./todo-start-workspace', () => ({
+  startTodoWorkspace: (...args: unknown[]) => startTodoWorkspace(...args)
+}))
+
+vi.mock('sonner', () => ({
+  toast: { error: vi.fn(), success: vi.fn() }
+}))
+
 const mockState = {
   updateTodoItem: vi.fn().mockResolvedValue(undefined),
   executeTask: vi.fn().mockResolvedValue('s1'),
@@ -34,12 +44,18 @@ const mockState = {
       updatedAt: 1
     }
   ],
-  settings: null as { todoDesignStageSkill: string } | null,
+  settings: null as {
+    todoDesignStageSkill: string
+    disabledTuiAgents?: string[]
+    defaultTuiAgent?: string | null
+  } | null,
   worktreesByRepo: {} as Record<string, unknown[]>,
   sshTargetLabels: new Map(),
   sshConnectionStates: new Map(),
   runtimeEnvironments: [],
   runtimeStatusByEnvironmentId: new Map(),
+  disabledTuiAgents: [] as string[],
+  todoTemplates: [] as { id: string; name: string; body: string }[],
   todoProjects: [
     {
       id: 'p1',
@@ -53,6 +69,16 @@ const mockState = {
   ]
 }
 
+vi.mock('@/hooks/useDetectedAgents', () => ({
+  useDetectedAgents: () => ({
+    detectedIds: ['claude', 'claude-agent-teams', 'codex', 'cursor', 'qoder'],
+    isLoading: false,
+    detectionFailed: false,
+    isRefreshing: false,
+    refresh: vi.fn()
+  })
+}))
+
 vi.mock('@/store', () => ({
   useAppStore: (selector: (s: typeof mockState) => unknown) => selector(mockState)
 }))
@@ -62,8 +88,14 @@ const { EnterInProgressDialog, buildBasePrompt, composePrompt } =
 
 afterEach(() => {
   cleanup()
-  mockState.todoProjects[0].defaultWorkingDir = '/repo'
   mockState.settings = null
+  startTodoWorkspace.mockReset()
+  startTodoWorkspace.mockResolvedValue({
+    ok: true,
+    worktreeId: 'wt-1',
+    path: '/repo/feat',
+    displayName: 'feat'
+  })
   vi.clearAllMocks()
 })
 
@@ -87,10 +119,14 @@ function mkItem(overrides: Partial<TodoItem> = {}): TodoItem {
     completedAt: null,
     sessionId: null,
     workspaceProjectId: null,
+    workspaceProjectIds: [],
     workspaceName: null,
+    prdLink: null,
+    executionMode: null,
     preferredAgent: null,
     autoPilotEnabled: false,
     autoPilotMaxTurns: null,
+    boundWorktreeId: null,
     designStageEnabled: false,
     ...overrides
   }
@@ -131,33 +167,54 @@ describe('prompt builders', () => {
 })
 
 describe('EnterInProgressDialog', () => {
-  it('enables start when the create-time project has a ready cwd', () => {
+  it('enables start when a bound project is ready', () => {
     renderDialog(mkItem({ workspaceProjectId: 'wp-1' }))
     expect(screen.getByRole('button', { name: /start/i })).toBeEnabled()
   })
 
-  it('falls back to the todo project default working dir when no workspace project', () => {
-    renderDialog(mkItem({ workspaceProjectId: null }))
-    expect(screen.getByRole('button', { name: /start/i })).toBeEnabled()
-  })
-
-  it('disables confirm when no cwd can be resolved', () => {
-    mockState.todoProjects[0].defaultWorkingDir = null
+  it('disables start and shows hint when no bound project', () => {
     renderDialog(mkItem({ workspaceProjectId: null }))
     expect(screen.getByRole('button', { name: /start/i })).toBeDisabled()
+    expect(screen.getByText(/bind a project on this requirement/i)).toBeInTheDocument()
   })
 
-  it('defaults engine from preferredAgent', () => {
+  it('does not render a working directory picker', () => {
+    renderDialog(mkItem({ workspaceProjectId: 'wp-1' }))
+    expect(screen.queryByText(/working directory/i)).toBeNull()
+    expect(screen.queryByRole('button', { name: /browse/i })).toBeNull()
+  })
+
+  it('defaults ACP engine from preferredAgent when valid', () => {
     renderDialog(mkItem({ preferredAgent: 'cursor' }))
-    expect(screen.getByLabelText(/engine/i)).toHaveValue('cursor')
+    expect(screen.getByLabelText(/agent/i)).toHaveValue('cursor')
   })
 
-  it('passes autoPilot with default maxTurns when the toggle is on', async () => {
+  it('creates workspace then executes with cwd from worktree', async () => {
     renderDialog(mkItem({ workspaceProjectId: 'wp-1' }))
     await userEvent.click(screen.getByRole('button', { name: /start/i }))
-    expect(mockState.executeTask).toHaveBeenCalledWith(
-      expect.objectContaining({ autoPilot: { maxTurns: 10 } })
+    expect(startTodoWorkspace).toHaveBeenCalled()
+    expect(mockState.updateTodoItem).toHaveBeenCalledWith(
+      't1',
+      expect.objectContaining({ boundWorktreeId: 'wt-1', status: 'in_progress' })
     )
+    expect(mockState.executeTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cwd: '/repo/feat',
+        autoPilot: { maxTurns: 10 }
+      })
+    )
+  })
+
+  it('does not execute when workspace creation fails', async () => {
+    startTodoWorkspace.mockResolvedValue({
+      ok: false,
+      reason: 'create-failed',
+      message: 'boom'
+    })
+    renderDialog(mkItem({ workspaceProjectId: 'wp-1' }))
+    await userEvent.click(screen.getByRole('button', { name: /start/i }))
+    expect(mockState.updateTodoItem).not.toHaveBeenCalled()
+    expect(mockState.executeTask).not.toHaveBeenCalled()
   })
 
   it('omits autoPilot when the toggle is off', async () => {
@@ -173,18 +230,24 @@ describe('EnterInProgressDialog', () => {
 describe('EnterInProgressDialog design stage', () => {
   it('sends the card to solution_design with the design prompt when checked', async () => {
     const item = mkItem({ workspaceProjectId: 'wp-1' })
-    // Deliberately not DEFAULT_TODO_DESIGN_STAGE_SKILL, so a hardcoded default cannot pass.
     mockState.settings = { todoDesignStageSkill: '/design-skill' }
     renderDialog(item)
     await userEvent.click(screen.getByLabelText(/design the solution first/i))
     await userEvent.click(screen.getByRole('button', { name: /start/i }))
-    expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', {
-      status: 'solution_design',
-      designStageEnabled: true
-    })
+    expect(mockState.updateTodoItem).toHaveBeenCalledWith(
+      't1',
+      expect.objectContaining({
+        status: 'solution_design',
+        boundWorktreeId: 'wt-1',
+        designStageEnabled: true,
+        executionMode: 'acp',
+        preferredAgent: 'cursor'
+      })
+    )
     expect(mockState.executeTask).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: buildDesignStagePrompt(item, '/design-skill', '.orca')
+        prompt: buildDesignStagePrompt(item, '/design-skill', '.orca'),
+        cwd: '/repo/feat'
       })
     )
   })
@@ -199,10 +262,15 @@ describe('EnterInProgressDialog design stage', () => {
     const item = mkItem({ workspaceProjectId: 'wp-1' })
     renderDialog(item)
     await userEvent.click(screen.getByRole('button', { name: /start/i }))
-    expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', {
-      status: 'in_progress',
-      designStageEnabled: false
-    })
+    expect(mockState.updateTodoItem).toHaveBeenCalledWith(
+      't1',
+      expect.objectContaining({
+        status: 'in_progress',
+        boundWorktreeId: 'wt-1',
+        designStageEnabled: false,
+        executionMode: 'acp'
+      })
+    )
     expect(mockState.executeTask).toHaveBeenCalledWith(
       expect.objectContaining({ prompt: buildBasePrompt(item) })
     )
@@ -215,10 +283,15 @@ describe('EnterInProgressDialog design stage', () => {
     expect(screen.getByLabelText(/design the solution first/i)).not.toBeChecked()
     expect(screen.getByText(/set a solution design skill in settings/i)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /start/i }))
-    expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', {
-      status: 'in_progress',
-      designStageEnabled: false
-    })
+    expect(mockState.updateTodoItem).toHaveBeenCalledWith(
+      't1',
+      expect.objectContaining({
+        status: 'in_progress',
+        boundWorktreeId: 'wt-1',
+        designStageEnabled: false,
+        executionMode: 'acp'
+      })
+    )
   })
 
   it('disables the design stage when the configured skill is only whitespace', async () => {
@@ -226,10 +299,15 @@ describe('EnterInProgressDialog design stage', () => {
     renderDialog(mkItem({ workspaceProjectId: 'wp-1', designStageEnabled: true }))
     expect(screen.getByLabelText(/design the solution first/i)).toBeDisabled()
     await userEvent.click(screen.getByRole('button', { name: /start/i }))
-    expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', {
-      status: 'in_progress',
-      designStageEnabled: false
-    })
+    expect(mockState.updateTodoItem).toHaveBeenCalledWith(
+      't1',
+      expect.objectContaining({
+        status: 'in_progress',
+        boundWorktreeId: 'wt-1',
+        designStageEnabled: false,
+        executionMode: 'acp'
+      })
+    )
   })
 
   it('hands off to implementation with the design docs in from-design mode', async () => {
@@ -237,8 +315,14 @@ describe('EnterInProgressDialog design stage', () => {
     renderDialog(item, { mode: 'from-design', designDocNames: ['plan.md'] })
     expect(screen.queryByLabelText(/design the solution first/i)).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: /start/i }))
-    // Why: the handoff must not erase the card's record of having gone through design.
-    expect(mockState.updateTodoItem).toHaveBeenCalledWith('t1', { status: 'in_progress' })
+    expect(mockState.updateTodoItem).toHaveBeenCalledWith(
+      't1',
+      expect.objectContaining({
+        status: 'in_progress',
+        executionMode: 'acp',
+        boundWorktreeId: 'wt-1'
+      })
+    )
     expect(mockState.updateTodoItem).not.toHaveBeenCalledWith(
       't1',
       expect.objectContaining({ designStageEnabled: false })

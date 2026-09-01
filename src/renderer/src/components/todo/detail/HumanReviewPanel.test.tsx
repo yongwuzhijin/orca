@@ -5,7 +5,7 @@ import { afterEach, describe, it, expect, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import type { TodoItem } from '../../../../../shared/todo/todo-item'
 
-vi.mock('./ReviewBrowserPane', () => ({ ReviewBrowserPane: () => <div>review-browser</div> }))
+vi.mock('./ReviewLeftPane', () => ({ ReviewLeftPane: () => <div>review-left-pane</div> }))
 vi.mock('./InProgressPanel', () => ({
   InProgressPanel: ({ showPlan }: { showPlan?: boolean }) => (
     <div>in-progress-panel-{String(showPlan)}</div>
@@ -39,10 +39,14 @@ function mkItem(): TodoItem {
     completedAt: null,
     sessionId: null,
     workspaceProjectId: null,
+    workspaceProjectIds: [],
     workspaceName: null,
     preferredAgent: null,
     autoPilotEnabled: false,
     autoPilotMaxTurns: null,
+    prdLink: null,
+    executionMode: null,
+    boundWorktreeId: null,
     designStageEnabled: false
   }
 }
@@ -50,7 +54,7 @@ function mkItem(): TodoItem {
 describe('HumanReviewPanel', () => {
   it('renders preview and verify panel without Reject/Approve', () => {
     render(<HumanReviewPanel item={mkItem()} />)
-    expect(screen.getByText('review-browser')).toBeInTheDocument()
+    expect(screen.getByText('review-left-pane')).toBeInTheDocument()
     expect(screen.getByText('in-progress-panel-false')).toBeInTheDocument()
     expect(screen.getByTestId('review-conversation')).toHaveClass(
       'rounded-md',

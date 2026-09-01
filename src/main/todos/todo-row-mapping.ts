@@ -3,7 +3,12 @@ import type { TodoPriority } from '../../shared/todo/todo-priority'
 import type { TodoProject } from '../../shared/todo/todo-project'
 import type { TodoStatus } from '../../shared/todo/todo-status'
 import type { TodoTemplate } from '../../shared/todo/todo-template'
-import { isAcpEngine } from '../../shared/acp/acp-session'
+import { isTodoExecutionMode, type TodoExecutionMode } from '../../shared/todo/todo-execution-mode'
+import {
+  normalizeWorkspaceProjectIds,
+  parseWorkspaceProjectIds,
+  primaryWorkspaceProjectId
+} from '../../shared/todo/workspace-project-ids'
 
 // Snake_case shapes mirror the SQLite columns in todo-database.ts so the raw
 // prepared-statement rows map to domain entities without implicit casing magic.
@@ -44,11 +49,15 @@ export type TodoItemRow = {
   completed_at: string | null
   session_id: string | null
   workspace_project_id: string | null
+  workspace_project_ids: string | null
   workspace_name: string | null
   preferred_agent: string | null
   auto_pilot_enabled: number
   auto_pilot_max_turns: number | null
   design_stage_enabled: number
+  prd_link: string | null
+  execution_mode: string | null
+  bound_worktree_id: string | null
 }
 
 export function rowToProject(row: TodoProjectRow): TodoProject {
@@ -106,12 +115,27 @@ export function rowToTodoItem(row: TodoItemRow): TodoItem {
     startedAt: row.started_at,
     completedAt: row.completed_at,
     sessionId: row.session_id,
-    workspaceProjectId: row.workspace_project_id,
+    workspaceProjectIds: normalizeWorkspaceProjectIds(
+      parseWorkspaceProjectIds(row.workspace_project_ids),
+      row.workspace_project_id
+    ),
+    workspaceProjectId: primaryWorkspaceProjectId(
+      normalizeWorkspaceProjectIds(
+        parseWorkspaceProjectIds(row.workspace_project_ids),
+        row.workspace_project_id
+      ),
+      row.workspace_project_id
+    ),
     workspaceName: row.workspace_name,
-    preferredAgent:
-      row.preferred_agent && isAcpEngine(row.preferred_agent) ? row.preferred_agent : null,
+    prdLink: row.prd_link?.trim() ? row.prd_link.trim() : null,
+    executionMode:
+      row.execution_mode && isTodoExecutionMode(row.execution_mode)
+        ? (row.execution_mode as TodoExecutionMode)
+        : null,
+    preferredAgent: row.preferred_agent?.trim() ? row.preferred_agent.trim() : null,
     autoPilotEnabled: row.auto_pilot_enabled === 1,
     autoPilotMaxTurns: row.auto_pilot_max_turns,
-    designStageEnabled: row.design_stage_enabled === 1
+    designStageEnabled: row.design_stage_enabled === 1,
+    boundWorktreeId: row.bound_worktree_id?.trim() ? row.bound_worktree_id.trim() : null
   }
 }

@@ -19,6 +19,7 @@ import { getEmptyProjectPlaceholderRepoIds } from '../../empty-project-placehold
 import { addHostSectionRows } from '../../host-section-rows'
 import { orderHostSectionOptions } from '../../host-section-order'
 import { buildSidebarHostOptions } from '../../sidebar-host-options'
+import { listActiveBoundWorktreeIds } from '../../../../../../shared/todo/todo-requirement-worktrees'
 
 type SectionRowsArgs = {
   groupBy: WorktreeGroupBy
@@ -76,6 +77,8 @@ export function useSidebarSectionRows(args: SectionRowsArgs) {
   const runtimeStatusByEnvironmentId = useAppStore((s) => s.runtimeStatusByEnvironmentId)
   const workspaceHostOrder = useAppStore((s) => s.workspaceHostOrder)
   const setWorkspaceHostOrder = useAppStore((s) => s.setWorkspaceHostOrder)
+  const todoItems = useAppStore((s) => s.todoItems)
+  const activeBoundWorktreeIds = useMemo(() => listActiveBoundWorktreeIds(todoItems), [todoItems])
 
   // Why: manual header order is bound to state.repos; Recent/Smart derive order from the sorted worktree stream.
   const repoOrder = useMemo(
@@ -166,7 +169,8 @@ export function useSidebarSectionRows(args: SectionRowsArgs) {
         args.visibleFolderWorkspacesForRows,
         hostLabelById,
         defaultHostId,
-        args.pinnedDisplayPolicy
+        args.pinnedDisplayPolicy,
+        activeBoundWorktreeIds
       ),
     [
       args.groupBy,
@@ -181,15 +185,16 @@ export function useSidebarSectionRows(args: SectionRowsArgs) {
       args.worktreeLineageById,
       args.worktreeMap,
       args.settings,
-      args.projectGrouping,
       args.visibleProjectGroupsForRows,
-      args.visibleFolderWorkspacesForRows,
       placeholderRepoIds,
       args.importedWorktreesByRepo,
       args.newExternalWorktreesInboxByRepo,
       pendingCreations,
+      args.projectGrouping,
+      args.visibleFolderWorkspacesForRows,
       hostLabelById,
-      args.pinnedDisplayPolicy
+      args.pinnedDisplayPolicy,
+      activeBoundWorktreeIds
     ]
   )
   const orderedHostOptions = useMemo(

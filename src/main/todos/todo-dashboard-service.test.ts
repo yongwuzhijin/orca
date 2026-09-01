@@ -26,10 +26,14 @@ function item(id: string, status: TodoItem['status']): TodoItem {
     completedAt: '2026-07-12T00:00:00.000Z',
     sessionId: null,
     workspaceProjectId: null,
+    workspaceProjectIds: [],
     workspaceName: null,
     preferredAgent: null,
     autoPilotEnabled: false,
     autoPilotMaxTurns: null,
+    prdLink: null,
+    executionMode: null,
+    boundWorktreeId: null,
     designStageEnabled: false
   }
 }

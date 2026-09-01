@@ -395,3 +395,52 @@ describe('WorktreeList header styles', () => {
     expect(source).toContain('projectHostSetups: projectHostSetupProjection.setups')
   })
 })
+
+describe('buildRows requirements subgroup', () => {
+  it('nests active bound worktrees under a Requirements header in repo mode', () => {
+    const bound = { ...worktree, id: 'wt-bound', displayName: 'req-feat' }
+    const other = { ...worktree, id: 'wt-other', displayName: 'other' }
+    const rows = buildRows(
+      'repo',
+      [other, bound],
+      repoMap,
+      null,
+      new Set(),
+      undefined,
+      undefined,
+      undefined,
+      {},
+      undefined,
+      false,
+      undefined,
+      [],
+      new Set(),
+      new Map(),
+      new Map(),
+      [],
+      undefined,
+      [],
+      undefined,
+      undefined,
+      undefined,
+      new Set(['wt-bound'])
+    )
+
+    const headers = rows.filter((row) => row.type === 'header')
+    expect(headers.some((row) => row.type === 'header' && row.key.endsWith(':requirements'))).toBe(
+      true
+    )
+    const reqHeaderIndex = rows.findIndex(
+      (row) => row.type === 'header' && row.key.endsWith(':requirements')
+    )
+    expect(rows[reqHeaderIndex + 1]).toMatchObject({ type: 'item', worktree: { id: 'wt-bound' } })
+    expect(rows.some((row) => row.type === 'item' && row.worktree.id === 'wt-other')).toBe(true)
+  })
+
+  it('does not emit Requirements when bound ids are empty', () => {
+    const rows = buildRows('repo', [worktree], repoMap, null, new Set())
+    expect(rows.every((row) => row.type !== 'header' || !row.key.endsWith(':requirements'))).toBe(
+      true
+    )
+  })
+})

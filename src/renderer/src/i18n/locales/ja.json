@@ -5031,7 +5031,8 @@
               "682ed5d551": "クローズ",
               "7c2f009786": "進行中",
               "6798dc7c94": "レビュー中",
-              "5076efc3d2": "完了"
+              "5076efc3d2": "完了",
+              "requirements": "要件リスト"
             }
           }
         },
@@ -5308,7 +5309,7 @@
           "9a4d0f6b21": "長すぎます"
         },
         "SidebarTodoNavButton": {
-          "title": "TODO"
+          "title": "要件"
         }
       },
       "shared": {
@@ -14707,18 +14708,20 @@
           "prefixPlaceholder": "ENG"
         },
         "TodoCreateDialog": {
-          "title": "New task",
-          "titleLabel": "Title",
-          "descriptionLabel": "Description",
-          "statusLabel": "Status",
-          "priorityLabel": "Priority",
-          "scheduledLabel": "Scheduled",
-          "templateLabel": "Template",
-          "create": "Create task",
-          "cancel": "Cancel",
-          "createError": "Failed to create task",
-          "titlePlaceholder": "What needs to be done?",
-          "descriptionPlaceholder": "Add more detail (Markdown supported)"
+          "title": "新規要件",
+          "titleLabel": "タイトル",
+          "descriptionLabel": "説明",
+          "statusLabel": "ステータス",
+          "priorityLabel": "優先度",
+          "scheduledLabel": "予定日",
+          "templateLabel": "テンプレート",
+          "prdLinkLabel": "PRD リンク",
+          "prdLinkPlaceholder": "https://…",
+          "create": "要件を作成",
+          "cancel": "キャンセル",
+          "createError": "要件の作成に失敗しました",
+          "titlePlaceholder": "何をする必要がありますか？",
+          "descriptionPlaceholder": "詳細を追加（Markdown 対応）"
         },
         "TodoDetailDialog": {
           "statusLabel": "Status",
@@ -14751,18 +14754,38 @@
         "detail": {
           "EnterInProgressDialog": {
             "title": "タスクを開始",
-            "engine": "Engine",
-            "cwd": "Working directory",
-            "browse": "Browse…",
-            "basePrompt": "Base prompt",
-            "extra": "Additional prompt",
-            "cancel": "Cancel",
-            "start": "Start",
-            "cwdPlaceholder": "/path/to/repo",
+            "executionMode": "実行モード",
+            "acpMode": "ACP",
+            "terminalMode": "ターミナル",
+            "engine": "Agent",
+            "noInstalledAgents": "インストール済みの Agent がありません",
+            "noInstalledAcpAgents": "インストール済みの ACP Agent がありません（Cursor / Qoder）",
+            "noBoundProject": "開始する前にこの要件にプロジェクトを紐付けてください。",
+            "starting": "開始中…",
+            "basePrompt": "基本プロンプト",
+            "extra": "追加プロンプト",
+            "cancel": "キャンセル",
+            "start": "開始",
             "autoPilot": "AutoPilot（自動推進）",
             "maxTurns": "最大ターン数",
             "designStage": "先にソリューション設計を行う",
             "designStageUnset": "設定でソリューション設計スキルを指定してください"
+          },
+          "todoStartWorkspace": {
+            "noProject": "開始する前にこの要件にプロジェクトを紐付けてください。",
+            "unsupportedFolder": "フォルダープロジェクトではまだワークツリーを自動作成できません。",
+            "createFailed": "ワークスペースの作成に失敗しました"
+          },
+          "todoTerminalTaskStart": {
+            "noWorkspace": "このパスに対応するワークスペースが見つかりません。先にワークスペースを作成または開いてください。",
+            "startupFailed": "この Agent の起動プランを構築できませんでした。"
+          },
+          "TodoDetailWorkspaceMeta": {
+            "workspaceName": "ワークスペース",
+            "projectPath": "プロジェクトパス",
+            "workspacePath": "ワークスペースパス",
+            "notSet": "未設定",
+            "noProject": "プロジェクト未紐付け"
           },
           "TodoDetailView": {
             "startTask": "タスクを開始",
@@ -14809,7 +14832,10 @@
             "forward": "Forward",
             "reload": "Reload",
             "desktop": "Desktop",
-            "mobile": "Mobile"
+            "mobile": "Mobile",
+            "title": "レビュー",
+            "noWorktree": "ワークスペースでタスクを開始すると、ここで組み込みブラウザを再利用できます。",
+            "portLabel": "ポート"
           },
           "ReviewDecisionBar": {
             "reject": "Reject",
@@ -14829,7 +14855,21 @@
             "empty": "設計ドキュメントはまだありません。スキルが書き込むとここに表示されます。",
             "refresh": "更新"
           },
-          "startImplementation": "実装を開始"
+          "startImplementation": "実装を開始",
+          "ReviewLeftPane": {
+            "tabBrowser": "ブラウザ",
+            "tabChanges": "変更",
+            "tabFiles": "ファイル",
+            "noWorktree": "ワークスペースでタスクを開始すると、ここで変更とファイルを確認できます。"
+          },
+          "ReviewFilePreviewDialog": {
+            "description": "ファイルプレビュー",
+            "loadingEditor": "エディターを読み込み中…",
+            "fullscreen": "全画面",
+            "exitFullscreen": "全画面を終了",
+            "close": "閉じる",
+            "openInEditor": "ワークスペースエディターで開く"
+          }
         },
         "dashboard": {
           "CycleTimeCard": {
@@ -14867,6 +14907,10 @@
         "TodoPriorityMenu": {
           "setPriority": "Set priority",
           "changePriorityAria": "Change priority"
+        },
+        "TodoWorkspaceMultiProjectPicker": {
+          "removeProject": "プロジェクトを削除",
+          "addProjectPlaceholder": "タスクにプロジェクトを追加"
         }
       },
       "jsonFormatter": {

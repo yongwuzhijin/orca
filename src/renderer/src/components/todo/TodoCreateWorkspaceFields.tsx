@@ -3,22 +3,11 @@ import { CaseSensitive } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
-import { ACP_ENGINES, type AcpEngine } from '../../../../shared/acp/acp-session'
-import { TodoWorkspaceProjectPicker } from './TodoWorkspaceProjectPicker'
-
-const SELECT_CLASS =
-  'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
-
-const ACP_ENGINE_LABELS: Record<AcpEngine, string> = {
-  claude: 'Claude',
-  qoder: 'Qoder',
-  cursor: 'Cursor'
-}
+import { TodoWorkspaceMultiProjectPicker } from './TodoWorkspaceMultiProjectPicker'
 
 export type TodoCreateWorkspaceFieldsValue = {
-  workspaceProjectId: string | null
+  workspaceProjectIds: string[]
   workspaceName: string
-  preferredAgent: AcpEngine
 }
 
 export function TodoCreateWorkspaceFields({
@@ -30,9 +19,9 @@ export function TodoCreateWorkspaceFields({
 }): React.JSX.Element {
   return (
     <div className="flex flex-col gap-3">
-      <TodoWorkspaceProjectPicker
-        value={value.workspaceProjectId}
-        onChange={(projectId) => onChange({ ...value, workspaceProjectId: projectId })}
+      <TodoWorkspaceMultiProjectPicker
+        values={value.workspaceProjectIds}
+        onChange={(workspaceProjectIds) => onChange({ ...value, workspaceProjectIds })}
       />
 
       <div className="space-y-1">
@@ -54,29 +43,6 @@ export function TodoCreateWorkspaceFields({
             className={cn('h-9 pl-8')}
           />
         </div>
-      </div>
-
-      <div className="space-y-1">
-        <label
-          htmlFor="todo-create-acp-engine"
-          className="text-xs font-medium text-muted-foreground"
-        >
-          {translate('auto.components.NewWorkspaceComposerCard.01d1e8f601', 'Agent')}
-        </label>
-        {/* Why: todo execution goes through ACP; only engines in ACP_ENGINES are supported
-            (same set as EnterInProgressDialog). */}
-        <select
-          id="todo-create-acp-engine"
-          className={SELECT_CLASS}
-          value={value.preferredAgent}
-          onChange={(e) => onChange({ ...value, preferredAgent: e.target.value as AcpEngine })}
-        >
-          {ACP_ENGINES.map((engine) => (
-            <option key={engine} value={engine}>
-              {ACP_ENGINE_LABELS[engine]}
-            </option>
-          ))}
-        </select>
       </div>
     </div>
   )

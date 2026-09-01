@@ -51,10 +51,14 @@ function mkItem(overrides: Partial<TodoItem> = {}): TodoItem {
     completedAt: null,
     sessionId: null,
     workspaceProjectId: null,
+    workspaceProjectIds: [],
     workspaceName: null,
     preferredAgent: null,
     autoPilotEnabled: false,
     autoPilotMaxTurns: null,
+    prdLink: null,
+    executionMode: null,
+    boundWorktreeId: null,
     designStageEnabled: false,
     ...overrides
   }

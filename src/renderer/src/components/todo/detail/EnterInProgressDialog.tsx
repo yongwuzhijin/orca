@@ -1,16 +1,20 @@
 import React from 'react'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { getAgentCatalog } from '@/lib/agent-catalog'
+import { useDetectedAgents } from '@/hooks/useDetectedAgents'
+import { isTuiAgentEnabled, pickTuiAgent } from '../../../../../shared/tui-agent-selection'
 import { useAppStore } from '@/store'
-import { translate } from '@/i18n/i18n'
-import { ACP_ENGINES, isAcpEngine, type AcpEngine } from '../../../../../shared/acp/acp-session'
+import { EMPTY_DISABLED_TUI_AGENTS } from '@/components/settings/shortcut-groups'
 import type { TodoItem } from '../../../../../shared/todo/todo-item'
 import type { TodoStatus } from '../../../../../shared/todo/todo-status'
-import {
-  resolveWorkspaceProjectCwd,
-  TodoWorkspaceProjectPicker
-} from '../TodoWorkspaceProjectPicker'
+import type {
+  TodoExecutionMode,
+  TodoAcpEngine
+} from '../../../../../shared/todo/todo-execution-mode'
+import { TODO_ACP_ENGINES } from '../../../../../shared/todo/todo-execution-mode'
+import { resolveTodoStartRepo } from '../../../../../shared/todo/resolve-todo-start-repo'
+import type { TuiAgent } from '../../../../../shared/tui-agent'
 
 import { buildBasePrompt, composePrompt } from '../../../../../shared/todo/todo-base-prompt'
 import {
@@ -20,19 +24,16 @@ import {
 } from '../../../../../shared/todo/todo-design-prompt'
 import { DEFAULT_TODO_DESIGN_STAGE_SKILL } from '../../../../../shared/constants'
 import { resolveWorkspaceOrcaDirName } from '../../../../../shared/orca-dir-names'
+import { parseTodoTerminalAgent, startTodoViaTerminal } from './todo-terminal-task-start'
+import { startTodoWorkspace } from './todo-start-workspace'
+import { resolveAcpEngine, resolveInitialExecutionMode } from './enter-in-progress-dialog-agents'
+import { EnterInProgressDialogFields } from './EnterInProgressDialogFields'
 
 export { buildBasePrompt, composePrompt }
-
-function resolveInitialEngine(item: TodoItem): AcpEngine {
-  return item.preferredAgent && isAcpEngine(item.preferredAgent)
-    ? item.preferredAgent
-    : ACP_ENGINES[0]
-}
 
 type EnterInProgressDialogProps = {
   item: TodoItem
   onClose: () => void
-  // 'from-design' starts the implementation that follows an approved design, so the stage is over.
   mode?: 'todo' | 'from-design'
   designDocNames?: readonly string[]
 }
@@ -46,200 +47,200 @@ export function EnterInProgressDialog({
   const updateTodoItem = useAppStore((s) => s.updateTodoItem)
   const executeTask = useAppStore((s) => s.executeTask)
   const openTodoDetail = useAppStore((s) => s.openTodoDetail)
-  const project = useAppStore((s) => s.todoProjects.find((p) => p.id === item.projectId))
+  const disabledTuiAgents = useAppStore(
+    (s) => s.settings?.disabledTuiAgents ?? EMPTY_DISABLED_TUI_AGENTS
+  )
+  const defaultTuiAgent = useAppStore((s) => s.settings?.defaultTuiAgent ?? null)
   const projectHostSetups = useAppStore((s) => s.projectHostSetups)
   const designStageSkill = useAppStore(
     (s) => s.settings?.todoDesignStageSkill ?? DEFAULT_TODO_DESIGN_STAGE_SKILL
   )
   const orcaDirName = useAppStore((s) => resolveWorkspaceOrcaDirName(s.settings))
 
-  const [engine, setEngine] = React.useState<AcpEngine>(() => resolveInitialEngine(item))
-  const [workspaceProjectId, setWorkspaceProjectId] = React.useState<string | null>(
-    () => item.workspaceProjectId
+  const { detectedIds } = useDetectedAgents({ kind: 'local' })
+  const installedAgentIds = React.useMemo(
+    () => (detectedIds === null ? null : new Set(detectedIds)),
+    [detectedIds]
   )
+
+  const agentCatalog = React.useMemo(() => getAgentCatalog(), [])
+  const visibleTerminalAgents = React.useMemo(() => {
+    if (installedAgentIds === null) {
+      return []
+    }
+    return agentCatalog.filter(
+      (agent) => installedAgentIds.has(agent.id) && isTuiAgentEnabled(agent.id, disabledTuiAgents)
+    )
+  }, [agentCatalog, disabledTuiAgents, installedAgentIds])
+
+  const visibleAcpEngines = React.useMemo(() => {
+    if (installedAgentIds === null) {
+      return [...TODO_ACP_ENGINES]
+    }
+    return TODO_ACP_ENGINES.filter((engine) => installedAgentIds.has(engine))
+  }, [installedAgentIds])
+
+  const [executionMode, setExecutionMode] = React.useState<TodoExecutionMode>(() =>
+    resolveInitialExecutionMode(item)
+  )
+  const [acpEngine, setAcpEngine] = React.useState<TodoAcpEngine | null>(() =>
+    resolveAcpEngine(item.preferredAgent, null)
+  )
+  const [terminalAgent, setTerminalAgent] = React.useState<TuiAgent | null>(null)
+  const [templateId, setTemplateId] = React.useState<string | null>(() => item.templateId)
   const [extra, setExtra] = React.useState('')
   const [autoPilotOn, setAutoPilotOn] = React.useState(true)
   const [maxTurns, setMaxTurns] = React.useState(10)
   const [designStage, setDesignStage] = React.useState(item.designStageEnabled)
+  const [starting, setStarting] = React.useState(false)
 
-  const cwd = resolveWorkspaceProjectCwd(
-    workspaceProjectId,
-    projectHostSetups,
-    project?.defaultWorkingDir
+  React.useEffect(() => {
+    setAcpEngine((current) => resolveAcpEngine(current ?? item.preferredAgent, installedAgentIds))
+  }, [installedAgentIds, item.preferredAgent])
+
+  React.useEffect(() => {
+    if (installedAgentIds === null) {
+      return
+    }
+    setTerminalAgent((current) => {
+      if (
+        current &&
+        installedAgentIds.has(current) &&
+        isTuiAgentEnabled(current, disabledTuiAgents)
+      ) {
+        return current
+      }
+      return pickTuiAgent(
+        parseTodoTerminalAgent(item.preferredAgent) ?? defaultTuiAgent,
+        installedAgentIds,
+        disabledTuiAgents
+      )
+    })
+  }, [defaultTuiAgent, disabledTuiAgents, installedAgentIds, item.preferredAgent])
+
+  const hasBoundProject = Boolean(
+    resolveTodoStartRepo({
+      workspaceProjectId: item.workspaceProjectId,
+      projectHostSetups
+    })
   )
   const designStageAvailable = isDesignStageSkillConfigured(designStageSkill)
   const useDesignStage = mode !== 'from-design' && designStage && designStageAvailable
-  // Why: one value, so the preview and the dispatch cannot drift apart.
   const base =
     mode === 'from-design'
       ? buildDesignHandoffPrompt(item, designDocNames ?? [], orcaDirName)
       : useDesignStage
         ? buildDesignStagePrompt(item, designStageSkill, orcaDirName)
         : buildBasePrompt(item)
-  const canStart = cwd.trim().length > 0
+  const prompt = composePrompt(base, extra)
+  const canStart =
+    !starting &&
+    hasBoundProject &&
+    (executionMode === 'acp'
+      ? acpEngine !== null
+      : terminalAgent !== null && visibleTerminalAgents.length > 0)
 
   const confirm = async (): Promise<void> => {
     if (!canStart) {
       return
     }
-    // Persist the project choice so later restarts keep the same default.
-    if (workspaceProjectId !== item.workspaceProjectId) {
-      await updateTodoItem(item.id, { workspaceProjectId })
+    const preferredAgent = executionMode === 'acp' ? acpEngine : terminalAgent
+    if (!preferredAgent) {
+      return
     }
-    const nextStatus: TodoStatus = useDesignStage ? 'solution_design' : 'in_progress'
-    // Why: the handoff out of design must not erase the card's record of having gone through it.
-    await updateTodoItem(
-      item.id,
-      mode === 'from-design'
-        ? { status: nextStatus }
-        : { status: nextStatus, designStageEnabled: useDesignStage }
-    )
-    await executeTask({
-      taskId: item.id,
-      engine,
-      prompt: composePrompt(base, extra),
-      cwd: cwd.trim(),
-      autoPilot: autoPilotOn ? { maxTurns } : undefined
-    })
-    openTodoDetail(item.id)
-    onClose()
+
+    setStarting(true)
+    try {
+      const workspace = await startTodoWorkspace(item)
+      if (!workspace.ok) {
+        toast.error(workspace.message)
+        return
+      }
+
+      const nextStatus: TodoStatus = useDesignStage ? 'solution_design' : 'in_progress'
+      await updateTodoItem(
+        item.id,
+        mode === 'from-design'
+          ? {
+              status: nextStatus,
+              templateId,
+              executionMode,
+              preferredAgent,
+              boundWorktreeId: workspace.worktreeId
+            }
+          : {
+              status: nextStatus,
+              designStageEnabled: useDesignStage,
+              templateId,
+              executionMode,
+              preferredAgent,
+              boundWorktreeId: workspace.worktreeId
+            }
+      )
+
+      if (executionMode === 'terminal') {
+        const started = await startTodoViaTerminal({
+          agent: preferredAgent as TuiAgent,
+          worktreeId: workspace.worktreeId,
+          prompt
+        })
+        if (started) {
+          openTodoDetail(item.id)
+          onClose()
+        }
+        return
+      }
+
+      await executeTask({
+        taskId: item.id,
+        engine: preferredAgent as TodoAcpEngine,
+        prompt,
+        cwd: workspace.path,
+        autoPilot: autoPilotOn ? { maxTurns } : undefined
+      })
+      openTodoDetail(item.id)
+      onClose()
+    } finally {
+      setStarting(false)
+    }
   }
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-xl">
-        <div className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold">
-            {translate('auto.components.todo.detail.EnterInProgressDialog.title', 'Start task')}
-          </h2>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="enter-engine">
-              {translate('auto.components.todo.detail.EnterInProgressDialog.engine', 'Engine')}
-            </Label>
-            <select
-              id="enter-engine"
-              className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-              value={engine}
-              onChange={(e) => setEngine(e.target.value as AcpEngine)}
-            >
-              {ACP_ENGINES.map((e) => (
-                <option key={e} value={e}>
-                  {e}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Why: reuse the New Task project picker and seed from workspaceProjectId
-              so Start Session continues from the project chosen at create time. */}
-          <TodoWorkspaceProjectPicker
-            value={workspaceProjectId}
-            onChange={setWorkspaceProjectId}
-            label={translate(
-              'auto.components.todo.detail.EnterInProgressDialog.cwd',
-              'Working directory'
-            )}
-          />
-
-          <div className="flex flex-col gap-1.5">
-            <Label>
-              {translate(
-                'auto.components.todo.detail.EnterInProgressDialog.basePrompt',
-                'Base prompt'
-              )}
-            </Label>
-            <pre className="scrollbar-sleek max-h-32 overflow-y-auto whitespace-pre-wrap rounded-md border border-border bg-muted/40 p-2 text-xs text-muted-foreground">
-              {base}
-            </pre>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="enter-extra">
-              {translate(
-                'auto.components.todo.detail.EnterInProgressDialog.extra',
-                'Additional prompt'
-              )}
-            </Label>
-            <textarea
-              id="enter-extra"
-              className="min-h-20 w-full rounded-md border border-input bg-transparent p-2 text-sm"
-              value={extra}
-              onChange={(e) => setExtra(e.target.value)}
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <input
-              id="enter-autopilot"
-              type="checkbox"
-              className="size-4"
-              checked={autoPilotOn}
-              onChange={(e) => setAutoPilotOn(e.target.checked)}
-            />
-            <Label htmlFor="enter-autopilot" className="cursor-pointer">
-              {translate(
-                'auto.components.todo.detail.EnterInProgressDialog.autoPilot',
-                'AutoPilot (advance autonomously)'
-              )}
-            </Label>
-            {autoPilotOn ? (
-              <div className="ml-auto flex items-center gap-2">
-                <Label htmlFor="enter-max-turns" className="text-xs text-muted-foreground">
-                  {translate(
-                    'auto.components.todo.detail.EnterInProgressDialog.maxTurns',
-                    'Max turns'
-                  )}
-                </Label>
-                <input
-                  id="enter-max-turns"
-                  type="number"
-                  min={1}
-                  className="h-8 w-16 rounded-md border border-input bg-transparent px-2 text-sm"
-                  value={maxTurns}
-                  onChange={(e) => setMaxTurns(Math.max(1, Number(e.target.value) || 1))}
-                />
-              </div>
-            ) : null}
-          </div>
-
-          {mode === 'from-design' ? null : (
-            <div className="flex items-center gap-3">
-              <input
-                id="enter-design-stage"
-                type="checkbox"
-                className="size-4"
-                checked={designStage && designStageAvailable}
-                disabled={!designStageAvailable}
-                aria-describedby={designStageAvailable ? undefined : 'enter-design-stage-hint'}
-                onChange={(e) => setDesignStage(e.target.checked)}
-              />
-              <Label htmlFor="enter-design-stage" className="cursor-pointer">
-                {translate(
-                  'auto.components.todo.detail.EnterInProgressDialog.designStage',
-                  'Design the solution first'
-                )}
-              </Label>
-              {designStageAvailable ? null : (
-                <span id="enter-design-stage-hint" className="text-xs text-muted-foreground">
-                  {translate(
-                    'auto.components.todo.detail.EnterInProgressDialog.designStageUnset',
-                    'Set a solution design skill in Settings to enable this stage'
-                  )}
-                </span>
-              )}
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2">
-            <Button size="sm" variant="outline" onClick={onClose}>
-              {translate('auto.components.todo.detail.EnterInProgressDialog.cancel', 'Cancel')}
-            </Button>
-            <Button size="sm" disabled={!canStart} onClick={() => void confirm()}>
-              {translate('auto.components.todo.detail.EnterInProgressDialog.start', 'Start')}
-            </Button>
-          </div>
-        </div>
+        <EnterInProgressDialogFields
+          mode={mode}
+          hasBoundProject={hasBoundProject}
+          executionMode={executionMode}
+          onExecutionModeChange={setExecutionMode}
+          acpEngine={acpEngine}
+          onAcpEngineChange={setAcpEngine}
+          visibleAcpEngines={visibleAcpEngines}
+          terminalAgent={terminalAgent}
+          onTerminalAgentChange={setTerminalAgent}
+          visibleTerminalAgents={visibleTerminalAgents}
+          templateId={templateId}
+          onTemplateSelect={(template) => {
+            setTemplateId(template?.id ?? null)
+            if (template) {
+              setExtra(template.body)
+            }
+          }}
+          base={base}
+          extra={extra}
+          onExtraChange={setExtra}
+          autoPilotOn={autoPilotOn}
+          onAutoPilotChange={setAutoPilotOn}
+          maxTurns={maxTurns}
+          onMaxTurnsChange={setMaxTurns}
+          designStage={designStage}
+          designStageAvailable={designStageAvailable}
+          onDesignStageChange={setDesignStage}
+          starting={starting}
+          canStart={canStart}
+          onCancel={onClose}
+          onStart={() => void confirm()}
+        />
       </DialogContent>
     </Dialog>
   )

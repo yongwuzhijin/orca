@@ -19,6 +19,7 @@ import { SolutionDesignPanel } from './SolutionDesignPanel'
 import { MergingPanel } from './MergingPanel'
 import { ReviewDecisionBar } from './ReviewDecisionBar'
 import { StartImplementationButton } from './StartImplementationButton'
+import { TodoDetailWorkspaceMeta } from './TodoDetailWorkspaceMeta'
 import { useDesignDocFiles } from './use-design-doc-files'
 
 type TodoDetailViewProps = {
@@ -125,6 +126,7 @@ function TodoDetailBody({ item }: { item: TodoItem }): React.JSX.Element {
               readOnly
             />
           </div>
+          <TodoDetailWorkspaceMeta item={item} />
           <div className="flex flex-col gap-1 px-2 pt-1">
             <div className="flex items-center gap-2">
               <Checkbox

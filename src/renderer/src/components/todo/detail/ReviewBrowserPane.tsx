@@ -1,21 +1,56 @@
 import React from 'react'
-import { RotateCw, ChevronLeft, ChevronRight, Monitor, Smartphone } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { translate } from '@/i18n/i18n'
+import { useAppStore } from '@/store'
+import { ORCA_BROWSER_BLANK_URL } from '../../../../../shared/constants'
+import type { BrowserWorkspace } from '../../../../../shared/browser-workspace-types'
 import type { WorkspacePort } from '../../../../../shared/workspace-ports'
+import BrowserPane from '@/components/browser-pane/assemble-chrome/browser-workspace-pane'
 import { portToPreviewUrl } from './review-port-url'
-import { ensureReviewWebview } from './review-webview'
 
 type ReviewBrowserPaneProps = {
   taskId: string
+  worktreeId: string | null
 }
 
-export function ReviewBrowserPane({ taskId }: ReviewBrowserPaneProps): React.JSX.Element {
+function reviewBrowserPageId(taskId: string): string {
+  return `todo-review-browser:${taskId}`
+}
+
+function findReviewBrowserTab(
+  worktreeId: string,
+  taskId: string,
+  browserTabsByWorktree: Record<string, BrowserWorkspace[]>,
+  browserPagesByWorkspace: Record<string, { id: string; workspaceId: string; url?: string }[]>
+): BrowserWorkspace | null {
+  const pageId = reviewBrowserPageId(taskId)
+  let workspaceId: string | null = null
+  for (const pages of Object.values(browserPagesByWorkspace)) {
+    const match = pages.find((page) => page.id === pageId)
+    if (match) {
+      workspaceId = match.workspaceId
+      break
+    }
+  }
+  if (!workspaceId) {
+    return null
+  }
+  return (browserTabsByWorktree[worktreeId] ?? []).find((tab) => tab.id === workspaceId) ?? null
+}
+
+export function ReviewBrowserPane({
+  taskId,
+  worktreeId
+}: ReviewBrowserPaneProps): React.JSX.Element {
+  const createBrowserTab = useAppStore((s) => s.createBrowserTab)
+  const setBrowserPageUrl = useAppStore((s) => s.setBrowserPageUrl)
+  const browserTabsByWorktree = useAppStore((s) => s.browserTabsByWorktree)
+  const browserPagesByWorkspace = useAppStore((s) => s.browserPagesByWorkspace)
+
+  const reviewPageId = reviewBrowserPageId(taskId)
   const [ports, setPorts] = React.useState<WorkspacePort[]>([])
-  const [url, setUrl] = React.useState('')
-  const [mobile, setMobile] = React.useState(false)
-  const viewportRef = React.useRef<HTMLDivElement | null>(null)
+  const [selectedUrl, setSelectedUrl] = React.useState<string | null>(null)
+  const lastNavigatedUrlRef = React.useRef<string | null>(null)
+  const ensureTabAttemptedRef = React.useRef(false)
 
   React.useEffect(() => {
     let cancelled = false
@@ -25,7 +60,7 @@ export function ReviewBrowserPane({ taskId }: ReviewBrowserPaneProps): React.JSX
       }
       setPorts(detected)
       if (detected.length > 0) {
-        setUrl(portToPreviewUrl(detected[0]))
+        setSelectedUrl(portToPreviewUrl(detected[0]))
       }
     })
     return () => {
@@ -34,112 +69,110 @@ export function ReviewBrowserPane({ taskId }: ReviewBrowserPaneProps): React.JSX
   }, [taskId])
 
   React.useEffect(() => {
-    const container = viewportRef.current
-    if (!container || !url) {
+    ensureTabAttemptedRef.current = false
+    lastNavigatedUrlRef.current = null
+  }, [worktreeId, taskId])
+
+  const browserTab = React.useMemo(() => {
+    if (!worktreeId) {
+      return null
+    }
+    return findReviewBrowserTab(worktreeId, taskId, browserTabsByWorktree, browserPagesByWorkspace)
+  }, [browserPagesByWorkspace, browserTabsByWorktree, taskId, worktreeId])
+
+  // Side effect: create the review browser tab once; never call store setters from useMemo.
+  React.useEffect(() => {
+    if (!worktreeId) {
       return
     }
-    ensureReviewWebview({ container, taskId, url, mobile })
-  }, [taskId, url, mobile])
+    if (findReviewBrowserTab(worktreeId, taskId, browserTabsByWorktree, browserPagesByWorkspace)) {
+      return
+    }
+    if (ensureTabAttemptedRef.current) {
+      return
+    }
+    ensureTabAttemptedRef.current = true
+    const url = selectedUrl ?? ORCA_BROWSER_BLANK_URL
+    try {
+      createBrowserTab(worktreeId, url, {
+        activate: false,
+        browserPageId: reviewPageId,
+        title: translate('auto.components.todo.detail.ReviewBrowserPane.title', 'Review')
+      })
+    } catch {
+      ensureTabAttemptedRef.current = false
+    }
+  }, [
+    browserPagesByWorkspace,
+    browserTabsByWorktree,
+    createBrowserTab,
+    reviewPageId,
+    selectedUrl,
+    taskId,
+    worktreeId
+  ])
 
-  const webview = (): Electron.WebviewTag | null =>
-    (viewportRef.current?.querySelector('webview') as Electron.WebviewTag | null) ?? null
+  const browserTabId = browserTab?.id ?? null
+  const browserPageId = browserTab?.activePageId ?? browserTab?.pageIds?.[0] ?? reviewPageId
 
-  const reload = (): void => {
-    const wv = webview()
-    if (wv && typeof wv.reload === 'function') {
-      wv.reload()
+  // Navigate only when selectedUrl changes and differs from the page's current URL.
+  React.useEffect(() => {
+    if (!browserTabId || !selectedUrl || selectedUrl === ORCA_BROWSER_BLANK_URL) {
+      return
     }
-  }
-  const back = (): void => {
-    const wv = webview()
-    if (wv && typeof wv.goBack === 'function') {
-      wv.goBack()
+    if (lastNavigatedUrlRef.current === selectedUrl) {
+      return
     }
-  }
-  const forward = (): void => {
-    const wv = webview()
-    if (wv && typeof wv.goForward === 'function') {
-      wv.goForward()
+    const page = (browserPagesByWorkspace[browserTabId] ?? []).find(
+      (entry) => entry.id === browserPageId
+    )
+    if (page?.url === selectedUrl) {
+      lastNavigatedUrlRef.current = selectedUrl
+      return
     }
+    lastNavigatedUrlRef.current = selectedUrl
+    setBrowserPageUrl(browserPageId, selectedUrl)
+  }, [browserPageId, browserPagesByWorkspace, browserTabId, selectedUrl, setBrowserPageUrl])
+
+  if (!worktreeId || !browserTab) {
+    return (
+      <div className="flex h-full items-center justify-center px-4 text-center text-xs text-muted-foreground">
+        {translate(
+          'auto.components.todo.detail.ReviewBrowserPane.noWorktree',
+          'Start the task in a workspace to reuse the embedded browser here.'
+        )}
+      </div>
+    )
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-border">
-      <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={back}
-          aria-label={translate('auto.components.todo.detail.ReviewBrowserPane.back', 'Back')}
-        >
-          <ChevronLeft className="size-4" />
-        </Button>
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={forward}
-          aria-label={translate('auto.components.todo.detail.ReviewBrowserPane.forward', 'Forward')}
-        >
-          <ChevronRight className="size-4" />
-        </Button>
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={reload}
-          aria-label={translate('auto.components.todo.detail.ReviewBrowserPane.reload', 'Reload')}
-        >
-          <RotateCw className="size-4" />
-        </Button>
-        <Input
-          value={url}
-          placeholder={translate(
-            'auto.components.todo.detail.ReviewBrowserPane.urlPlaceholder',
-            'http://localhost:...'
-          )}
-          onChange={(e) => setUrl(e.target.value)}
-          className="h-7 flex-1 text-xs"
-        />
-        {ports.length > 1 ? (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      {ports.length > 1 ? (
+        <div className="flex items-center gap-2 border-b border-border px-2 py-1.5">
+          <label className="text-xs text-muted-foreground">
+            {translate('auto.components.todo.detail.ReviewBrowserPane.portLabel', 'Port')}
+          </label>
           <select
-            className="h-7 rounded border border-border bg-background text-xs"
-            onChange={(e) => setUrl(e.target.value)}
-            value={url}
+            className="h-7 flex-1 rounded border border-border bg-background text-xs"
+            onChange={(e) => {
+              lastNavigatedUrlRef.current = null
+              setSelectedUrl(e.target.value)
+            }}
+            value={selectedUrl ?? ''}
           >
-            {ports.map((p) => {
-              const u = portToPreviewUrl(p)
+            {ports.map((port) => {
+              const url = portToPreviewUrl(port)
               return (
-                <option key={p.id} value={u}>
-                  {u}
+                <option key={port.id} value={url}>
+                  {url}
                 </option>
               )
             })}
           </select>
-        ) : null}
-        <Button
-          size="icon"
-          variant={mobile ? 'ghost' : 'secondary'}
-          aria-label={translate('auto.components.todo.detail.ReviewBrowserPane.desktop', 'Desktop')}
-          aria-pressed={!mobile}
-          onClick={() => setMobile(false)}
-        >
-          <Monitor className="size-4" />
-        </Button>
-        <Button
-          size="icon"
-          variant={mobile ? 'secondary' : 'ghost'}
-          aria-label={translate('auto.components.todo.detail.ReviewBrowserPane.mobile', 'Mobile')}
-          aria-pressed={mobile}
-          onClick={() => setMobile(true)}
-        >
-          <Smartphone className="size-4" />
-        </Button>
-      </div>
-      <div className="flex min-h-0 flex-1 justify-center overflow-hidden bg-muted">
-        <div
-          ref={viewportRef}
-          className="flex min-h-0 flex-1"
-          style={mobile ? { maxWidth: '390px' } : undefined}
-        />
+        </div>
+      ) : null}
+      <div className="min-h-0 flex-1">
+        <BrowserPane browserTab={browserTab} isActive chromeShortcutScope="inactive" />
       </div>
     </div>
   )

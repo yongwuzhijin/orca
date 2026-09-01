@@ -9,7 +9,9 @@ import Database from '../sqlite/sync-database'
 // v5 adds auto_pilot_enabled / auto_pilot_max_turns on todo_items for the orchestrator.
 // v6 folds the redundant 'backlog' status into 'todo' and adds
 // design_stage_enabled, the per-card opt-in for the solution-design stage.
-export const SCHEMA_VERSION = 6
+// v8 adds prd_link and execution_mode on todo_items for requirement metadata and start-time routing.
+// v9 adds bound_worktree_id so the sidebar requirements list and detail meta can resolve the workspace.
+export const SCHEMA_VERSION = 9
 
 export class TodoDatabase {
   private db: Database.Database
@@ -75,7 +77,11 @@ export class TodoDatabase {
         preferred_agent TEXT,
         auto_pilot_enabled INTEGER NOT NULL DEFAULT 0,
         auto_pilot_max_turns INTEGER,
-        design_stage_enabled INTEGER NOT NULL DEFAULT 0
+        design_stage_enabled INTEGER NOT NULL DEFAULT 0,
+        workspace_project_ids TEXT,
+        prd_link TEXT,
+        execution_mode TEXT,
+        bound_worktree_id TEXT
       );
 
       CREATE INDEX IF NOT EXISTS idx_todo_items_project_status
@@ -148,6 +154,28 @@ export class TodoDatabase {
             'ALTER TABLE todo_items ADD COLUMN design_stage_enabled INTEGER NOT NULL DEFAULT 0'
           )
         }
+      }
+      // v7: multi-project workspace binding at task creation.
+      if (current < 7 && !this.hasColumn('todo_items', 'workspace_project_ids')) {
+        this.db.exec('ALTER TABLE todo_items ADD COLUMN workspace_project_ids TEXT')
+        this.db.exec(
+          `UPDATE todo_items SET workspace_project_ids = json_array(workspace_project_id)
+           WHERE workspace_project_id IS NOT NULL
+             AND (workspace_project_ids IS NULL OR workspace_project_ids = '')`
+        )
+      }
+      // v8: PRD link at create; execution mode recorded at start.
+      if (current < 8) {
+        if (!this.hasColumn('todo_items', 'prd_link')) {
+          this.db.exec('ALTER TABLE todo_items ADD COLUMN prd_link TEXT')
+        }
+        if (!this.hasColumn('todo_items', 'execution_mode')) {
+          this.db.exec('ALTER TABLE todo_items ADD COLUMN execution_mode TEXT')
+        }
+      }
+      // v9: worktree created when the requirement starts.
+      if (current < 9 && !this.hasColumn('todo_items', 'bound_worktree_id')) {
+        this.db.exec('ALTER TABLE todo_items ADD COLUMN bound_worktree_id TEXT')
       }
       this.db.pragma(`user_version = ${SCHEMA_VERSION}`)
       this.db.exec('COMMIT')

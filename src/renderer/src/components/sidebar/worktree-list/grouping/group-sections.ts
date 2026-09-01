@@ -6,7 +6,12 @@ import {
   getWorkspaceStatusFromGroupKey,
   getWorkspaceStatusVisualMeta
 } from '../../workspace-status'
-import { PROJECT_GROUP_META, PR_GROUP_META } from './group-keys'
+import {
+  PROJECT_GROUP_META,
+  PR_GROUP_META,
+  REQUIREMENTS_GROUP_META,
+  getRequirementsGroupKey
+} from './group-keys'
 import type { PRGroupKey } from './group-keys'
 import type { NoticeHostContext } from './host-labels'
 import {
@@ -22,6 +27,7 @@ import {
   buildNewExternalWorktreesInboxRow,
   buildPendingCreationRow
 } from './row-builders'
+import { partitionRepoRequirementWorktrees } from './requirement-worktree-partition'
 import type {
   ImportedWorktreesCardCandidate,
   NewExternalWorktreesInboxCandidate,
@@ -50,6 +56,7 @@ export type SectionAppendContext = {
   worktreeMap: Map<string, Worktree>
   nestLineage: boolean
   cyclicLineageIds: ReadonlySet<string>
+  activeBoundWorktreeIds: ReadonlySet<string>
 }
 
 export function appendOrderedGroups(
@@ -73,7 +80,8 @@ export function appendOrderedGroups(
     lineageById,
     worktreeMap,
     nestLineage,
-    cyclicLineageIds
+    cyclicLineageIds,
+    activeBoundWorktreeIds
   } = ctx
   for (const [key, group] of groupsToAppend) {
     const isCollapsed = collapsedGroups.has(key)
@@ -201,7 +209,7 @@ export function appendOrderedGroups(
       // host labels, which are keyed by host-qualified identity.
       const hostContextLabelByWorktreeIdentity =
         groupBy === 'repo' && hostContextLabelByRepoId ? undefined : mixedWorktreeHostContextLabels
-      appendWorktreeRows(result, items, repoMap, lineageById, worktreeMap, {
+      const rowOptions = {
         nestLineage,
         collapsedGroups,
         groupDepth: projectGroupDepth,
@@ -209,7 +217,37 @@ export function appendOrderedGroups(
         hostContextLabelByRepoId,
         hostContextLabelByWorktreeIdentity,
         cyclicLineageIds
-      })
+      }
+      if (groupBy === 'repo' && activeBoundWorktreeIds.size > 0) {
+        const { requirement, rest } = partitionRepoRequirementWorktrees(
+          items,
+          activeBoundWorktreeIds
+        )
+        if (requirement.length > 0) {
+          const requirementsKey = getRequirementsGroupKey(key)
+          result.push({
+            type: 'header',
+            key: requirementsKey,
+            label: REQUIREMENTS_GROUP_META.label,
+            count: requirement.length,
+            tone: REQUIREMENTS_GROUP_META.tone,
+            icon: REQUIREMENTS_GROUP_META.icon,
+            projectGroupDepth: projectGroupDepth + 1
+          })
+          if (!collapsedGroups.has(requirementsKey)) {
+            appendWorktreeRows(result, requirement, repoMap, lineageById, worktreeMap, {
+              ...rowOptions,
+              groupDepth: projectGroupDepth + 1,
+              sectionKey: requirementsKey
+            })
+          }
+          appendWorktreeRows(result, rest, repoMap, lineageById, worktreeMap, rowOptions)
+        } else {
+          appendWorktreeRows(result, items, repoMap, lineageById, worktreeMap, rowOptions)
+        }
+      } else {
+        appendWorktreeRows(result, items, repoMap, lineageById, worktreeMap, rowOptions)
+      }
       for (const pair of folderPairs) {
         result.push(buildFolderWorkspaceRow(pair, projectGroupDepth))
       }

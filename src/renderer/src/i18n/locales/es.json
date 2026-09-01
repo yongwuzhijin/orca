@@ -5050,7 +5050,8 @@
               "682ed5d551": "Cerrado",
               "7c2f009786": "En curso",
               "6798dc7c94": "En revisión",
-              "5076efc3d2": "Hecho"
+              "5076efc3d2": "Hecho",
+              "requirements": "Requisitos"
             }
           }
         },
@@ -5308,7 +5309,7 @@
           "9a4d0f6b21": "Demasiado largo"
         },
         "SidebarTodoNavButton": {
-          "title": "TODO"
+          "title": "Requisitos"
         }
       },
       "shared": {
@@ -14707,18 +14708,20 @@
           "prefixPlaceholder": "ENG"
         },
         "TodoCreateDialog": {
-          "title": "New task",
-          "titleLabel": "Title",
-          "descriptionLabel": "Description",
-          "statusLabel": "Status",
-          "priorityLabel": "Priority",
-          "scheduledLabel": "Scheduled",
-          "templateLabel": "Template",
-          "create": "Create task",
-          "cancel": "Cancel",
-          "createError": "Failed to create task",
-          "titlePlaceholder": "What needs to be done?",
-          "descriptionPlaceholder": "Add more detail (Markdown supported)"
+          "title": "Nuevo requisito",
+          "titleLabel": "Título",
+          "descriptionLabel": "Descripción",
+          "statusLabel": "Estado",
+          "priorityLabel": "Prioridad",
+          "scheduledLabel": "Programado",
+          "templateLabel": "Plantilla",
+          "prdLinkLabel": "Enlace PRD",
+          "prdLinkPlaceholder": "https://…",
+          "create": "Crear requisito",
+          "cancel": "Cancelar",
+          "createError": "Error al crear el requisito",
+          "titlePlaceholder": "¿Qué hay que hacer?",
+          "descriptionPlaceholder": "Añade más detalle (Markdown compatible)"
         },
         "TodoDetailDialog": {
           "statusLabel": "Status",
@@ -14751,18 +14754,38 @@
         "detail": {
           "EnterInProgressDialog": {
             "title": "Iniciar tarea",
-            "engine": "Engine",
-            "cwd": "Working directory",
-            "browse": "Browse…",
-            "basePrompt": "Base prompt",
-            "extra": "Additional prompt",
-            "cancel": "Cancel",
-            "start": "Start",
-            "cwdPlaceholder": "/path/to/repo",
+            "executionMode": "Modo de ejecución",
+            "acpMode": "ACP",
+            "terminalMode": "Terminal",
+            "engine": "Agente",
+            "noInstalledAgents": "No hay agentes instalados",
+            "noInstalledAcpAgents": "No hay agentes ACP instalados (Cursor / Qoder)",
+            "noBoundProject": "Vincula un proyecto a este requisito antes de iniciar.",
+            "starting": "Iniciando…",
+            "basePrompt": "Prompt base",
+            "extra": "Prompt adicional",
+            "cancel": "Cancelar",
+            "start": "Iniciar",
             "autoPilot": "AutoPilot (avanzar de forma autónoma)",
             "maxTurns": "Turnos máximos",
             "designStage": "Diseñar la solución primero",
             "designStageUnset": "Configura una habilidad de diseño de solución en Ajustes para activar esta etapa"
+          },
+          "todoStartWorkspace": {
+            "noProject": "Vincula un proyecto a este requisito antes de iniciar.",
+            "unsupportedFolder": "Los proyectos de carpeta aún no pueden crear un worktree automáticamente.",
+            "createFailed": "No se pudo crear el espacio de trabajo"
+          },
+          "todoTerminalTaskStart": {
+            "noWorkspace": "No se encontró un espacio de trabajo para esta ruta. Crea o abre uno primero.",
+            "startupFailed": "No se pudo crear un plan de inicio para este agente."
+          },
+          "TodoDetailWorkspaceMeta": {
+            "workspaceName": "Espacio de trabajo",
+            "projectPath": "Ruta del proyecto",
+            "workspacePath": "Ruta del espacio de trabajo",
+            "notSet": "Sin definir",
+            "noProject": "Sin proyecto vinculado"
           },
           "TodoDetailView": {
             "startTask": "Iniciar tarea",
@@ -14809,7 +14832,10 @@
             "forward": "Forward",
             "reload": "Reload",
             "desktop": "Desktop",
-            "mobile": "Mobile"
+            "mobile": "Mobile",
+            "title": "Revisión",
+            "noWorktree": "Inicia la tarea en un espacio de trabajo para reutilizar el navegador integrado aquí.",
+            "portLabel": "Puerto"
           },
           "ReviewDecisionBar": {
             "reject": "Reject",
@@ -14829,7 +14855,21 @@
             "empty": "Aún no hay documentos de diseño. Aparecerán aquí cuando la habilidad los escriba.",
             "refresh": "Actualizar"
           },
-          "startImplementation": "Iniciar implementación"
+          "startImplementation": "Iniciar implementación",
+          "ReviewLeftPane": {
+            "tabBrowser": "Navegador",
+            "tabChanges": "Cambios",
+            "tabFiles": "Archivos",
+            "noWorktree": "Inicia la tarea en un espacio de trabajo para revisar cambios y archivos aquí."
+          },
+          "ReviewFilePreviewDialog": {
+            "description": "Vista previa del archivo",
+            "loadingEditor": "Cargando editor…",
+            "fullscreen": "Pantalla completa",
+            "exitFullscreen": "Salir de pantalla completa",
+            "close": "Cerrar",
+            "openInEditor": "Abrir en el editor del espacio de trabajo"
+          }
         },
         "dashboard": {
           "CycleTimeCard": {
@@ -14867,6 +14907,10 @@
         "TodoPriorityMenu": {
           "setPriority": "Set priority",
           "changePriorityAria": "Change priority"
+        },
+        "TodoWorkspaceMultiProjectPicker": {
+          "removeProject": "Quitar proyecto",
+          "addProjectPlaceholder": "Agregar proyecto a la tarea"
         }
       },
       "jsonFormatter": {

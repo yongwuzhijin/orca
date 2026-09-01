@@ -34,10 +34,14 @@ function mkItem(id: string, status: TodoStatus, scheduledDate: string | null): T
     completedAt: null,
     sessionId: null,
     workspaceProjectId: null,
+    workspaceProjectIds: [],
     workspaceName: null,
     preferredAgent: null,
     autoPilotEnabled: false,
     autoPilotMaxTurns: null,
+    prdLink: null,
+    executionMode: null,
+    boundWorktreeId: null,
     designStageEnabled: false
   }
 }

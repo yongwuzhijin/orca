@@ -54,6 +54,9 @@ vi.mock('./MergingPanel', () => ({
 vi.mock('./EnterInProgressDialog', () => ({
   EnterInProgressDialog: () => <div data-testid="enter-in-progress-dialog" />
 }))
+vi.mock('./TodoDetailWorkspaceMeta', () => ({
+  TodoDetailWorkspaceMeta: () => <div data-testid="todo-detail-workspace-meta" />
+}))
 vi.mock('./ReviewDecisionBar', () => ({
   ReviewDecisionBar: () => <div data-testid="review-decision-bar">decision-bar</div>
 }))
@@ -98,10 +101,14 @@ function mkItem(overrides: Partial<TodoItem> = {}): TodoItem {
     completedAt: null,
     sessionId: null,
     workspaceProjectId: null,
+    workspaceProjectIds: [],
     workspaceName: null,
     preferredAgent: null,
     autoPilotEnabled: false,
     autoPilotMaxTurns: null,
+    prdLink: null,
+    executionMode: null,
+    boundWorktreeId: null,
     designStageEnabled: false,
     ...overrides
   }

@@ -5,11 +5,18 @@ import type { TodoItem } from './todo-item'
 export function buildBasePrompt(item: TodoItem): string {
   const title = item.title.trimEnd()
   const description = item.description.trim()
+  const prdLink = item.prdLink?.trim()
+  const sections: string[] = []
   // Why: create flow often seeds description from title; concatenating both duplicates the prompt.
   if (!description || description === title.trim()) {
-    return title
+    sections.push(title)
+  } else {
+    sections.push(`${title}\n\n${description}`)
   }
-  return `${title}\n\n${description}`
+  if (prdLink) {
+    sections.push(`PRD: ${prdLink}`)
+  }
+  return sections.join('\n\n')
 }
 
 export function composePrompt(base: string, extra: string): string {

@@ -5079,7 +5079,8 @@
               "682ed5d551": "已关闭",
               "7c2f009786": "进行中",
               "6798dc7c94": "评审中",
-              "5076efc3d2": "完成"
+              "5076efc3d2": "完成",
+              "requirements": "需求列表"
             }
           }
         },
@@ -5356,7 +5357,7 @@
           "9a4d0f6b21": "过长"
         },
         "SidebarTodoNavButton": {
-          "title": "待办"
+          "title": "需求"
         }
       },
       "shared": {
@@ -8484,8 +8485,8 @@
             "editorFontFamilyDesc": "文件编辑器和差异视图使用的字体，留空则跟随终端字体。",
             "externalWorktrees": "外部工作树",
             "externalWorktreesDescription": "选择是否默认显示在 Orca 外部创建的工作树。",
-            "orcaDirectoryNames": "Orca 目录名",
-            "orcaDirectoryNamesDescription": "重命名 Orca 在工作区内和主目录下用于存放自身状态的目录。"
+            "orcaDirectoryNames": "上下文目录",
+            "orcaDirectoryNamesDescription": "重命名 Orca 在项目内和主目录下用于存放自身状态的目录。"
           }
         },
         "git": {
@@ -10480,14 +10481,14 @@
           "description": "任务进入方案设计阶段时，作为前缀加到提示词开头。留空则关闭该阶段。"
         },
         "OrcaDirectoryNameSettings": {
-          "title": "Orca 目录名",
-          "description": "Orca 在每个工作区内和主目录下用于存放自身状态的目录名。",
-          "workspaceLabel": "工作区 Orca 目录",
-          "resetWorkspace": "重置工作区目录名",
-          "workspaceInvalid": "请输入工作区内的相对目录名。不允许绝对路径、“..”或特殊字符。",
+          "title": "上下文目录",
+          "description": "Orca 在每个项目内和主目录下用于存放自身状态的目录名。",
+          "workspaceLabel": "项目上下文目录",
+          "resetWorkspace": "重置项目上下文目录名",
+          "workspaceInvalid": "请输入项目内的相对目录名。不允许绝对路径、“..”或特殊字符。",
           "workspaceHelp": "用于存放拖入的文件、文档模板、设计文档以及 issue 命令覆写。立即生效。",
-          "homeLabel": "主目录 Orca 目录",
-          "resetHome": "重置主目录名",
+          "homeLabel": "全局上下文目录",
+          "resetHome": "重置全局上下文目录名",
           "homeInvalid": "请输入主目录下的单个目录名。不允许路径分隔符或特殊字符。",
           "homeHelp": "用于存放凭据、快捷键配置和 agent hook 脚本。重启后生效；已有文件不会被移动。",
           "restartPending": "重启 Orca 后将使用 ~/{{pending}}。当前会话仍在使用 ~/{{effective}}。"
@@ -14735,7 +14736,7 @@
           "urgent": "紧急"
         },
         "TodoPage": {
-          "newTask": "新建任务",
+          "newTask": "新建需求",
           "empty": "创建一个项目开始使用",
           "tabBoard": "看板",
           "tabData": "数据"
@@ -14763,16 +14764,18 @@
           "prefixPlaceholder": "ENG"
         },
         "TodoCreateDialog": {
-          "title": "新建任务",
+          "title": "新建需求",
           "titleLabel": "标题",
           "descriptionLabel": "描述",
           "statusLabel": "状态",
           "priorityLabel": "优先级",
           "scheduledLabel": "计划日期",
           "templateLabel": "模板",
-          "create": "创建任务",
+          "prdLinkLabel": "PRD 链接",
+          "prdLinkPlaceholder": "https://…",
+          "create": "创建需求",
           "cancel": "取消",
-          "createError": "创建任务失败",
+          "createError": "创建需求失败",
           "titlePlaceholder": "需要做什么?",
           "descriptionPlaceholder": "添加更多细节(支持 Markdown)"
         },
@@ -14815,18 +14818,38 @@
         "detail": {
           "EnterInProgressDialog": {
             "title": "开始任务",
-            "engine": "引擎",
-            "cwd": "工作目录",
-            "browse": "浏览…",
+            "executionMode": "执行模式",
+            "acpMode": "ACP",
+            "terminalMode": "终端",
+            "engine": "智能体",
+            "noInstalledAgents": "暂无已安装的智能体",
+            "noInstalledAcpAgents": "暂无已安装的 ACP 智能体（Cursor / Qoder）",
+            "noBoundProject": "开始前请先绑定项目。",
+            "starting": "正在启动…",
             "basePrompt": "基础提示词",
             "extra": "附加提示词",
             "cancel": "取消",
             "start": "开始",
-            "cwdPlaceholder": "/path/to/repo",
             "autoPilot": "AutoPilot（自主推进）",
             "maxTurns": "最大轮次",
             "designStage": "先做方案设计",
             "designStageUnset": "请先在设置中配置方案设计技能"
+          },
+          "todoStartWorkspace": {
+            "noProject": "开始前请先绑定项目。",
+            "unsupportedFolder": "文件夹项目暂不支持自动创建工作区。",
+            "createFailed": "创建工作区失败"
+          },
+          "todoTerminalTaskStart": {
+            "noWorkspace": "未找到该路径对应的工作区，请先创建或打开工作区。",
+            "startupFailed": "无法为该智能体构建启动计划。"
+          },
+          "TodoDetailWorkspaceMeta": {
+            "workspaceName": "工作区",
+            "projectPath": "项目路径",
+            "workspacePath": "工作区路径",
+            "notSet": "未设置",
+            "noProject": "未绑定项目"
           },
           "TodoDetailView": {
             "startTask": "开始任务",
@@ -14873,7 +14896,10 @@
             "forward": "Forward",
             "reload": "Reload",
             "desktop": "Desktop",
-            "mobile": "Mobile"
+            "mobile": "Mobile",
+            "title": "评审",
+            "noWorktree": "在工作区中启动任务后，可在此复用内嵌浏览器。",
+            "portLabel": "端口"
           },
           "ReviewDecisionBar": {
             "reject": "Reject",
@@ -14893,7 +14919,21 @@
             "empty": "暂无方案文档。技能写入后会显示在这里。",
             "refresh": "刷新"
           },
-          "startImplementation": "开始实施"
+          "startImplementation": "开始实施",
+          "ReviewLeftPane": {
+            "tabBrowser": "浏览器",
+            "tabChanges": "更改",
+            "tabFiles": "文件",
+            "noWorktree": "在工作区中启动任务后，可在此查看更改和文件。"
+          },
+          "ReviewFilePreviewDialog": {
+            "description": "文件预览",
+            "loadingEditor": "正在加载编辑器…",
+            "fullscreen": "全屏",
+            "exitFullscreen": "退出全屏",
+            "close": "关闭",
+            "openInEditor": "在工作区编辑器中打开"
+          }
         },
         "dashboard": {
           "CycleTimeCard": {
@@ -14923,6 +14963,10 @@
             "coverage": "Attributed",
             "unavailable": "n/a"
           }
+        },
+        "TodoWorkspaceMultiProjectPicker": {
+          "removeProject": "移除项目",
+          "addProjectPlaceholder": "为任务添加项目"
         }
       },
       "jsonFormatter": {

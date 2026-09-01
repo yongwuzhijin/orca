@@ -66,7 +66,7 @@ export default function TodoPage(): React.JSX.Element {
           }}
         >
           <Plus className="size-4" />
-          {translate('auto.components.todo.TodoPage.newTask', 'New task')}
+          {translate('auto.components.todo.TodoPage.newTask', 'New requirement')}
         </Button>
       </header>
       <div className="min-h-0 flex-1 overflow-hidden">

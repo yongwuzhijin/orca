@@ -11,8 +11,7 @@ describe('buildCreateTodoPayload', () => {
       priority: 'high',
       scheduledDate: '2026-07-11',
       estimate: 3,
-      labels: ['ux'],
-      templateId: 't1'
+      labels: ['ux']
     })
     expect(payload).toEqual({
       projectId: 'p1',
@@ -22,21 +21,21 @@ describe('buildCreateTodoPayload', () => {
       priority: 'high',
       scheduledDate: '2026-07-11',
       estimate: 3,
-      labels: ['ux'],
-      templateId: 't1'
+      labels: ['ux']
     })
   })
   it('includes workspace binding fields when set', () => {
     const payload = buildCreateTodoPayload({
       projectId: 'p1',
       title: 'Ship',
-      workspaceProjectId: 'proj-1',
+      workspaceProjectIds: ['proj-1', 'proj-2'],
       workspaceName: '  feature-x  ',
-      preferredAgent: 'claude'
+      prdLink: ' https://doc.example/prd '
     })
+    expect(payload.workspaceProjectIds).toEqual(['proj-1', 'proj-2'])
     expect(payload.workspaceProjectId).toBe('proj-1')
     expect(payload.workspaceName).toBe('feature-x')
-    expect(payload.preferredAgent).toBe('claude')
+    expect(payload.prdLink).toBe('https://doc.example/prd')
   })
 
   it('omits empty optional fields', () => {
@@ -46,6 +45,6 @@ describe('buildCreateTodoPayload', () => {
     expect(payload.scheduledDate ?? null).toBeNull()
     expect(payload.workspaceProjectId).toBeUndefined()
     expect(payload.workspaceName).toBeUndefined()
-    expect(payload.preferredAgent).toBeUndefined()
+    expect(payload.prdLink).toBeUndefined()
   })
 })

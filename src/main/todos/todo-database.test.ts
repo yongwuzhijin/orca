@@ -39,7 +39,7 @@ describe('TodoDatabase', () => {
   it('sets user_version to SCHEMA_VERSION', () => {
     const d = createDb()
     const version = d.raw.pragma('user_version', { simple: true }) as number
-    expect(SCHEMA_VERSION).toBe(6)
+    expect(SCHEMA_VERSION).toBe(9)
     expect(version).toBe(SCHEMA_VERSION)
   })
 
@@ -78,9 +78,9 @@ describe('TodoDatabase', () => {
     expect(row.next_sequence).toBe(1)
   })
 
-  it('ships schema version 6 with workspace binding columns on a fresh db', () => {
+  it('ships schema version 9 with workspace binding columns on a fresh db', () => {
     const d = createDb()
-    expect(SCHEMA_VERSION).toBe(6)
+    expect(SCHEMA_VERSION).toBe(9)
     const cols = (d.raw.pragma('table_info(todo_items)') as { name: string }[]).map((c) => c.name)
     expect(cols).toContain('session_id')
     expect(cols).toContain('workspace_project_id')
@@ -90,6 +90,10 @@ describe('TodoDatabase', () => {
     // suite while every new install breaks on first insert — and ensureSchema has
     // already stamped user_version = 6, so migrate() can never repair it.
     expect(cols).toContain('design_stage_enabled')
+    expect(cols).toContain('workspace_project_ids')
+    expect(cols).toContain('prd_link')
+    expect(cols).toContain('execution_mode')
+    expect(cols).toContain('bound_worktree_id')
   })
 
   it('adds workspace binding columns to an on-disk legacy v1 db when reopened', () => {
@@ -124,17 +128,18 @@ describe('TodoDatabase', () => {
     // Why: a `current === 5` guard would leave this db stamped v6 with the column
     // missing — unrecoverable. Pre-v5 dbs must take the v6 step too.
     expect(cols).toContain('design_stage_enabled')
+    expect(cols).toContain('workspace_project_ids')
     expect(db.raw.prepare('SELECT status FROM todo_items WHERE id = ?').get('l1')).toEqual({
       status: 'todo'
     })
-    expect(version).toBe(6)
+    expect(version).toBe(9)
   })
 
   it('migrates todo_projects with default_working_dir (v3, P2b)', () => {
     const d = createDb()
     const cols = d.raw.pragma('table_info(todo_projects)') as { name: string }[]
     expect(cols.some((c) => c.name === 'default_working_dir')).toBe(true)
-    expect(d.raw.pragma('user_version', { simple: true })).toBe(6)
+    expect(d.raw.pragma('user_version', { simple: true })).toBe(9)
   })
 
   it('exposes auto_pilot columns on a fresh db', () => {
@@ -177,10 +182,11 @@ describe('TodoDatabase', () => {
     // Why: pre-v5 dbs must also take the v6 step, else they land stamped v6 with
     // design_stage_enabled missing and no path back.
     expect(cols).toContain('design_stage_enabled')
+    expect(cols).toContain('workspace_project_ids')
     expect(db.raw.prepare('SELECT status FROM todo_items WHERE id = ?').get('v4a')).toEqual({
       status: 'todo'
     })
-    expect(version).toBe(6)
+    expect(version).toBe(9)
   })
 
   // Returns the path to an on-disk v5 db whose todo_items holds `itemValues`
@@ -242,7 +248,7 @@ describe('TodoDatabase', () => {
 
     db = new TodoDatabase(file)
 
-    expect(db.raw.pragma('user_version', { simple: true })).toBe(6)
+    expect(db.raw.pragma('user_version', { simple: true })).toBe(9)
     const cols = (db.raw.pragma('table_info(todo_items)') as { name: string }[]).map((c) => c.name)
     expect(cols).toContain('design_stage_enabled')
     expect(
@@ -256,7 +262,7 @@ describe('TodoDatabase', () => {
     // Why: re-opening must be a no-op — migrate() short-circuits on user_version.
     db.close()
     db = new TodoDatabase(file)
-    expect(db.raw.pragma('user_version', { simple: true })).toBe(6)
+    expect(db.raw.pragma('user_version', { simple: true })).toBe(9)
     expect(
       db.raw.prepare('SELECT COUNT(*) AS n FROM todo_items WHERE status = ?').get('todo')
     ).toEqual({ n: 2 })

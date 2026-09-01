@@ -5034,7 +5034,8 @@
               "682ed5d551": "닫힘",
               "7c2f009786": "진행중",
               "6798dc7c94": "리뷰 중",
-              "5076efc3d2": "완료"
+              "5076efc3d2": "완료",
+              "requirements": "요구사항 목록"
             }
           }
         },
@@ -5311,7 +5312,7 @@
           "9a4d0f6b21": "너무 김"
         },
         "SidebarTodoNavButton": {
-          "title": "TODO"
+          "title": "요구사항"
         }
       },
       "shared": {
@@ -14721,18 +14722,20 @@
           "prefixPlaceholder": "ENG"
         },
         "TodoCreateDialog": {
-          "title": "New task",
-          "titleLabel": "Title",
-          "descriptionLabel": "Description",
-          "statusLabel": "Status",
-          "priorityLabel": "Priority",
-          "scheduledLabel": "Scheduled",
-          "templateLabel": "Template",
-          "create": "Create task",
-          "cancel": "Cancel",
-          "createError": "Failed to create task",
-          "titlePlaceholder": "What needs to be done?",
-          "descriptionPlaceholder": "Add more detail (Markdown supported)"
+          "title": "새 요구사항",
+          "titleLabel": "제목",
+          "descriptionLabel": "설명",
+          "statusLabel": "상태",
+          "priorityLabel": "우선순위",
+          "scheduledLabel": "예정일",
+          "templateLabel": "템플릿",
+          "prdLinkLabel": "PRD 링크",
+          "prdLinkPlaceholder": "https://…",
+          "create": "요구사항 만들기",
+          "cancel": "취소",
+          "createError": "요구사항 생성 실패",
+          "titlePlaceholder": "무엇을 해야 하나요?",
+          "descriptionPlaceholder": "자세한 내용 추가(Markdown 지원)"
         },
         "TodoDetailDialog": {
           "statusLabel": "Status",
@@ -14765,18 +14768,38 @@
         "detail": {
           "EnterInProgressDialog": {
             "title": "작업 시작",
-            "engine": "Engine",
-            "cwd": "Working directory",
-            "browse": "Browse…",
-            "basePrompt": "Base prompt",
-            "extra": "Additional prompt",
-            "cancel": "Cancel",
-            "start": "Start",
-            "cwdPlaceholder": "/path/to/repo",
+            "executionMode": "실행 모드",
+            "acpMode": "ACP",
+            "terminalMode": "터미널",
+            "engine": "에이전트",
+            "noInstalledAgents": "설치된 에이전트가 없습니다",
+            "noInstalledAcpAgents": "설치된 ACP 에이전트가 없습니다(Cursor / Qoder)",
+            "noBoundProject": "시작하기 전에 이 요구사항에 프로젝트를 연결하세요.",
+            "starting": "시작 중…",
+            "basePrompt": "기본 프롬프트",
+            "extra": "추가 프롬프트",
+            "cancel": "취소",
+            "start": "시작",
             "autoPilot": "AutoPilot(자동 진행)",
             "maxTurns": "최대 턴 수",
             "designStage": "먼저 솔루션을 설계",
             "designStageUnset": "설정에서 솔루션 설계 스킬을 지정하세요"
+          },
+          "todoStartWorkspace": {
+            "noProject": "시작하기 전에 이 요구사항에 프로젝트를 연결하세요.",
+            "unsupportedFolder": "폴더 프로젝트는 아직 워크트리를 자동 생성할 수 없습니다.",
+            "createFailed": "워크스페이스를 만들지 못했습니다"
+          },
+          "todoTerminalTaskStart": {
+            "noWorkspace": "이 경로에 해당하는 워크스페이스를 찾을 수 없습니다. 먼저 워크스페이스를 만들거나 여세요.",
+            "startupFailed": "이 에이전트에 대한 실행 계획을 만들 수 없습니다."
+          },
+          "TodoDetailWorkspaceMeta": {
+            "workspaceName": "워크스페이스",
+            "projectPath": "프로젝트 경로",
+            "workspacePath": "워크스페이스 경로",
+            "notSet": "설정되지 않음",
+            "noProject": "프로젝트 미연결"
           },
           "TodoDetailView": {
             "startTask": "작업 시작",
@@ -14823,7 +14846,10 @@
             "forward": "Forward",
             "reload": "Reload",
             "desktop": "Desktop",
-            "mobile": "Mobile"
+            "mobile": "Mobile",
+            "title": "검토",
+            "noWorktree": "작업 공간에서 작업을 시작하면 여기에서 내장 브라우저를 재사용할 수 있습니다.",
+            "portLabel": "포트"
           },
           "ReviewDecisionBar": {
             "reject": "Reject",
@@ -14843,7 +14869,21 @@
             "empty": "설계 문서가 아직 없습니다. 스킬이 작성하면 여기에 표시됩니다.",
             "refresh": "새로 고침"
           },
-          "startImplementation": "구현 시작"
+          "startImplementation": "구현 시작",
+          "ReviewLeftPane": {
+            "tabBrowser": "브라우저",
+            "tabChanges": "변경",
+            "tabFiles": "파일",
+            "noWorktree": "작업 공간에서 작업을 시작하면 여기에서 변경 사항과 파일을 검토할 수 있습니다."
+          },
+          "ReviewFilePreviewDialog": {
+            "description": "파일 미리보기",
+            "loadingEditor": "편집기 로드 중…",
+            "fullscreen": "전체 화면",
+            "exitFullscreen": "전체 화면 종료",
+            "close": "닫기",
+            "openInEditor": "작업 공간 편집기에서 열기"
+          }
         },
         "dashboard": {
           "CycleTimeCard": {
@@ -14881,6 +14921,10 @@
         "TodoPriorityMenu": {
           "setPriority": "Set priority",
           "changePriorityAria": "Change priority"
+        },
+        "TodoWorkspaceMultiProjectPicker": {
+          "removeProject": "프로젝트 제거",
+          "addProjectPlaceholder": "작업에 프로젝트 추가"
         }
       },
       "jsonFormatter": {

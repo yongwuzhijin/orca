@@ -1,6 +1,6 @@
-import type { AcpEngine } from '../acp/acp-session'
 import type { TodoPriority } from './todo-priority'
 import type { TodoStatus } from './todo-status'
+import type { TodoExecutionMode } from './todo-execution-mode'
 
 export type TodoItem = {
   id: string
@@ -16,10 +16,16 @@ export type TodoItem = {
   templateId: string | null
   /** Orca Project id bound for workspace creation when the task starts. */
   workspaceProjectId: string | null
+  /** All Orca projects selected at task creation; primary is workspaceProjectId. */
+  workspaceProjectIds: string[]
   /** Optional worktree/workspace name hint for later creation. */
   workspaceName: string | null
-  /** Preferred ACP engine when entering in-progress. */
-  preferredAgent: AcpEngine | null
+  /** PRD document URL captured at requirement creation. */
+  prdLink: string | null
+  /** How the task was started: ACP session or terminal agent. */
+  executionMode: TodoExecutionMode | null
+  /** Agent/engine id chosen at start; meaning depends on executionMode. */
+  preferredAgent: string | null
   orderKey: string
   createdAt: string
   updatedAt: string
@@ -32,6 +38,8 @@ export type TodoItem = {
   autoPilotMaxTurns: number | null
   /** Whether starting this task routes it through the solution_design stage. Default false. */
   designStageEnabled: boolean
+  /** Worktree created when the task started; drives sidebar requirements list. */
+  boundWorktreeId: string | null
 }
 
 export type CreateTodoItemInput = {
@@ -45,11 +53,15 @@ export type CreateTodoItemInput = {
   labels?: string[]
   templateId?: string | null
   workspaceProjectId?: string | null
+  workspaceProjectIds?: string[]
   workspaceName?: string | null
-  preferredAgent?: AcpEngine | null
+  prdLink?: string | null
+  executionMode?: TodoExecutionMode | null
+  preferredAgent?: string | null
   autoPilotEnabled?: boolean
   autoPilotMaxTurns?: number | null
   designStageEnabled?: boolean
+  boundWorktreeId?: string | null
 }
 
 export type UpdateTodoItemPatch = {
@@ -62,9 +74,13 @@ export type UpdateTodoItemPatch = {
   labels?: string[]
   templateId?: string | null
   workspaceProjectId?: string | null
+  workspaceProjectIds?: string[]
   workspaceName?: string | null
-  preferredAgent?: AcpEngine | null
+  prdLink?: string | null
+  executionMode?: TodoExecutionMode | null
+  preferredAgent?: string | null
   autoPilotEnabled?: boolean
   autoPilotMaxTurns?: number | null
   designStageEnabled?: boolean
+  boundWorktreeId?: string | null
 }
