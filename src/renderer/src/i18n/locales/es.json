@@ -7996,7 +7996,9 @@
             "translateDictionaryTitle": "Definiciones del diccionario",
             "translateDictionaryDescription": "Permite que el panel de traducción solicite definiciones de palabras a dict.youdao.com.",
             "translateDictionaryKeywordDictionary": "diccionario",
-            "translateDictionaryKeywordTranslate": "traducir"
+            "translateDictionaryKeywordTranslate": "traducir",
+            "translateAiTitle": "Traducción con IA",
+            "translateAiDescription": "Configura la API compatible con OpenAI que se usa al seleccionar la traducción con IA."
           }
         },
         "auto": {
@@ -10469,6 +10471,31 @@
           "homeInvalid": "Introduce un único nombre de directorio dentro de tu directorio personal. No se permiten separadores ni caracteres especiales.",
           "homeHelp": "Contiene las credenciales, los atajos de teclado y los scripts de hooks de agentes. Se aplica tras reiniciar; los archivos existentes no se mueven.",
           "restartPending": "Reinicia Orca para usar ~/{{pending}}. Esta sesión sigue usando ~/{{effective}}."
+        },
+        "TranslateAiApiKeyDialog": {
+          "title": "Clave API de traducción con IA",
+          "description": "El texto solo se envía a tu API configurada cuando se selecciona la traducción con IA.",
+          "apiKeyLabel": "Clave API",
+          "configuredPlaceholder": "Clave API configurada",
+          "placeholder": "sk-...",
+          "localKeyStorage": "Las claves locales se almacenan en ~/{{dir}} usando el almacenamiento cifrado de Electron cuando está disponible.",
+          "clearKey": "Borrar clave",
+          "saveKey": "Guardar clave"
+        },
+        "TranslateAiSettings": {
+          "apiKeySaved": "Clave API guardada",
+          "apiKeySaveFailed": "No se pudo guardar la clave API",
+          "apiKeyCleared": "Clave API borrada",
+          "apiKeyClearFailed": "No se pudo borrar la clave API",
+          "baseUrlLabel": "URL base",
+          "modelLabel": "Modelo",
+          "apiKeyLabel": "Clave API",
+          "connected": "Conectado",
+          "apiKeyConfiguredDescription": "Clave API configurada para traducción con IA.",
+          "apiKeyMissingDescription": "Añade una clave API antes de seleccionar la traducción con IA.",
+          "replaceKey": "Reemplazar clave",
+          "disconnectApiKey": "Desconectar clave API",
+          "addApiKey": "Añadir clave API"
         }
       },
       "right": {
@@ -15572,12 +15599,15 @@
       "auto": "Auto",
       "directionHint": "Haz clic para cambiar la dirección; Auto la detecta según tu texto",
       "fallbackNote": "Traducido por el servicio de respaldo",
+      "modelNote": "Traducido por {model}",
       "agentNote": "Traducido por {agent}",
       "agentFallbackName": "el agente de IA",
       "normalizedNote": "Consultado como «{query}»",
       "dictionaryAriaLabel": "Entradas del diccionario",
       "ai": "AI",
-      "aiHint": "Usa tu agente de IA configurado en lugar del servicio gratuito",
+      "aiHint": "Usa tu API compatible con OpenAI configurada en lugar del servicio gratuito",
+      "aiNotConfigured": "Añade una clave API de traducción IA en Ajustes para usar el modo IA.",
+      "goToSettings": "Ir a ajustes",
       "cancel": "Cancelar",
       "useFreeInstead": "Usar la traducción rápida",
       "partOfSpeech": {
@@ -15603,7 +15633,7 @@
         "rateLimited": "Se agotó la cuota gratuita de traducción. Inténtalo más tarde.",
         "timeout": "La solicitud de traducción superó el tiempo de espera.",
         "providerError": "El servicio de traducción devolvió una respuesta inesperada.",
-        "aiUnavailable": "El agente de IA no pudo traducir esto."
+        "aiUnavailable": "La API de traducción no pudo completar esta traducción."
       }
     }
   }

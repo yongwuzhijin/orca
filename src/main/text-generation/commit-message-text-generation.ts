@@ -104,11 +104,7 @@ export type RemoteCommitMessageExecResult = {
   spawnError?: string
 }
 
-export type TextGenerationOperation =
-  | 'commit-message'
-  | 'pull-request-fields'
-  | 'branch-name'
-  | 'translation'
+export type TextGenerationOperation = 'commit-message' | 'pull-request-fields' | 'branch-name'
 
 export type CommitMessageGenerationTarget =
   | { kind: 'local'; cwd: string; env?: NodeJS.ProcessEnv; wslDistro?: string }
@@ -1153,10 +1149,6 @@ export async function generateCommitMessageFromContext(
 
 export function cancelGeneratePullRequestFieldsLocal(cwd: string): void {
   cancelTokensByLane.get(localLaneKey('pull-request-fields', cwd))?.()
-}
-
-export function cancelGenerateTranslationLocal(cwd: string): void {
-  cancelTokensByLane.get(localLaneKey('translation', cwd))?.()
 }
 
 function formatPullRequestFieldsGenerationResult(

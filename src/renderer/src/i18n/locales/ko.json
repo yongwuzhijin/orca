@@ -7984,7 +7984,9 @@
             "translateDictionaryTitle": "사전 뜻풀이",
             "translateDictionaryDescription": "번역 팝오버가 dict.youdao.com에 단어 뜻을 요청하도록 허용합니다.",
             "translateDictionaryKeywordDictionary": "사전",
-            "translateDictionaryKeywordTranslate": "번역"
+            "translateDictionaryKeywordTranslate": "번역",
+            "translateAiTitle": "AI 번역",
+            "translateAiDescription": "AI 번역을 선택할 때 사용할 OpenAI 호환 API를 설정합니다."
           }
         },
         "auto": {
@@ -10472,6 +10474,31 @@
           "homeInvalid": "홈 디렉터리 아래의 단일 디렉터리 이름을 입력하세요. 구분자나 특수 문자는 사용할 수 없습니다.",
           "homeHelp": "자격 증명, 키 바인딩, 에이전트 훅 스크립트를 저장합니다. 재시작 후 적용되며 기존 파일은 이동되지 않습니다.",
           "restartPending": "Orca를 재시작하면 ~/{{pending}}을(를) 사용합니다. 현재 세션은 여전히 ~/{{effective}}을(를) 사용합니다."
+        },
+        "TranslateAiApiKeyDialog": {
+          "title": "AI 번역 API 키",
+          "description": "AI 번역을 선택한 경우에만 텍스트가 설정한 API로 전송됩니다.",
+          "apiKeyLabel": "API 키",
+          "configuredPlaceholder": "API 키가 설정됨",
+          "placeholder": "sk-...",
+          "localKeyStorage": "로컬 런타임 키는 ~/{{dir}}에 저장되며, 가능한 경우 Electron 암호화 저장소를 사용합니다.",
+          "clearKey": "키 지우기",
+          "saveKey": "키 저장"
+        },
+        "TranslateAiSettings": {
+          "apiKeySaved": "API 키가 저장됨",
+          "apiKeySaveFailed": "API 키 저장 실패",
+          "apiKeyCleared": "API 키가 삭제됨",
+          "apiKeyClearFailed": "API 키 삭제 실패",
+          "baseUrlLabel": "Base URL",
+          "modelLabel": "모델",
+          "apiKeyLabel": "API 키",
+          "connected": "연결됨",
+          "apiKeyConfiguredDescription": "AI 번역용 API 키가 설정되어 있습니다.",
+          "apiKeyMissingDescription": "AI 번역을 선택하기 전에 API 키를 추가하세요.",
+          "replaceKey": "키 교체",
+          "disconnectApiKey": "API 키 연결 해제",
+          "addApiKey": "API 키 추가"
         }
       },
       "right": {
@@ -15671,12 +15698,15 @@
       "auto": "자동",
       "directionHint": "클릭하여 번역 방향을 바꿉니다. 자동은 텍스트로 판별합니다",
       "fallbackNote": "예비 번역 서비스로 번역했습니다",
+      "modelNote": "{model}이(가) 번역했습니다",
       "agentNote": "{agent}이(가) 번역했습니다",
       "agentFallbackName": "AI 에이전트",
       "normalizedNote": "“{query}”(으)로 조회했습니다",
       "dictionaryAriaLabel": "사전 항목",
       "ai": "AI",
-      "aiHint": "무료 서비스 대신 설정된 AI 에이전트를 사용합니다",
+      "aiHint": "무료 서비스 대신 설정된 OpenAI 호환 API를 사용합니다",
+      "aiNotConfigured": "AI 모드를 사용하려면 설정에서 AI 번역 API 키를 추가하세요.",
+      "goToSettings": "설정으로 이동",
       "cancel": "취소",
       "useFreeInstead": "빠른 번역으로 전환",
       "partOfSpeech": {
@@ -15702,7 +15732,7 @@
         "rateLimited": "무료 번역 할당량을 모두 사용했습니다. 잠시 후 다시 시도하세요.",
         "timeout": "번역 요청이 시간을 초과했습니다.",
         "providerError": "번역 서비스가 예기치 않은 응답을 반환했습니다.",
-        "aiUnavailable": "AI 에이전트가 번역하지 못했습니다."
+        "aiUnavailable": "번역 API가 이 번역을 완료하지 못했습니다."
       }
     }
   }

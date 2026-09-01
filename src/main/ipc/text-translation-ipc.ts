@@ -10,12 +10,20 @@ import {
 import { cancelAiTranslation, translateTextWithAi } from '../text-translation/ai-translation'
 import { translationFetch } from '../text-translation/translation-fetch'
 import { translateText } from '../text-translation/translation-service'
+import {
+  clearTranslateAiApiKey,
+  hasTranslateAiApiKey,
+  saveTranslateAiApiKey
+} from '../text-translation/translate-ai-api-key-store'
 import { lookupYoudaoDictionary } from '../text-translation/youdao-dictionary-provider'
 
 export const TRANSLATION_TRANSLATE_CHANNEL = 'translation:translate'
 export const TRANSLATION_TRANSLATE_WITH_AI_CHANNEL = 'translation:translateWithAi'
 export const TRANSLATION_CANCEL_AI_CHANNEL = 'translation:cancelAi'
 export const TRANSLATION_LOOKUP_DICTIONARY_CHANNEL = 'translation:lookupDictionary'
+export const TRANSLATION_GET_AI_API_KEY_STATUS_CHANNEL = 'translation:getAiApiKeyStatus'
+export const TRANSLATION_SAVE_AI_API_KEY_CHANNEL = 'translation:saveAiApiKey'
+export const TRANSLATION_CLEAR_AI_API_KEY_CHANNEL = 'translation:clearAiApiKey'
 
 export type TextTranslationHandlerDeps = {
   getSettings: () => GlobalSettings
@@ -26,7 +34,10 @@ export function registerTextTranslationHandlers(deps: TextTranslationHandlerDeps
     TRANSLATION_TRANSLATE_CHANNEL,
     TRANSLATION_TRANSLATE_WITH_AI_CHANNEL,
     TRANSLATION_CANCEL_AI_CHANNEL,
-    TRANSLATION_LOOKUP_DICTIONARY_CHANNEL
+    TRANSLATION_LOOKUP_DICTIONARY_CHANNEL,
+    TRANSLATION_GET_AI_API_KEY_STATUS_CHANNEL,
+    TRANSLATION_SAVE_AI_API_KEY_CHANNEL,
+    TRANSLATION_CLEAR_AI_API_KEY_CHANNEL
   ]) {
     ipcMain.removeHandler(channel)
   }
@@ -88,6 +99,23 @@ export function registerTextTranslationHandlers(deps: TextTranslationHandlerDeps
   // Safe with nothing in flight: the lane lookup simply misses.
   ipcMain.handle(TRANSLATION_CANCEL_AI_CHANNEL, async (): Promise<void> => {
     cancelAiTranslation()
+  })
+
+  ipcMain.handle(TRANSLATION_GET_AI_API_KEY_STATUS_CHANNEL, async () => ({
+    configured: hasTranslateAiApiKey()
+  }))
+
+  ipcMain.handle(TRANSLATION_SAVE_AI_API_KEY_CHANNEL, async (_event, apiKey: unknown) => {
+    if (typeof apiKey !== 'string') {
+      throw new TypeError('API key must be a string')
+    }
+    saveTranslateAiApiKey(apiKey)
+    return { configured: true }
+  })
+
+  ipcMain.handle(TRANSLATION_CLEAR_AI_API_KEY_CHANNEL, async () => {
+    clearTranslateAiApiKey()
+    return { configured: false }
   })
 }
 

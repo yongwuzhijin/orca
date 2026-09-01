@@ -9095,7 +9095,9 @@
             "translateDictionaryTitle": "Dictionary definitions",
             "translateDictionaryDescription": "Let the translate popover request word definitions from dict.youdao.com.",
             "translateDictionaryKeywordDictionary": "dictionary",
-            "translateDictionaryKeywordTranslate": "translate"
+            "translateDictionaryKeywordTranslate": "translate",
+            "translateAiTitle": "AI translation",
+            "translateAiDescription": "Configure the OpenAI-compatible API used when AI translation is selected."
           }
         },
         "auto": {
@@ -11731,6 +11733,31 @@
           "homeInvalid": "Enter a single directory name under your home directory. No separators or special characters.",
           "homeHelp": "Holds credentials, keybindings, and agent hook scripts. Takes effect after a restart; existing files are not moved.",
           "restartPending": "Restart Orca to use ~/{{pending}}. This session is still using ~/{{effective}}."
+        },
+        "TranslateAiApiKeyDialog": {
+          "title": "AI translation API key",
+          "description": "Text is sent to your configured API only when AI translation is selected.",
+          "apiKeyLabel": "API Key",
+          "configuredPlaceholder": "API key configured",
+          "placeholder": "sk-...",
+          "localKeyStorage": "Local runtime keys are stored in ~/{{dir}} using Electron encrypted storage when available.",
+          "clearKey": "Clear Key",
+          "saveKey": "Save Key"
+        },
+        "TranslateAiSettings": {
+          "apiKeySaved": "API key saved",
+          "apiKeySaveFailed": "Failed to save API key",
+          "apiKeyCleared": "API key cleared",
+          "apiKeyClearFailed": "Failed to clear API key",
+          "baseUrlLabel": "Base URL",
+          "modelLabel": "Model",
+          "apiKeyLabel": "API Key",
+          "connected": "Connected",
+          "apiKeyConfiguredDescription": "API key configured for AI translation.",
+          "apiKeyMissingDescription": "Add an API key before selecting AI translation.",
+          "replaceKey": "Replace key",
+          "disconnectApiKey": "Disconnect API key",
+          "addApiKey": "Add API key"
         }
       },
       "right": {
@@ -17855,12 +17882,15 @@
       "auto": "Auto",
       "directionHint": "Click to switch direction; Auto detects it from your text",
       "fallbackNote": "Translated by the backup service",
+      "modelNote": "Translated by {model}",
       "agentNote": "Translated by {agent}",
       "agentFallbackName": "the AI agent",
       "normalizedNote": "Looked up as “{query}”",
       "dictionaryAriaLabel": "Dictionary entries",
       "ai": "AI",
-      "aiHint": "Use your configured AI agent instead of the free service",
+      "aiHint": "Use your configured OpenAI-compatible API instead of the free service",
+      "aiNotConfigured": "Add an AI translation API key in Settings to use AI mode.",
+      "goToSettings": "Go to settings",
       "cancel": "Cancel",
       "useFreeInstead": "Use the quick translation",
       "partOfSpeech": {
@@ -17886,7 +17916,7 @@
         "rateLimited": "The free translation quota is used up. Try again later.",
         "timeout": "The translation request timed out.",
         "providerError": "The translation service returned an unexpected response.",
-        "aiUnavailable": "The AI agent could not translate this."
+        "aiUnavailable": "The translation API could not complete this translation."
       }
     }
   }

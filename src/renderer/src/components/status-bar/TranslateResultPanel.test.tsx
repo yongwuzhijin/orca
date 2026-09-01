@@ -38,7 +38,7 @@ describe('TranslateResultPanel', () => {
     expect(container.textContent).not.toContain('backup')
   })
 
-  it('names the agent that produced an AI translation', () => {
+  it('names the model that produced an AI translation', () => {
     render(
       <TranslateResultPanel
         result={{
@@ -46,13 +46,30 @@ describe('TranslateResultPanel', () => {
           dictionaryEntries: [],
           queriedText: 'dependent',
           providerId: 'ai',
-          agentLabel: 'Claude'
+          agentLabel: 'qwen-mt-flash'
         }}
         typedText="dependent"
         headwordEntries={[]}
       />
     )
-    expect(screen.getByText(/Claude/)).toBeTruthy()
+    expect(screen.getByText(/qwen-mt-flash/)).toBeTruthy()
+  })
+
+  it('falls back to the default model name when the payload omits agentLabel', () => {
+    render(
+      <TranslateResultPanel
+        result={{
+          translatedText: 'adj. 依赖的',
+          dictionaryEntries: [],
+          queriedText: 'dependent',
+          providerId: 'ai'
+        }}
+        typedText="dependent"
+        headwordEntries={[]}
+      />
+    )
+    expect(screen.getByText(/qwen-mt-flash/)).toBeTruthy()
+    expect(screen.queryByText(/AI agent/)).toBeNull()
   })
 
   it('still renders the translation when the payload omits the dictionary array', () => {

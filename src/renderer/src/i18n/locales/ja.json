@@ -8018,7 +8018,9 @@
             "translateDictionaryTitle": "辞書の意味",
             "translateDictionaryDescription": "翻訳ポップオーバーが dict.youdao.com に単語の意味を問い合わせることを許可します。",
             "translateDictionaryKeywordDictionary": "辞書",
-            "translateDictionaryKeywordTranslate": "翻訳"
+            "translateDictionaryKeywordTranslate": "翻訳",
+            "translateAiTitle": "AI翻訳",
+            "translateAiDescription": "AI翻訳を選択した際に使用する OpenAI 互換 API を設定します。"
           }
         },
         "auto": {
@@ -10469,6 +10471,31 @@
           "homeInvalid": "ホームディレクトリ直下の単一のディレクトリ名を入力してください。区切り文字や特殊文字は使用できません。",
           "homeHelp": "認証情報、キーバインド、Agent フックスクリプトを保存します。再起動後に反映され、既存のファイルは移動されません。",
           "restartPending": "Orca を再起動すると ~/{{pending}} を使用します。このセッションは引き続き ~/{{effective}} を使用しています。"
+        },
+        "TranslateAiApiKeyDialog": {
+          "title": "AI翻訳 APIキー",
+          "description": "AI翻訳を選択した場合のみ、テキストは設定した API に送信されます。",
+          "apiKeyLabel": "APIキー",
+          "configuredPlaceholder": "APIキーが設定されました",
+          "placeholder": "sk-...",
+          "localKeyStorage": "ローカルランタイムキーは ~/{{dir}} に保存され、利用可能な場合は Electron の暗号化ストレージを使用します。",
+          "clearKey": "キーをクリア",
+          "saveKey": "キーを保存"
+        },
+        "TranslateAiSettings": {
+          "apiKeySaved": "APIキーを保存しました",
+          "apiKeySaveFailed": "APIキーの保存に失敗しました",
+          "apiKeyCleared": "APIキーをクリアしました",
+          "apiKeyClearFailed": "APIキーのクリアに失敗しました",
+          "baseUrlLabel": "ベース URL",
+          "modelLabel": "モデル",
+          "apiKeyLabel": "APIキー",
+          "connected": "接続済み",
+          "apiKeyConfiguredDescription": "AI翻訳用の API キーが設定されています。",
+          "apiKeyMissingDescription": "AI翻訳を選択する前に API キーを追加してください。",
+          "replaceKey": "キーを差し替え",
+          "disconnectApiKey": "APIキーを切断",
+          "addApiKey": "APIキーを追加"
         }
       },
       "right": {
@@ -15572,12 +15599,15 @@
       "auto": "自動",
       "directionHint": "クリックで翻訳方向を切り替えます。自動ではテキストから判定します",
       "fallbackNote": "バックアップの翻訳サービスで翻訳しました",
+      "modelNote": "{model} が翻訳しました",
       "agentNote": "{agent} が翻訳しました",
       "agentFallbackName": "AI Agent",
       "normalizedNote": "「{query}」として検索しました",
       "dictionaryAriaLabel": "辞書項目",
       "ai": "AI",
-      "aiHint": "無料サービスの代わりに設定済みの AI Agent を使います",
+      "aiHint": "無料サービスの代わりに設定済みの OpenAI 互換 API を使用します",
+      "aiNotConfigured": "AI モードを使うには、設定で AI 翻訳 API キーを追加してください。",
+      "goToSettings": "設定へ",
       "cancel": "キャンセル",
       "useFreeInstead": "クイック翻訳に切り替える",
       "partOfSpeech": {
@@ -15603,7 +15633,7 @@
         "rateLimited": "無料の翻訳枠を使い切りました。しばらくしてからお試しください。",
         "timeout": "翻訳リクエストがタイムアウトしました。",
         "providerError": "翻訳サービスが予期しない応答を返しました。",
-        "aiUnavailable": "AI Agent は翻訳できませんでした。"
+        "aiUnavailable": "翻訳 API がこの翻訳を完了できませんでした。"
       }
     }
   }

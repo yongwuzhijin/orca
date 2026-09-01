@@ -2,6 +2,8 @@ import { createLocalizedCatalog } from '@/i18n/localized-catalog'
 import { translate } from '@/i18n/i18n'
 import { translateSearchKeyword } from './settings-search-keywords'
 
+import { TRANSLATE_AI_SETTING_ID } from './appearance-translate-ai-search'
+
 /** Stable Settings deep-link / scroll target for the Used/Remaining control. */
 export const USAGE_PERCENTAGE_DISPLAY_SETTING_ID = 'usage-percentage-display'
 
@@ -16,6 +18,9 @@ export function resolveAppearanceAccordionDeepLink(
   sectionId: string | undefined
 ): AppearanceAccordionSection | null {
   if (sectionId === USAGE_PERCENTAGE_DISPLAY_SETTING_ID) {
+    return 'window'
+  }
+  if (sectionId === TRANSLATE_AI_SETTING_ID) {
     return 'window'
   }
   return null

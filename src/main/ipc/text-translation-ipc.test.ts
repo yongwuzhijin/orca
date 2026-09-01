@@ -7,14 +7,20 @@ const {
   translateTextMock,
   translateWithAiMock,
   cancelAiMock,
-  lookupDictionaryMock
+  lookupDictionaryMock,
+  hasTranslateAiApiKeyMock,
+  saveTranslateAiApiKeyMock,
+  clearTranslateAiApiKeyMock
 } = vi.hoisted(() => ({
   handleMock: vi.fn(),
   removeHandlerMock: vi.fn(),
   translateTextMock: vi.fn(),
   translateWithAiMock: vi.fn(),
   cancelAiMock: vi.fn(),
-  lookupDictionaryMock: vi.fn()
+  lookupDictionaryMock: vi.fn(),
+  hasTranslateAiApiKeyMock: vi.fn(),
+  saveTranslateAiApiKeyMock: vi.fn(),
+  clearTranslateAiApiKeyMock: vi.fn()
 }))
 
 vi.mock('electron', () => ({
@@ -34,11 +40,20 @@ vi.mock('../text-translation/youdao-dictionary-provider', () => ({
   lookupYoudaoDictionary: lookupDictionaryMock
 }))
 
+vi.mock('../text-translation/translate-ai-api-key-store', () => ({
+  hasTranslateAiApiKey: hasTranslateAiApiKeyMock,
+  saveTranslateAiApiKey: saveTranslateAiApiKeyMock,
+  clearTranslateAiApiKey: clearTranslateAiApiKeyMock
+}))
+
 import { DICTIONARY_LOOKUP_MAX_LENGTH } from '../../shared/text-translation-types'
 import {
   registerTextTranslationHandlers,
   TRANSLATION_CANCEL_AI_CHANNEL,
+  TRANSLATION_CLEAR_AI_API_KEY_CHANNEL,
+  TRANSLATION_GET_AI_API_KEY_STATUS_CHANNEL,
   TRANSLATION_LOOKUP_DICTIONARY_CHANNEL,
+  TRANSLATION_SAVE_AI_API_KEY_CHANNEL,
   TRANSLATION_TRANSLATE_CHANNEL,
   TRANSLATION_TRANSLATE_WITH_AI_CHANNEL
 } from './text-translation-ipc'
@@ -64,6 +79,10 @@ describe('text translation IPC', () => {
     translateWithAiMock.mockReset()
     cancelAiMock.mockReset()
     lookupDictionaryMock.mockReset()
+    hasTranslateAiApiKeyMock.mockReset()
+    saveTranslateAiApiKeyMock.mockReset()
+    clearTranslateAiApiKeyMock.mockReset()
+    hasTranslateAiApiKeyMock.mockReturnValue(false)
     translateTextMock.mockResolvedValue({ ok: true, translatedText: '缓存很冷。' })
     translateWithAiMock.mockResolvedValue({
       ok: true,
@@ -77,6 +96,7 @@ describe('text translation IPC', () => {
     expect(removeHandlerMock).toHaveBeenCalledWith(TRANSLATION_TRANSLATE_CHANNEL)
     expect(removeHandlerMock).toHaveBeenCalledWith(TRANSLATION_TRANSLATE_WITH_AI_CHANNEL)
     expect(removeHandlerMock).toHaveBeenCalledWith(TRANSLATION_CANCEL_AI_CHANNEL)
+    expect(removeHandlerMock).toHaveBeenCalledWith(TRANSLATION_GET_AI_API_KEY_STATUS_CHANNEL)
   })
 
   it('forwards a valid request to the service', async () => {
@@ -151,6 +171,26 @@ describe('text translation IPC', () => {
     const handler = registerAndGetHandler(TRANSLATION_CANCEL_AI_CHANNEL)
     await expect(handler({}, undefined)).resolves.toBeUndefined()
     expect(cancelAiMock).toHaveBeenCalledTimes(1)
+  })
+
+  describe('translate AI API key', () => {
+    it('reports configured status from the encrypted key store', async () => {
+      hasTranslateAiApiKeyMock.mockReturnValue(true)
+      const handler = registerAndGetHandler(TRANSLATION_GET_AI_API_KEY_STATUS_CHANNEL)
+      await expect(handler({}, undefined)).resolves.toEqual({ configured: true })
+    })
+
+    it('saves a trimmed API key', async () => {
+      const handler = registerAndGetHandler(TRANSLATION_SAVE_AI_API_KEY_CHANNEL)
+      await expect(handler({}, '  sk-test  ')).resolves.toEqual({ configured: true })
+      expect(saveTranslateAiApiKeyMock).toHaveBeenCalledWith('  sk-test  ')
+    })
+
+    it('clears the stored API key', async () => {
+      const handler = registerAndGetHandler(TRANSLATION_CLEAR_AI_API_KEY_CHANNEL)
+      await expect(handler({}, undefined)).resolves.toEqual({ configured: false })
+      expect(clearTranslateAiApiKeyMock).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('translation:lookupDictionary', () => {

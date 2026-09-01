@@ -8,6 +8,8 @@ import { TranslateStatusSegment } from './TranslateStatusSegment'
 
 const storeState = {
   recordFeatureInteraction: () => {},
+  openSettingsPage: vi.fn(),
+  openSettingsTarget: vi.fn(),
   settings: { translateDictionaryLookupEnabled: true } as Record<string, unknown>
 }
 
@@ -18,9 +20,13 @@ vi.mock('@/store', () => ({
 const translateMock = vi.fn()
 const translateWithAiMock = vi.fn()
 const lookupDictionaryMock = vi.fn()
+const getAiApiKeyStatusMock = vi.fn()
 
 beforeEach(() => {
   storeState.settings = { translateDictionaryLookupEnabled: true }
+  storeState.openSettingsPage.mockReset()
+  storeState.openSettingsTarget.mockReset()
+  getAiApiKeyStatusMock.mockReset().mockResolvedValue({ configured: true })
   translateMock.mockReset().mockResolvedValue({
     ok: true,
     translatedText: '依赖的',
@@ -50,7 +56,8 @@ beforeEach(() => {
         translate: translateMock,
         translateWithAi: translateWithAiMock,
         cancelAi: vi.fn(),
-        lookupDictionary: lookupDictionaryMock
+        lookupDictionary: lookupDictionaryMock,
+        getAiApiKeyStatus: getAiApiKeyStatusMock
       },
       ui: { writeClipboardText: vi.fn().mockResolvedValue(undefined) }
     }
@@ -148,5 +155,50 @@ describe('TranslateStatusSegment', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(screen.queryByText('adj. 依赖的')).toBeNull()
     expect(screen.getByText('adj. 冷的')).toBeTruthy()
+  })
+
+  it('shows an inline reminder and skips AI translation when the API key is missing', async () => {
+    getAiApiKeyStatusMock.mockResolvedValue({ configured: false })
+    render(
+      <TooltipProvider>
+        <TranslateStatusSegment iconOnly={false} />
+      </TooltipProvider>
+    )
+    fireEvent.click(screen.getByLabelText('Translate text'))
+    await waitFor(() => expect(getAiApiKeyStatusMock).toHaveBeenCalled())
+    fireEvent.click(screen.getByRole('button', { name: 'AI' }))
+    await waitFor(() => expect(getAiApiKeyStatusMock).toHaveBeenCalledTimes(2))
+    expect(
+      screen.getByText(/Add an AI translation API key in Settings to use AI mode/)
+    ).toBeTruthy()
+    fireEvent.change(screen.getByPlaceholderText(/Type or paste text/), {
+      target: { value: 'dependent' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Translate' }))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(translateWithAiMock).not.toHaveBeenCalled()
+  })
+
+  it('opens Appearance AI translation settings from the inline reminder', async () => {
+    getAiApiKeyStatusMock.mockResolvedValue({ configured: false })
+    render(
+      <TooltipProvider>
+        <TranslateStatusSegment iconOnly={false} />
+      </TooltipProvider>
+    )
+    fireEvent.click(screen.getByLabelText('Translate text'))
+    fireEvent.click(screen.getByRole('button', { name: 'AI' }))
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Add an AI translation API key in Settings to use AI mode/)
+      ).toBeTruthy()
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Go to settings' }))
+    expect(storeState.openSettingsTarget).toHaveBeenCalledWith({
+      pane: 'appearance',
+      repoId: null,
+      sectionId: 'translate-ai'
+    })
+    expect(storeState.openSettingsPage).toHaveBeenCalledOnce()
   })
 })

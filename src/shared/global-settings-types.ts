@@ -104,6 +104,10 @@ export type GlobalSettings = {
   richMarkdownSpellcheckEnabled?: boolean
   /** Opt-out for the translate popover's outbound dict.youdao.com lookup; absent means on. */
   translateDictionaryLookupEnabled?: boolean
+  /** OpenAI-compatible chat base URL for status-bar AI translate; empty → DashScope default. */
+  translateAiBaseUrl?: string
+  /** Model id for status-bar AI translate; empty → qwen-mt-flash. */
+  translateAiModel?: string
   /** Whether local markdown review note controls and the review panel are shown. */
   markdownReviewToolsEnabled: boolean
   /** Why: mirrors terminal selection-paste muscle memory without mutating the

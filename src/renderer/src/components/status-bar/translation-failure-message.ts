@@ -27,7 +27,7 @@ export function describeTranslationFailure(kind: TranslationFailureKind): string
     case 'ai-unavailable':
       return translate(
         'statusBar.translate.error.aiUnavailable',
-        'The AI agent could not translate this.'
+        'The translation API could not complete this translation.'
       )
   }
 }

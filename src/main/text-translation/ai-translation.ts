@@ -1,11 +1,13 @@
-import { homedir } from 'node:os'
-import { planCommitMessageGeneration } from '../../shared/commit-message-plan'
 import type { GlobalSettings } from '../../shared/global-settings-types'
 import {
   TRANSLATION_INPUT_MAX_LENGTH,
   type TranslationRequest,
   type TranslationResponse
 } from '../../shared/text-translation-types'
+import {
+  resolveTranslateAiBaseUrl,
+  resolveTranslateAiModel
+} from '../../shared/translate-ai-defaults'
 import { buildTranslationPrompt } from '../../shared/translation-prompt'
 import { normalizeTranslationQuery } from '../../shared/translation-query-normalization'
 import {
@@ -13,26 +15,20 @@ import {
   resolveTranslationTargetLanguage
 } from '../../shared/translation-target-language'
 import {
-  cancelGenerateTranslationLocal,
-  commandBackslashMode,
-  resolveTextGenerationParams,
-  runLocalPlanForAgent,
-  type LocalGenerationTarget
-} from '../text-generation/commit-message-text-generation'
+  requestOpenAiCompatibleTranslation,
+  type OpenAiCompatibleTranslationResult
+} from './openai-compatible-translation-client'
+import { hasTranslateAiApiKey, readTranslateAiApiKey } from './translate-ai-api-key-store'
 
 export type AiTranslationDeps = {
   getSettings: () => GlobalSettings
-  /** Overridable for tests; production always runs in the user's home. */
-  cwd?: string
+  hasApiKey?: () => boolean
+  readApiKey?: () => string
+  requestTranslation?: typeof requestOpenAiCompatibleTranslation
 }
 
-/**
- * The status bar is global, so there is no repo or execution host in scope: the
- * plan runs locally in the user's home directory. Agent and model come from the
- * already-configured `commitMessage` operation, but its `commandInputTemplate`
- * and `customPrompt` are deliberately ignored — both are commit-message-shaped
- * and would corrupt a translation prompt.
- */
+let activeController: AbortController | null = null
+
 export async function translateTextWithAi(
   request: TranslationRequest,
   deps: AiTranslationDeps
@@ -44,49 +40,81 @@ export async function translateTextWithAi(
   if (trimmed.length > TRANSLATION_INPUT_MAX_LENGTH) {
     return { ok: false, kind: 'too-long' }
   }
+
+  const hasKey = (deps.hasApiKey ?? hasTranslateAiApiKey)()
+  if (!hasKey) {
+    return {
+      ok: false,
+      kind: 'ai-unavailable',
+      detail: 'Configure a translate AI API key in Settings.'
+    }
+  }
+
   const text = normalizeTranslationQuery(trimmed)
   const target = resolveTranslationTargetLanguage(text, request.preference)
+  const settings = deps.getSettings()
+  const baseUrl = resolveTranslateAiBaseUrl(settings.translateAiBaseUrl)
+  const model = resolveTranslateAiModel(settings.translateAiModel)
+  const prompt = buildTranslationPrompt(text, target)
 
-  const resolved = resolveTextGenerationParams(deps.getSettings(), 'local', 'commitMessage', null)
-  if (!resolved.ok) {
-    return { ok: false, kind: 'ai-unavailable', detail: resolved.error }
-  }
-  const generationTarget: LocalGenerationTarget = { kind: 'local', cwd: deps.cwd ?? homedir() }
-  const planned = planCommitMessageGeneration(
-    { ...resolved.params, backslash: commandBackslashMode(generationTarget) },
-    buildTranslationPrompt(text, target)
-  )
-  if (!planned.ok) {
-    return { ok: false, kind: 'ai-unavailable', detail: planned.error }
+  activeController?.abort()
+  const controller = new AbortController()
+  activeController = controller
+
+  const result = await (deps.requestTranslation ?? requestOpenAiCompatibleTranslation)({
+    baseUrl,
+    apiKey: (deps.readApiKey ?? readTranslateAiApiKey)(),
+    model,
+    prompt,
+    signal: controller.signal
+  })
+
+  if (activeController === controller) {
+    activeController = null
   }
 
-  const result = await runLocalPlanForAgent(
-    resolved.params.agentId,
-    planned.plan,
-    generationTarget,
-    'translation',
-    'translation'
-  )
-  if (!result.success) {
-    return { ok: false, kind: 'ai-unavailable', detail: result.error }
+  return mapTranslationResult(result, { text, target, model })
+}
+
+export function cancelAiTranslation(): void {
+  activeController?.abort()
+  activeController = null
+}
+
+function mapTranslationResult(
+  result: OpenAiCompatibleTranslationResult,
+  context: {
+    text: string
+    target: ReturnType<typeof resolveTranslationTargetLanguage>
+    model: string
   }
-  const translatedText = result.rawOutput.trim()
+): TranslationResponse {
+  if (!result.ok) {
+    switch (result.kind) {
+      case 'timeout':
+        return { ok: false, kind: 'timeout' }
+      case 'offline':
+        return { ok: false, kind: 'offline' }
+      case 'aborted':
+        return { ok: false, kind: 'ai-unavailable' }
+      default:
+        return { ok: false, kind: 'ai-unavailable', detail: result.detail }
+    }
+  }
+
+  const translatedText = result.text.trim()
   if (translatedText === '') {
-    return { ok: false, kind: 'ai-unavailable', detail: `${planned.plan.label} returned nothing.` }
+    return { ok: false, kind: 'ai-unavailable', detail: `${context.model} returned nothing.` }
   }
+
   return {
     ok: true,
     translatedText,
-    targetLanguage: target,
-    // The agent does not report detection, so name the pair we asked it to use.
-    detectedSourceLanguage: resolveTranslationSourceLanguage(target),
+    targetLanguage: context.target,
+    detectedSourceLanguage: resolveTranslationSourceLanguage(context.target),
     providerId: 'ai',
     dictionaryEntries: [],
-    queriedText: text,
-    agentLabel: result.agentLabel ?? planned.plan.label
+    queriedText: context.text,
+    agentLabel: context.model
   }
-}
-
-export function cancelAiTranslation(deps: Pick<AiTranslationDeps, 'cwd'> = {}): void {
-  cancelGenerateTranslationLocal(deps.cwd ?? homedir())
 }

@@ -8029,7 +8029,9 @@
             "translateDictionaryTitle": "词典释义",
             "translateDictionaryDescription": "允许翻译弹层向 dict.youdao.com 请求词条释义。",
             "translateDictionaryKeywordDictionary": "词典",
-            "translateDictionaryKeywordTranslate": "翻译"
+            "translateDictionaryKeywordTranslate": "翻译",
+            "translateAiTitle": "AI 翻译",
+            "translateAiDescription": "配置选择 AI 翻译时使用的 OpenAI 兼容 API。"
           }
         },
         "auto": {
@@ -10525,6 +10527,31 @@
           "homeInvalid": "请输入主目录下的单个目录名。不允许路径分隔符或特殊字符。",
           "homeHelp": "用于存放凭据、快捷键配置和 agent hook 脚本。重启后生效；已有文件不会被移动。",
           "restartPending": "重启 Orca 后将使用 ~/{{pending}}。当前会话仍在使用 ~/{{effective}}。"
+        },
+        "TranslateAiApiKeyDialog": {
+          "title": "AI 翻译 API 密钥",
+          "description": "仅在选择 AI 翻译时，文本才会发送到您配置的 API。",
+          "apiKeyLabel": "API 密钥",
+          "configuredPlaceholder": "API 密钥已配置",
+          "placeholder": "sk-...",
+          "localKeyStorage": "本地运行时密钥存储在 ~/{{dir}}，在可用时使用 Electron 加密存储。",
+          "clearKey": "清除密钥",
+          "saveKey": "保存密钥"
+        },
+        "TranslateAiSettings": {
+          "apiKeySaved": "API 密钥已保存",
+          "apiKeySaveFailed": "保存 API 密钥失败",
+          "apiKeyCleared": "API 密钥已清除",
+          "apiKeyClearFailed": "清除 API 密钥失败",
+          "baseUrlLabel": "Base URL",
+          "modelLabel": "模型",
+          "apiKeyLabel": "API 密钥",
+          "connected": "已连接",
+          "apiKeyConfiguredDescription": "已配置 AI 翻译 API 密钥。",
+          "apiKeyMissingDescription": "选择 AI 翻译前请先添加 API 密钥。",
+          "replaceKey": "更换密钥",
+          "disconnectApiKey": "断开 API 密钥",
+          "addApiKey": "添加 API 密钥"
         }
       },
       "right": {
@@ -15689,12 +15716,15 @@
       "auto": "自动",
       "directionHint": "点击切换翻译方向；自动模式会根据文本判断",
       "fallbackNote": "由备用翻译服务完成",
+      "modelNote": "由 {model} 翻译",
       "agentNote": "由 {agent} 翻译",
       "agentFallbackName": "AI Agent",
       "normalizedNote": "以“{query}”查询",
       "dictionaryAriaLabel": "词典释义",
       "ai": "AI",
-      "aiHint": "使用已配置的 AI Agent 翻译，而不是免费服务",
+      "aiHint": "使用已配置的 OpenAI 兼容 API 翻译，而不是免费服务",
+      "aiNotConfigured": "请在设置中添加 AI 翻译 API 密钥以使用 AI 模式。",
+      "goToSettings": "去设置",
       "cancel": "取消",
       "useFreeInstead": "改用快速翻译",
       "partOfSpeech": {
@@ -15720,7 +15750,7 @@
         "rateLimited": "免费翻译额度已用完，请稍后再试。",
         "timeout": "翻译请求超时。",
         "providerError": "翻译服务返回了异常结果。",
-        "aiUnavailable": "AI Agent 未能完成翻译。"
+        "aiUnavailable": "翻译 API 未能完成此翻译。"
       }
     }
   }

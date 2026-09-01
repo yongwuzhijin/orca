@@ -5453,7 +5453,13 @@ const api = {
       ipcRenderer.invoke('translation:translateWithAi', request),
     cancelAi: (): Promise<void> => ipcRenderer.invoke('translation:cancelAi'),
     lookupDictionary: (request: DictionaryLookupRequest): Promise<DictionaryLookupResponse> =>
-      ipcRenderer.invoke('translation:lookupDictionary', request)
+      ipcRenderer.invoke('translation:lookupDictionary', request),
+    getAiApiKeyStatus: (): Promise<{ configured: boolean }> =>
+      ipcRenderer.invoke('translation:getAiApiKeyStatus'),
+    saveAiApiKey: (apiKey: string): Promise<{ configured: boolean }> =>
+      ipcRenderer.invoke('translation:saveAiApiKey', apiKey),
+    clearAiApiKey: (): Promise<{ configured: boolean }> =>
+      ipcRenderer.invoke('translation:clearAiApiKey')
   } satisfies PreloadApi['translation']
 }
 

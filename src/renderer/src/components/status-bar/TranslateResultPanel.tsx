@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react'
 import { Check, Copy } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
+import { DEFAULT_TRANSLATE_AI_MODEL } from '../../../../shared/translate-ai-defaults'
 import type { DictionaryHeadwordEntry } from '../../../../shared/text-translation-types'
 import type { TranslateResult } from './translate-popover-state'
 import { describeTranslationPartOfSpeech } from './translation-part-of-speech'
@@ -101,9 +102,9 @@ export function TranslateResultPanel({
 
 function describeProvider(result: TranslateResult): string {
   if (result.providerId === 'ai') {
-    return translate('statusBar.translate.agentNote', 'Translated by {agent}').replace(
-      '{agent}',
-      result.agentLabel ?? translate('statusBar.translate.agentFallbackName', 'the AI agent')
+    return translate('statusBar.translate.modelNote', 'Translated by {model}').replace(
+      '{model}',
+      result.agentLabel ?? DEFAULT_TRANSLATE_AI_MODEL
     )
   }
   if (result.providerId === 'google-gtx') {

@@ -1,41 +1,34 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GlobalSettings } from '../../shared/global-settings-types'
-
-const { resolveParamsMock, runLocalPlanMock, cancelLocalMock } = vi.hoisted(() => ({
-  resolveParamsMock: vi.fn(),
-  runLocalPlanMock: vi.fn(),
-  cancelLocalMock: vi.fn()
-}))
-
-vi.mock('../text-generation/commit-message-text-generation', () => ({
-  resolveTextGenerationParams: resolveParamsMock,
-  runLocalPlanForAgent: runLocalPlanMock,
-  cancelGenerateTranslationLocal: cancelLocalMock,
-  commandBackslashMode: () => 'escape'
-}))
-
+import {
+  DEFAULT_TRANSLATE_AI_BASE_URL,
+  DEFAULT_TRANSLATE_AI_MODEL
+} from '../../shared/translate-ai-defaults'
 import { cancelAiTranslation, translateTextWithAi } from './ai-translation'
 
+const requestTranslationMock = vi.fn()
+const hasApiKeyMock = vi.fn()
+const readApiKeyMock = vi.fn()
+
 const SETTINGS = {} as GlobalSettings
-const deps = { getSettings: () => SETTINGS, cwd: '/home/tester' }
+const deps = {
+  getSettings: () => SETTINGS,
+  hasApiKey: hasApiKeyMock,
+  readApiKey: readApiKeyMock,
+  requestTranslation: requestTranslationMock
+}
 
 describe('translateTextWithAi', () => {
   beforeEach(() => {
-    resolveParamsMock.mockReset()
-    runLocalPlanMock.mockReset()
-    cancelLocalMock.mockReset()
-    resolveParamsMock.mockReturnValue({
-      ok: true,
-      params: { agentId: 'claude', model: 'sonnet' }
-    })
-    runLocalPlanMock.mockResolvedValue({
-      success: true,
-      rawOutput: 'adj. 依赖的\nn. 依赖他人者\n',
-      agentLabel: 'Claude'
-    })
+    requestTranslationMock.mockReset()
+    hasApiKeyMock.mockReset()
+    readApiKeyMock.mockReset()
+    hasApiKeyMock.mockReturnValue(true)
+    readApiKeyMock.mockReturnValue('test-key')
+    requestTranslationMock.mockResolvedValue({ ok: true, text: 'adj. 依赖的\nn. 依赖他人者\n' })
   })
 
-  it('returns the agent output as an ai-provider success', async () => {
+  it('returns the model output as an ai-provider success', async () => {
     await expect(
       translateTextWithAi({ text: 'dependent', preference: 'auto' }, deps)
     ).resolves.toEqual({
@@ -46,32 +39,50 @@ describe('translateTextWithAi', () => {
       providerId: 'ai',
       dictionaryEntries: [],
       queriedText: 'dependent',
-      agentLabel: 'Claude'
+      agentLabel: DEFAULT_TRANSLATE_AI_MODEL
     })
+  })
+
+  it('calls requestTranslation with resolved baseUrl, model, prompt, and signal', async () => {
+    await translateTextWithAi({ text: 'dependent', preference: 'auto' }, deps)
+    expect(requestTranslationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: DEFAULT_TRANSLATE_AI_BASE_URL,
+        apiKey: 'test-key',
+        model: DEFAULT_TRANSLATE_AI_MODEL,
+        prompt: expect.stringContaining('Simplified Chinese'),
+        signal: expect.any(AbortSignal)
+      })
+    )
   })
 
   it('asks for senses on a single word and a natural translation on a sentence', async () => {
     await translateTextWithAi({ text: 'dependent', preference: 'auto' }, deps)
-    const wordPrompt = runLocalPlanMock.mock.calls[0][1].stdinPayload as string
-    expect(wordPrompt).toContain('Simplified Chinese')
+    const wordPrompt = requestTranslationMock.mock.calls[0][0].prompt as string
     expect(wordPrompt).toContain('single word')
     expect(wordPrompt).toContain('dependent')
 
-    runLocalPlanMock.mockClear()
+    requestTranslationMock.mockClear()
     await translateTextWithAi({ text: 'The cache was cold.', preference: 'auto' }, deps)
-    const sentencePrompt = runLocalPlanMock.mock.calls[0][1].stdinPayload as string
+    const sentencePrompt = requestTranslationMock.mock.calls[0][0].prompt as string
     expect(sentencePrompt).not.toContain('single word')
     expect(sentencePrompt).toContain('one natural Simplified Chinese translation')
   })
 
-  it('runs on the translation lane so cancelling cannot hit commit-message generation', async () => {
-    await translateTextWithAi({ text: 'dependent', preference: 'auto' }, deps)
-    expect(runLocalPlanMock).toHaveBeenCalledWith(
-      'claude',
-      expect.anything(),
-      { kind: 'local', cwd: '/home/tester' },
-      'translation',
-      'translation'
+  it('honors custom baseUrl and model from settings', async () => {
+    const customSettings = {
+      translateAiBaseUrl: ' https://example.com/v1 ',
+      translateAiModel: ' custom-model '
+    } as GlobalSettings
+    await translateTextWithAi(
+      { text: 'dependent', preference: 'auto' },
+      { ...deps, getSettings: () => customSettings }
+    )
+    expect(requestTranslationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: 'https://example.com/v1',
+        model: 'custom-model'
+      })
     )
   })
 
@@ -81,33 +92,69 @@ describe('translateTextWithAi', () => {
     ).resolves.toMatchObject({ ok: true, queriedText: 'dependent' })
   })
 
-  it('surfaces an unconfigured agent as ai-unavailable with the engine message', async () => {
-    resolveParamsMock.mockReturnValue({ ok: false, error: 'No AI agent is configured.' })
+  it('does not call request when no API key is configured', async () => {
+    hasApiKeyMock.mockReturnValue(false)
     await expect(translateTextWithAi({ text: 'hi', preference: 'auto' }, deps)).resolves.toEqual({
       ok: false,
       kind: 'ai-unavailable',
-      detail: 'No AI agent is configured.'
+      detail: 'Configure a translate AI API key in Settings.'
     })
-    expect(runLocalPlanMock).not.toHaveBeenCalled()
+    expect(requestTranslationMock).not.toHaveBeenCalled()
   })
 
-  it('surfaces a failed run as ai-unavailable rather than falling back silently', async () => {
-    runLocalPlanMock.mockResolvedValue({ success: false, error: 'Claude failed: exit 127' })
+  it('maps unauthorized and provider-error to ai-unavailable', async () => {
+    requestTranslationMock.mockResolvedValueOnce({
+      ok: false,
+      kind: 'unauthorized',
+      detail: 'bad key'
+    })
     await expect(translateTextWithAi({ text: 'hi', preference: 'auto' }, deps)).resolves.toEqual({
       ok: false,
       kind: 'ai-unavailable',
-      detail: 'Claude failed: exit 127'
+      detail: 'bad key'
+    })
+
+    requestTranslationMock.mockResolvedValueOnce({
+      ok: false,
+      kind: 'provider-error',
+      detail: '503'
+    })
+    await expect(translateTextWithAi({ text: 'hi', preference: 'auto' }, deps)).resolves.toEqual({
+      ok: false,
+      kind: 'ai-unavailable',
+      detail: '503'
     })
   })
 
-  it('treats empty model output as unavailable instead of an empty translation', async () => {
-    runLocalPlanMock.mockResolvedValue({ success: true, rawOutput: '  \n ' })
+  it('maps timeout and offline to their response kinds', async () => {
+    requestTranslationMock.mockResolvedValueOnce({ ok: false, kind: 'timeout' })
+    await expect(translateTextWithAi({ text: 'hi', preference: 'auto' }, deps)).resolves.toEqual({
+      ok: false,
+      kind: 'timeout'
+    })
+
+    requestTranslationMock.mockResolvedValueOnce({ ok: false, kind: 'offline' })
+    await expect(translateTextWithAi({ text: 'hi', preference: 'auto' }, deps)).resolves.toEqual({
+      ok: false,
+      kind: 'offline'
+    })
+  })
+
+  it('treats aborted requests as ai-unavailable', async () => {
+    requestTranslationMock.mockResolvedValueOnce({ ok: false, kind: 'aborted' })
     await expect(
       translateTextWithAi({ text: 'hi', preference: 'auto' }, deps)
     ).resolves.toMatchObject({ ok: false, kind: 'ai-unavailable' })
   })
 
-  it('rejects blank and oversized input before spawning anything', async () => {
+  it('treats empty model output as unavailable instead of an empty translation', async () => {
+    requestTranslationMock.mockResolvedValue({ ok: true, text: '  \n ' })
+    await expect(
+      translateTextWithAi({ text: 'hi', preference: 'auto' }, deps)
+    ).resolves.toMatchObject({ ok: false, kind: 'ai-unavailable' })
+  })
+
+  it('rejects blank and oversized input before calling the provider', async () => {
     await expect(translateTextWithAi({ text: '  ', preference: 'auto' }, deps)).resolves.toEqual({
       ok: false,
       kind: 'invalid-input'
@@ -115,13 +162,27 @@ describe('translateTextWithAi', () => {
     await expect(
       translateTextWithAi({ text: 'a'.repeat(5001), preference: 'auto' }, deps)
     ).resolves.toEqual({ ok: false, kind: 'too-long' })
-    expect(runLocalPlanMock).not.toHaveBeenCalled()
+    expect(requestTranslationMock).not.toHaveBeenCalled()
   })
 })
 
 describe('cancelAiTranslation', () => {
-  it('cancels the lane keyed by the same cwd the request used', () => {
-    cancelAiTranslation({ cwd: '/home/tester' })
-    expect(cancelLocalMock).toHaveBeenCalledWith('/home/tester')
+  it('aborts the in-flight request signal', async () => {
+    let capturedSignal: AbortSignal | undefined
+    requestTranslationMock.mockImplementation(
+      ({ signal }: { signal?: AbortSignal }) =>
+        new Promise((resolve) => {
+          capturedSignal = signal
+          signal?.addEventListener('abort', () => resolve({ ok: false, kind: 'aborted' }), {
+            once: true
+          })
+        })
+    )
+
+    const pending = translateTextWithAi({ text: 'dependent', preference: 'auto' }, deps)
+    await Promise.resolve()
+    cancelAiTranslation()
+    await expect(pending).resolves.toMatchObject({ ok: false, kind: 'ai-unavailable' })
+    expect(capturedSignal?.aborted).toBe(true)
   })
 })

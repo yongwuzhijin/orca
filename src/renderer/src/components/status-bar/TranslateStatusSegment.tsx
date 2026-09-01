@@ -21,6 +21,7 @@ import {
   toTranslateResult,
   type TranslatePopoverStatus
 } from './translate-popover-state'
+import { TRANSLATE_AI_SETTING_ID } from '@/components/settings/appearance-translate-ai-search'
 import { TranslateResultPanel } from './TranslateResultPanel'
 import { describeTranslationFailure } from './translation-failure-message'
 
@@ -38,11 +39,14 @@ export function TranslateStatusSegment({
   iconOnly
 }: TranslateStatusSegmentProps): React.JSX.Element {
   const recordFeatureInteraction = useAppStore((s) => s.recordFeatureInteraction)
+  const openSettingsPage = useAppStore((s) => s.openSettingsPage)
+  const openSettingsTarget = useAppStore((s) => s.openSettingsTarget)
   const dictionaryEnabled = useAppStore((s) => s.settings?.translateDictionaryLookupEnabled ?? true)
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
   const [preference, setPreference] = useState<TranslationDirectionPreference>('auto')
   const [useAi, setUseAi] = useState(false)
+  const [aiApiKeyConfigured, setAiApiKeyConfigured] = useState<boolean | null>(null)
   const [status, setStatus] = useState<TranslatePopoverStatus>({ phase: 'idle' })
   const [headwordEntries, setHeadwordEntries] = useState<DictionaryHeadwordEntry[]>([])
   // Late responses from a superseded submit must not overwrite a newer result.
@@ -55,20 +59,47 @@ export function TranslateStatusSegment({
   )
   const canSubmit = canSubmitTranslation(text, status)
 
+  const refreshAiApiKeyStatus = useCallback(() => {
+    void window.api.translation.getAiApiKeyStatus().then((status) => {
+      setAiApiKeyConfigured(status.configured)
+    })
+  }, [])
+
+  const openTranslateAiSettings = useCallback(() => {
+    openSettingsTarget({
+      pane: 'appearance',
+      repoId: null,
+      sectionId: TRANSLATE_AI_SETTING_ID
+    })
+    openSettingsPage()
+  }, [openSettingsPage, openSettingsTarget])
+
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       setOpen(nextOpen)
       if (nextOpen) {
         recordFeatureInteraction('translate')
+        refreshAiApiKeyStatus()
       }
     },
-    [recordFeatureInteraction]
+    [recordFeatureInteraction, refreshAiApiKeyStatus]
   )
+
+  const handleAiToggle = useCallback(() => {
+    const nextUseAi = !useAi
+    setUseAi(nextUseAi)
+    if (nextUseAi) {
+      refreshAiApiKeyStatus()
+    }
+  }, [refreshAiApiKeyStatus, useAi])
 
   const submit = useCallback(
     (withAi: boolean) => {
       const trimmed = text.trim()
       if (trimmed === '' || isTranslationInputTooLong(text)) {
+        return
+      }
+      if (withAi && aiApiKeyConfigured === false) {
         return
       }
       const seq = submitSeqRef.current + 1
@@ -107,14 +138,17 @@ export function TranslateStatusSegment({
           }
         })
     },
-    [dictionaryEnabled, preference, text]
+    [aiApiKeyConfigured, dictionaryEnabled, preference, text]
   )
 
   const handleSubmit = useCallback(() => {
+    if (useAi && aiApiKeyConfigured === false) {
+      return
+    }
     if (canSubmit) {
       submit(useAi)
     }
-  }, [canSubmit, submit, useAi])
+  }, [aiApiKeyConfigured, canSubmit, submit, useAi])
 
   // Abandons the in-flight sequence too, so a racing late reply cannot revive it.
   const handleCancelAi = useCallback(() => {
@@ -125,6 +159,7 @@ export function TranslateStatusSegment({
 
   const tooLong = isTranslationInputTooLong(text)
   const cancellable = status.phase === 'translating' && status.usedAi
+  const showAiNotConfigured = useAi && aiApiKeyConfigured === false
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -166,7 +201,7 @@ export function TranslateStatusSegment({
           <div className="flex shrink-0 items-center gap-1">
             <button
               type="button"
-              onClick={() => setUseAi(!useAi)}
+              onClick={handleAiToggle}
               aria-pressed={useAi}
               className={
                 useAi
@@ -175,7 +210,7 @@ export function TranslateStatusSegment({
               }
               title={translate(
                 'statusBar.translate.aiHint',
-                'Use your configured AI agent instead of the free service'
+                'Use your configured OpenAI-compatible API instead of the free service'
               )}
             >
               <Sparkles className="size-3" />
@@ -217,6 +252,23 @@ export function TranslateStatusSegment({
             )}
             className="min-h-20 max-h-40 resize-none text-[13px]"
           />
+          {showAiNotConfigured && (
+            <div className="flex flex-col items-start gap-1">
+              <p className="text-[11px] text-muted-foreground">
+                {translate(
+                  'statusBar.translate.aiNotConfigured',
+                  'Add an AI translation API key in Settings to use AI mode.'
+                )}
+              </p>
+              <button
+                type="button"
+                onClick={openTranslateAiSettings}
+                className="rounded border border-border px-1.5 py-0.5 text-[11px] text-foreground hover:bg-accent/70"
+              >
+                {translate('statusBar.translate.goToSettings', 'Go to settings')}
+              </button>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2">
             <span
               className={
