@@ -82,6 +82,21 @@ When adding or changing a Git command:
 - Prefer `rg` over the checked-out files for source searches. For history or refs, use a named ref, an explicit namespace/path, `--max-count`, and a bounded output; do not use an unqualified `--all` scan as a first diagnostic.
 - Keep repository-wide commands targeted to the current repository and worktree. If an unbounded scan is genuinely required, measure the ref count first, explain the cost, and get confirmation before running it.
 
+## Fork / Upstream Merge Policy
+
+When merging a remote fork branch (typically `upstream/main` into a local development branch), treat **local (`ours`) as the default winner** unless both sides can be kept without conflict.
+
+During conflict resolution, **always preserve**:
+
+- **Local-only features** — anything added on the local branch and absent upstream.
+- **Local features upstream deleted** — if upstream removed or replaced code that still exists locally, keep the local behavior unless upstream’s replacement clearly supersedes it and local callers are updated in the same merge.
+
+**Prefer upstream (`theirs`) only when** the change is a pure refactor/relocation with no local fork semantics (e.g. file moves, runtime splits) and local wiring can be reattached without dropping fork behavior.
+
+**When both sides changed the same surface and a clean merge is not possible**, resolve in favor of local — do not silently adopt upstream over todo orchestrator, AutoPilot, agent integrations (e.g. qoder), or other fork-specific settings/UI.
+
+After resolving, verify fork-specific wiring still exists (settings routes, store slices, runtime services, i18n keys, agent registries) before claiming the sync complete.
+
 ## Git Provider Compatibility
 
 Source-control and review changes must consider GitLab and other supported git providers, not only GitHub. Keep provider-specific behavior behind explicit checks, and avoid GitHub-only naming for generic review concepts.
