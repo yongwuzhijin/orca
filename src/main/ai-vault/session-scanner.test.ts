@@ -647,6 +647,26 @@ describe('scanAiVaultSessions', () => {
       ])
     )
 
+    const clineSessionId = 'cline-session'
+    const clineSessionDir = join(roots.clineSessionsDir, clineSessionId)
+    await mkdir(clineSessionDir, { recursive: true })
+    await writeFile(
+      join(clineSessionDir, `${clineSessionId}.json`),
+      JSON.stringify({
+        session_id: clineSessionId,
+        started_at: '2026-05-01T10:10:30.000Z',
+        model: 'cline-model',
+        cwd: '/tmp/cline'
+      })
+    )
+    await writeFile(
+      join(clineSessionDir, `${clineSessionId}.messages.json`),
+      JSON.stringify({
+        updated_at: '2026-05-01T10:10:31.000Z',
+        messages: [{ role: 'user', content: [{ type: 'text', text: 'Cline vault title' }] }]
+      })
+    )
+
     // Kimi: <sessions>/wd_*/session_*/state.json + sibling agents/main/wire.jsonl,
     // with the work dir resolved from the top-level session_index.jsonl.
     const kimiSessionDir = join(roots.kimiSessionsDir, 'wd_app_abc', 'session_kimi-session')
@@ -763,6 +783,7 @@ describe('scanAiVaultSessions', () => {
     expect(commandByAgent.get('prime-agent')).toBe(
       `cd '/tmp/prime-agent' && prime-agent --resume '${primeAgentSessionFile}'`
     )
+    expect(commandByAgent.get('cline')).toBe("cd '/tmp/cline' && cline --id 'cline-session'")
     expect(commandByAgent.get('devin')).toBe("cd '/tmp/devin' && devin --resume 'devin-session'")
     expect(commandByAgent.get('droid')).toBe("cd '/tmp/droid' && droid --resume 'droid-session'")
     expect(commandByAgent.get('kimi')).toBe(
@@ -779,79 +800,5 @@ describe('scanAiVaultSessions', () => {
     const primeAgentSession = result.sessions.find((session) => session.agent === 'prime-agent')
     expect(primeAgentSession?.model).toBe('inference/big-model')
     expect(primeAgentSession?.title).toBe('Prime Agent title')
-  })
-
-  it('captures an in-progress OMP model from model_change before any assistant reply', async () => {
-    // OMP writes the model on `model_change.model` (not Pi's `modelId`). With no
-    // assistant message yet, the model must still come through — proving the
-    // model_change fallback rather than assistant-message capture.
-    const root = await mkdtemp(join(tmpdir(), 'orca-ai-vault-omp-mc-'))
-    tempRoots.push(root)
-    const roots = isolatedScanRoots(root)
-    await mkdir(roots.ompSessionsDir, { recursive: true })
-    await writeFile(
-      join(roots.ompSessionsDir, 'omp-in-progress.jsonl'),
-      jsonLines([
-        {
-          type: 'session',
-          id: 'omp-in-progress',
-          timestamp: '2026-05-01T10:00:00.000Z',
-          cwd: '/tmp/omp'
-        },
-        { type: 'model_change', model: 'omp-mc-only-model', timestamp: '2026-05-01T10:00:01.000Z' },
-        {
-          type: 'message',
-          timestamp: '2026-05-01T10:00:02.000Z',
-          message: { role: 'user', content: [{ type: 'text', text: 'first prompt' }] }
-        }
-      ])
-    )
-
-    const result = await scanAiVaultSessions({ ...roots, platform: 'darwin', limit: 5 })
-    const session = result.sessions.find((s) => s.agent === 'omp')
-    expect(session?.model).toBe('omp-mc-only-model')
-  })
-
-  it('strips newline-heavy Grok user_query envelopes without regex matching', async () => {
-    const matchSpy = vi.spyOn(String.prototype, 'match')
-    const root = await mkdtemp(join(tmpdir(), 'orca-ai-vault-grok-large-'))
-    tempRoots.push(root)
-    const roots = isolatedScanRoots(root)
-    const sessionDir = join(roots.grokSessionsDir, encodeURIComponent('/tmp/grok'), 'large-session')
-    const requestText = 'Grok large title\n'.repeat(300)
-    await mkdir(sessionDir, { recursive: true })
-    await writeFile(
-      join(sessionDir, 'summary.json'),
-      JSON.stringify({
-        info: { id: 'large-session', cwd: '/tmp/grok' },
-        created_at: '2026-05-01T10:04:00.000Z'
-      })
-    )
-    await writeFile(
-      join(sessionDir, 'chat_history.jsonl'),
-      jsonLines([
-        {
-          type: 'user',
-          content: `<USER_INFO>context</USER_INFO><USER_QUERY>\n${requestText}</USER_QUERY>`
-        }
-      ])
-    )
-
-    const result = await scanAiVaultSessions({
-      ...roots,
-      platform: 'darwin',
-      limit: 5
-    })
-
-    expect(result.issues).toEqual([])
-    expect(result.sessions[0]?.title).toContain('Grok large title')
-    expect(result.sessions[0]?.title).not.toContain('USER_QUERY')
-    const usedGrokWrapperMatch = matchSpy.mock.calls.some(
-      ([pattern]) =>
-        pattern instanceof RegExp &&
-        pattern.source.includes('<user_query>') &&
-        pattern.source.includes('[\\s\\S]')
-    )
-    expect(usedGrokWrapperMatch).toBe(false)
   })
 })

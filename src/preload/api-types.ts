@@ -7,7 +7,7 @@ import type {
   GrokAccountsApi,
   MinimaxCredentialsApi
 } from './api/agent-account-api'
-import type { AgentHooksApi, HooksApi } from './api/agent-hook-api'
+import type { HooksApi } from './api/agent-hook-api'
 import type { SkillsApi } from './api/agent-skill-api'
 import type { AgentAwakeApi, AgentStatusApi, AgentTrustApi } from './api/agent-status-api'
 import type {
@@ -23,6 +23,7 @@ import type { BrowserApi } from './api/browser-api'
 import type { CliApi } from './api/cli-install-api'
 import type { CrashReportsApi, FeedbackApi } from './api/crash-report-api'
 import type { DashboardApi, TerminalPreviewApi } from './api/dashboard-api'
+import type { DocPreviewApi } from './api/doc-preview-api'
 import type { EmulatorApi } from './api/emulator-api'
 import type { EphemeralVmApi } from './api/ephemeral-vm-api'
 import type { ExportApi, FilesystemApi } from './api/filesystem-api'
@@ -106,7 +107,6 @@ export type PreloadApi = {
   claudeAccounts: ClaudeAccountsApi
   cli: CliApi
   codexConfigSync: CodexConfigSyncApi
-  agentHooks: AgentHooksApi
   agentTrust: AgentTrustApi
   preflight: PreflightApi
   notifications: NotificationsApi
@@ -128,6 +128,7 @@ export type PreloadApi = {
   remoteWorkspace: WorkspaceSessionApi['remoteWorkspace']
   updater: UpdaterApi
   notebook: FilesystemApi['notebook']
+  docPreview: DocPreviewApi['docPreview']
   stats: StatsApi
   memory: MemoryApi
   claudeUsage: ClaudeUsageApi

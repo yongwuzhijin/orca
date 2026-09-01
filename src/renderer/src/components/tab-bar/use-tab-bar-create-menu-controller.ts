@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 import { translate } from '@/i18n/i18n'
-import { focusTerminalTabSurface } from '@/lib/focus-terminal-tab-surface'
-import { launchAgentInNewTab } from '@/lib/launch-agent-in-new-tab'
+import {
+  launchAgentInNewTab,
+  shouldQueueTerminalFocusAfterMenuClose
+} from '@/lib/launch-agent-in-new-tab'
 import type { WindowsTerminalCapabilities } from '@/lib/windows-terminal-capabilities'
-import { useAppStore } from '../../store'
 import type { TabAgentLaunchOption } from './tab-agent-launch-options'
 import { buildTabCreateMenuOptions, type TabCreateMenuOption } from './tab-create-menu-options'
 import { resolveWindowsShellLaunchTarget } from './windows-shell-launch'
@@ -17,9 +18,7 @@ import type {
   getProjectRuntimeShellMenuMode,
   resolveWindowsPowerShellImplementationSetting
 } from './use-tab-bar-runtime-model'
-
-const NEW_TAB_MENU_TERMINAL_FOCUS_RETRY_MS = 50
-const NEW_TAB_MENU_TERMINAL_FOCUS_TIMEOUT_MS = 5000
+import { useTabBarCreateMenuFocus } from './use-tab-bar-create-menu-focus'
 
 export type TabBarCreateMenuController = {
   newTabMenuOpen: boolean
@@ -85,60 +84,13 @@ export function useTabBarCreateMenuController({
   // Why: <webview> clicks are out-of-process, so Radix's document-pointerdown outside-click check misses them; use window blur.
   const [newTabMenuOpen, setNewTabMenuOpen] = useState(false)
   const [createMenuQuery, setCreateMenuQuery] = useState('')
-  const pendingNewTabMenuFocusRef = useRef<(() => void) | null>(null)
-  const pendingNewTabMenuFocusAnimationRef = useRef<number | null>(null)
-  const pendingNewTabMenuFocusRetryRef = useRef<number | null>(null)
-  const clearPendingNewTabMenuFocusAnimation = (): void => {
-    if (pendingNewTabMenuFocusAnimationRef.current === null) {
-      return
-    }
-    cancelAnimationFrame(pendingNewTabMenuFocusAnimationRef.current)
-    pendingNewTabMenuFocusAnimationRef.current = null
-  }
-  const clearPendingNewTabMenuFocusRetry = (): void => {
-    if (pendingNewTabMenuFocusRetryRef.current === null) {
-      return
-    }
-    window.clearTimeout(pendingNewTabMenuFocusRetryRef.current)
-    pendingNewTabMenuFocusRetryRef.current = null
-  }
-  const focusNewActiveTerminalWhenReady = (
-    previousActiveTabId: string | null,
-    expiresAt: number
-  ): void => {
-    const state = useAppStore.getState()
-    if (
-      (state.activeTabType === 'terminal' || state.activeTabType === 'simulator') &&
-      state.activeTabId &&
-      state.activeTabId !== previousActiveTabId
-    ) {
-      focusTerminalTabSurface(state.activeTabId)
-      return
-    }
-    if (Date.now() >= expiresAt) {
-      return
-    }
-    pendingNewTabMenuFocusRetryRef.current = window.setTimeout(() => {
-      pendingNewTabMenuFocusRetryRef.current = null
-      focusNewActiveTerminalWhenReady(previousActiveTabId, expiresAt)
-    }, NEW_TAB_MENU_TERMINAL_FOCUS_RETRY_MS)
-  }
-  const queueNewActiveTerminalFocusAfterNewTabMenuClose = (): void => {
-    const previousActiveTabId = useAppStore.getState().activeTabId
-    pendingNewTabMenuFocusRef.current = () => {
-      // Why: paired web/SSH tab creation is async; await the host snapshot's new terminal instead of the pre-existing active tab.
-      focusNewActiveTerminalWhenReady(
-        previousActiveTabId,
-        Date.now() + NEW_TAB_MENU_TERMINAL_FOCUS_TIMEOUT_MS
-      )
-    }
-  }
-  const queueTerminalTabFocusAfterNewTabMenuClose = (tabId: string): void => {
-    pendingNewTabMenuFocusRef.current = () => focusTerminalTabSurface(tabId)
-  }
-  const queueFocusAfterNewTabMenuClose = (focus: () => void): void => {
-    pendingNewTabMenuFocusRef.current = focus
-  }
+  const {
+    queueNewActiveTerminalFocusAfterNewTabMenuClose,
+    queueTerminalTabFocusAfterNewTabMenuClose,
+    queueFocusAfterNewTabMenuClose,
+    runPendingNewTabMenuFocusAfterClose,
+    clearPendingNewTabMenuFocusOnUnmount
+  } = useTabBarCreateMenuFocus()
   const windowsShellEntries = useMemo(() => {
     return buildWindowsShellMenuEntries({
       showWindowsShellMenu,
@@ -244,34 +196,10 @@ export function useTabBarCreateMenuController({
       queueTerminalTabFocusAfterNewTabMenuClose(result.tabId)
       return
     }
-    queueNewActiveTerminalFocusAfterNewTabMenuClose()
-  }
-  const runPendingNewTabMenuFocusAfterClose = (): void => {
-    const pendingFocus = pendingNewTabMenuFocusRef.current
-    pendingNewTabMenuFocusRef.current = null
-    clearPendingNewTabMenuFocusAnimation()
-    clearPendingNewTabMenuFocusRetry()
-    if (pendingFocus) {
-      pendingNewTabMenuFocusAnimationRef.current = requestAnimationFrame(() => {
-        pendingNewTabMenuFocusAnimationRef.current = null
-        pendingFocus()
-      })
+    if (shouldQueueTerminalFocusAfterMenuClose(result)) {
+      queueNewActiveTerminalFocusAfterNewTabMenuClose()
     }
   }
-  const clearPendingNewTabMenuFocusOnUnmountRef = useRef<
-    ((node: HTMLDivElement | null) => void) | null
-  >(null)
-  if (clearPendingNewTabMenuFocusOnUnmountRef.current === null) {
-    clearPendingNewTabMenuFocusOnUnmountRef.current = (node: HTMLDivElement | null): void => {
-      if (node !== null) {
-        return
-      }
-      // Why: cancel the delayed focus handoff via this root ref cleanup, avoiding an otherwise cleanup-only React Effect.
-      clearPendingNewTabMenuFocusAnimation()
-      clearPendingNewTabMenuFocusRetry()
-    }
-  }
-  const clearPendingNewTabMenuFocusOnUnmount = clearPendingNewTabMenuFocusOnUnmountRef.current
 
   useEffect(() => {
     if (!newTabMenuOpen) {

@@ -4,7 +4,7 @@ import { lazyWithRetry as lazy } from '@/lib/lazy-with-retry'
 // same module is a distinct component type, so it gets its own Suspense boundary and remount.
 export const MonacoEditor = lazy(() => import('./MonacoEditor'))
 export const DiffViewer = lazy(() => import('./DiffViewer'))
-export const CombinedDiffViewer = lazy(() => import('./CombinedDiffViewer'))
+export const CombinedDiffViewer = lazy(() => import('./combined-diff/CombinedDiffViewer'))
 export const RichMarkdownEditor = lazy(() => import('./RichMarkdownEditor'), {
   reloadKey: 'rich-markdown-editor'
 })
@@ -14,3 +14,8 @@ export const ImageDiffViewer = lazy(() => import('./ImageDiffViewer'))
 export const MermaidViewer = lazy(() => import('./MermaidViewer'))
 export const CsvViewer = lazy(() => import('./CsvViewer'))
 export const IpynbViewer = lazy(() => import('./IpynbViewer'))
+export const JsonFormatterPane = lazy(() =>
+  import('@/components/json-formatter/JsonFormatterPane').then((module) => ({
+    default: module.JsonFormatterPane
+  }))
+)
