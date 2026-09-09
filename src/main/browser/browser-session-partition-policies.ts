@@ -8,10 +8,8 @@ import {
   invalidateBrowserSessionProxyApplication
 } from './browser-session-proxy'
 import { hasSystemMediaAccess, requestSystemMediaAccess } from './browser-media-access'
-import { installBrowserNetworkToolsStages } from './browser-network-tools-controller'
 import { isAutoGrantedBrowserSessionPermission } from './browser-session-permission-policy'
-import { clearBrowserSessionRequestPipeline } from './browser-session-request-pipeline'
-import { cleanElectronUserAgent, setupClientHintsOverride } from './browser-session-ua'
+import { setupGoogleAuthUserAgentOverride } from './browser-session-ua'
 import { setBrowserSessionUserAgentMode } from './browser-session-user-agent-mode'
 import {
   allowsBrowserWebAuthnPermission,
@@ -94,11 +92,8 @@ export function installBrowserSessionPartitionPolicies(
   }
 
   browserManager.installCertificateRequestGuard(sess)
-  installBrowserNetworkToolsStages(sess)
-  if (profile.userAgentMode !== 'native' && typeof sess.getUserAgent === 'function') {
-    const cleanUA = cleanElectronUserAgent(sess.getUserAgent())
-    sess.setUserAgent(cleanUA)
-    setupClientHintsOverride(sess, cleanUA)
+  if (profile.userAgentMode !== 'native') {
+    setupGoogleAuthUserAgentOverride(sess)
   }
   if (options?.permissions === 'deny') {
     sess.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
@@ -181,8 +176,6 @@ export function clearBrowserSessionPartitionPolicies(partition: string, sess: Se
   sess.setPermissionRequestHandler(null)
   sess.setPermissionCheckHandler(null)
   sess.setDisplayMediaRequestHandler(null)
-  // Why: guard removal re-installs the pipeline listeners, so dropping them has to come last.
-  clearBrowserSessionRequestPipeline(sess)
 }
 
 export function applyBrowserSessionUserAgentModes(profiles: BrowserSessionProfile[]): void {
@@ -196,11 +189,7 @@ export function applyBrowserSessionUserAgentModes(profiles: BrowserSessionProfil
       if (profile.userAgentMode === 'native') {
         continue
       }
-
-      // Why: the default Electron UA leaks "Electron/X.X.X" + app name, which trips Cloudflare Turnstile.
-      const cleanUA = cleanElectronUserAgent(sess.getUserAgent())
-      sess.setUserAgent(cleanUA)
-      setupClientHintsOverride(sess, cleanUA)
+      setupGoogleAuthUserAgentOverride(sess)
     } catch {
       /* session not available yet (e.g. unit tests or pre-ready) */
     }
