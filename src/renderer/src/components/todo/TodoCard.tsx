@@ -32,11 +32,12 @@ const TodoCardFace = React.forwardRef<HTMLButtonElement, TodoCardFaceProps>(func
       )}
       {...props}
     >
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <StatusIcon className={cn('size-3.5', statusMeta.colorToken)} />
-        <span>{item.identifier}</span>
+      <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+        <StatusIcon className={cn('size-3.5 shrink-0', statusMeta.colorToken)} />
+        <span className="shrink-0">{item.identifier}</span>
+        <span className="text-muted-foreground/60">·</span>
+        <span className="truncate font-medium text-foreground">{item.title}</span>
       </div>
-      <span className="text-[13px] font-medium leading-snug">{item.title}</span>
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <PriorityIcon className={cn('size-3.5', priorityMeta.colorToken)} />
         {item.scheduledDate ? <span>{item.scheduledDate}</span> : null}

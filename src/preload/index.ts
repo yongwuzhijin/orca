@@ -99,6 +99,12 @@ import type {
   CreateTodoTemplateInput,
   UpdateTodoTemplateInput
 } from '../shared/todo/todo-template'
+import type {
+  TodoClarificationTemplate,
+  CreateTodoClarificationTemplateInput,
+  UpdateTodoClarificationTemplateInput,
+  ClarificationState
+} from '../shared/todo/todo-clarification-template'
 import type { TodoStatus } from '../shared/todo/todo-status'
 import type { MergeOutcome, MergePlan } from '../shared/todo/todo-merge'
 import type { TodoDashboardMetrics, TodoDashboardRange } from '../shared/todo/todo-dashboard'
@@ -5178,6 +5184,30 @@ const api = {
       update: (input: UpdateTodoTemplateInput): Promise<TodoTemplate> =>
         ipcRenderer.invoke('todos:templates:update', input),
       delete: (id: string): Promise<void> => ipcRenderer.invoke('todos:templates:delete', id)
+    },
+    clarificationTemplates: {
+      list: (): Promise<TodoClarificationTemplate[]> =>
+        ipcRenderer.invoke('todos:clarification-templates:list'),
+      create: (input: CreateTodoClarificationTemplateInput): Promise<TodoClarificationTemplate> =>
+        ipcRenderer.invoke('todos:clarification-templates:create', input),
+      update: (input: UpdateTodoClarificationTemplateInput): Promise<TodoClarificationTemplate> =>
+        ipcRenderer.invoke('todos:clarification-templates:update', input),
+      delete: (id: string): Promise<void> =>
+        ipcRenderer.invoke('todos:clarification-templates:delete', id)
+    },
+    requirement: {
+      initWorktree: (args: {
+        worktreePath: string
+        todoId: string
+        title: string
+        prdLink?: string | null
+      }): Promise<void> => ipcRenderer.invoke('todos:requirement.initWorktree', args),
+      readClarification: (args: { worktreePath: string }): Promise<ClarificationState> =>
+        ipcRenderer.invoke('todos:requirement.readClarification', args),
+      writeClarification: (args: {
+        worktreePath: string
+        state: ClarificationState
+      }): Promise<void> => ipcRenderer.invoke('todos:requirement.writeClarification', args)
     },
     review: {
       scanPorts: (input: { taskId: string }): Promise<WorkspacePort[]> =>

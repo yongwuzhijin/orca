@@ -22,6 +22,7 @@ import {
   TodoCreateWorkspaceFields,
   type TodoCreateWorkspaceFieldsValue
 } from './TodoCreateWorkspaceFields'
+import { createRequirementWorkspaceForItem } from './todo-create-requirement-workspace'
 
 export type CreateTodoFormValues = {
   projectId: string
@@ -104,14 +105,16 @@ export function TodoCreateDialog({
     })
   )
 
-  const canSubmit = title.trim().length > 0
+  const canSubmit = title.trim().length > 0 && workspaceFields.workspaceProjectIds.length > 0
+  const [submitting, setSubmitting] = React.useState(false)
 
   const handleSubmit = async (): Promise<void> => {
-    if (!canSubmit) {
+    if (!canSubmit || submitting) {
       return
     }
+    setSubmitting(true)
     try {
-      await createTodoItem(
+      const created = await createTodoItem(
         buildCreateTodoPayload({
           projectId,
           title,
@@ -124,6 +127,11 @@ export function TodoCreateDialog({
           workspaceName: workspaceFields.workspaceName
         })
       )
+      const workspace = await createRequirementWorkspaceForItem(created)
+      if (!workspace.ok) {
+        toast.error(workspace.message)
+        return
+      }
       onClose()
     } catch (error) {
       console.error('[TodoCreateDialog] createTodoItem failed', error)
@@ -133,6 +141,8 @@ export function TodoCreateDialog({
           'Failed to create requirement'
         )
       )
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -255,7 +265,7 @@ export function TodoCreateDialog({
             onClick={() => {
               void handleSubmit()
             }}
-            disabled={!canSubmit}
+            disabled={!canSubmit || submitting}
           >
             {translate('auto.components.todo.TodoCreateDialog.create', 'Create requirement')}
           </Button>

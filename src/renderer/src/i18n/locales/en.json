@@ -1152,7 +1152,9 @@
         "shareSkillsTitle": "Share Skills",
         "shareSkillsDescription": "Share your skills with an unlisted link. Anyone who has it can install them.",
         "floatingWorkspaceWebDescription": "Global terminal and markdown tabs.",
-        "browserDescriptionWithQuickLinks": "Home page, link routing, session cookies, and quick links."
+        "browserDescriptionWithQuickLinks": "Home page, link routing, session cookies, and quick links.",
+        "requirementSettingsTitle": "Requirement settings",
+        "requirementSettingsDescription": "Manage start-task and clarification prompt templates."
       },
       "useAppMenuPaste": {
         "pasteTooLarge": "Paste is too large."
@@ -11758,6 +11760,25 @@
           "replaceKey": "Replace key",
           "disconnectApiKey": "Disconnect API key",
           "addApiKey": "Add API key"
+        },
+        "RequirementSettingsPane": {
+          "startTaskTab": "Start task templates",
+          "clarificationTab": "Clarification templates",
+          "startTaskEmpty": "No start task templates yet.",
+          "clarificationEmpty": "No clarification templates yet."
+        },
+        "RequirementTemplateListEditor": {
+          "saveError": "Failed to save template",
+          "listTitle": "Templates",
+          "new": "New",
+          "name": "Name",
+          "body": "Prompt body",
+          "delete": "Delete",
+          "save": "Save"
+        },
+        "requirementSettings": {
+          "title": "Requirement settings",
+          "description": "Manage start-task and clarification prompt templates for the requirements board."
         }
       },
       "right": {
@@ -16844,7 +16865,8 @@
         },
         "TodoTemplatePicker": {
           "none": "No template",
-          "manage": "Manage templates"
+          "manage": "Manage templates",
+          "openRequirementSettings": "Open requirement settings"
         },
         "TodoTemplateManagerDialog": {
           "title": "Manage templates",
@@ -16983,6 +17005,40 @@
             "exitFullscreen": "Exit full screen",
             "close": "Close",
             "openInEditor": "Open in workspace editor"
+          },
+          "RequirementClarificationPane": {
+            "started": "Clarification started.",
+            "noAnswers": "Answer at least one clarification item first.",
+            "applyStarted": "Updating PRD from clarification answers.",
+            "noWorktree": "Workspace is not ready yet.",
+            "loading": "Loading…",
+            "start": "Start clarification",
+            "apply": "Apply to PRD",
+            "empty": "No clarification items yet.",
+            "answerPlaceholder": "Your answer",
+            "invalid": "Invalid",
+            "refreshFailed": "Failed to refresh clarification items.",
+            "refresh": "Refresh"
+          },
+          "RequirementPrdPane": {
+            "noWorktree": "Workspace is not ready yet.",
+            "openPrd": "Edit prd.md",
+            "refreshPreview": "Refresh PRD preview"
+          },
+          "RequirementPrdSupplementPane": {
+            "noWorktree": "Workspace is not ready yet.",
+            "hint": "Start a supplement session to let the agent edit prd.md from your instructions.",
+            "start": "Start supplement"
+          },
+          "TodoRequirementPanel": {
+            "tabOverview": "Requirement",
+            "tabPrd": "PRD",
+            "tabClarification": "Clarification",
+            "tabSupplement": "PRD supplement"
+          },
+          "RequirementPrdPreview": {
+            "loading": "Loading PRD…",
+            "empty": "No PRD content yet. Edit prd.md or run PRD parsing."
           }
         },
         "dashboard": {
@@ -17017,6 +17073,18 @@
         "TodoWorkspaceMultiProjectPicker": {
           "removeProject": "Remove project",
           "addProjectPlaceholder": "Add project to task"
+        },
+        "ClarificationTemplatePicker": {
+          "placeholder": "Select clarification template",
+          "none": "No template",
+          "openRequirementSettings": "Open clarification template settings"
+        },
+        "todoCreateRequirementWorkspace": {
+          "initFailed": "Failed to initialize requirement workspace files"
+        },
+        "todoPrdParse": {
+          "mcpMissing": "DingTalk document MCP is not configured. PRD parsing cannot run.",
+          "started": "PRD parsing started in the background."
         }
       },
       "jsonFormatter": {

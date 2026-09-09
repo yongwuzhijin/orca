@@ -11,7 +11,8 @@ import Database from '../sqlite/sync-database'
 // design_stage_enabled, the per-card opt-in for the solution-design stage.
 // v8 adds prd_link and execution_mode on todo_items for requirement metadata and start-time routing.
 // v9 adds bound_worktree_id so the sidebar requirements list and detail meta can resolve the workspace.
-export const SCHEMA_VERSION = 9
+// v10 adds todo_clarification_templates for requirement clarification prompts.
+export const SCHEMA_VERSION = 10
 
 export class TodoDatabase {
   private db: Database.Database
@@ -47,6 +48,14 @@ export class TodoDatabase {
       );
 
       CREATE TABLE IF NOT EXISTS todo_templates (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        body TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS todo_clarification_templates (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         body TEXT NOT NULL,
@@ -176,6 +185,17 @@ export class TodoDatabase {
       // v9: worktree created when the requirement starts.
       if (current < 9 && !this.hasColumn('todo_items', 'bound_worktree_id')) {
         this.db.exec('ALTER TABLE todo_items ADD COLUMN bound_worktree_id TEXT')
+      }
+      if (current < 10) {
+        this.db.exec(`
+          CREATE TABLE IF NOT EXISTS todo_clarification_templates (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            body TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          )
+        `)
       }
       this.db.pragma(`user_version = ${SCHEMA_VERSION}`)
       this.db.exec('COMMIT')

@@ -17,6 +17,11 @@ import type {
   CreateTodoTemplateInput,
   UpdateTodoTemplateInput
 } from '../../../../shared/todo/todo-template'
+import type {
+  TodoClarificationTemplate,
+  CreateTodoClarificationTemplateInput,
+  UpdateTodoClarificationTemplateInput
+} from '../../../../shared/todo/todo-clarification-template'
 import type { TodoStatus } from '../../../../shared/todo/todo-status'
 
 export type TodosSlice = {
@@ -24,6 +29,7 @@ export type TodosSlice = {
   todoActiveProjectId: string | null
   todoItems: TodoItem[]
   todoTemplates: TodoTemplate[]
+  todoClarificationTemplates: TodoClarificationTemplate[]
   todoLoaded: boolean
   todoDetailItemId: string | null
 
@@ -46,6 +52,15 @@ export type TodosSlice = {
   createTodoTemplate: (input: CreateTodoTemplateInput) => Promise<TodoTemplate>
   updateTodoTemplate: (input: UpdateTodoTemplateInput) => Promise<TodoTemplate>
   deleteTodoTemplate: (id: string) => Promise<void>
+
+  loadTodoClarificationTemplates: () => Promise<void>
+  createTodoClarificationTemplate: (
+    input: CreateTodoClarificationTemplateInput
+  ) => Promise<TodoClarificationTemplate>
+  updateTodoClarificationTemplate: (
+    input: UpdateTodoClarificationTemplateInput
+  ) => Promise<TodoClarificationTemplate>
+  deleteTodoClarificationTemplate: (id: string) => Promise<void>
 }
 
 export const createTodosSlice: StateCreator<AppState, [], [], TodosSlice> = (set, get) => ({
@@ -53,6 +68,7 @@ export const createTodosSlice: StateCreator<AppState, [], [], TodosSlice> = (set
   todoActiveProjectId: null,
   todoItems: [],
   todoTemplates: [],
+  todoClarificationTemplates: [],
   todoLoaded: false,
   todoDetailItemId: null,
 
@@ -172,5 +188,35 @@ export const createTodosSlice: StateCreator<AppState, [], [], TodosSlice> = (set
   deleteTodoTemplate: async (id) => {
     await window.api.todos.templates.delete(id)
     set((s) => ({ todoTemplates: s.todoTemplates.filter((template) => template.id !== id) }))
+  },
+
+  loadTodoClarificationTemplates: async () => {
+    const templates = await window.api.todos.clarificationTemplates.list()
+    set({ todoClarificationTemplates: templates })
+  },
+
+  createTodoClarificationTemplate: async (input) => {
+    const created = await window.api.todos.clarificationTemplates.create(input)
+    set((s) => ({ todoClarificationTemplates: [...s.todoClarificationTemplates, created] }))
+    return created
+  },
+
+  updateTodoClarificationTemplate: async (input) => {
+    const updated = await window.api.todos.clarificationTemplates.update(input)
+    set((s) => ({
+      todoClarificationTemplates: s.todoClarificationTemplates.map((template) =>
+        template.id === updated.id ? updated : template
+      )
+    }))
+    return updated
+  },
+
+  deleteTodoClarificationTemplate: async (id) => {
+    await window.api.todos.clarificationTemplates.delete(id)
+    set((s) => ({
+      todoClarificationTemplates: s.todoClarificationTemplates.filter(
+        (template) => template.id !== id
+      )
+    }))
   }
 })

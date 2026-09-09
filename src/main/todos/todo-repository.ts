@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import type Database from '../sqlite/sync-database'
 import type {
   CreateTodoItemInput,
@@ -17,7 +16,18 @@ import type {
   TodoTemplate,
   UpdateTodoTemplateInput
 } from '../../shared/todo/todo-template'
+import type {
+  CreateTodoClarificationTemplateInput,
+  TodoClarificationTemplate,
+  UpdateTodoClarificationTemplateInput
+} from '../../shared/todo/todo-clarification-template'
 import type { TodoDatabase } from './todo-database'
+import {
+  createTodoClarificationTemplate,
+  deleteTodoClarificationTemplate,
+  listTodoClarificationTemplates,
+  updateTodoClarificationTemplate
+} from './todo-clarification-template-store'
 import {
   createTodoProject,
   deleteTodoProject,
@@ -26,17 +36,18 @@ import {
   renameTodoProject,
   updateTodoProject
 } from './todo-project-store'
+import {
+  createTodoTemplate,
+  deleteTodoTemplate,
+  listTodoTemplates,
+  updateTodoTemplate
+} from './todo-template-store'
 import { deriveTodoItemTimestamps, insertTodoItem } from './todo-item-store'
 import {
   normalizeWorkspaceProjectIds,
   primaryWorkspaceProjectId
 } from '../../shared/todo/workspace-project-ids'
-import {
-  rowToTemplate,
-  rowToTodoItem,
-  type TodoItemRow,
-  type TodoTemplateRow
-} from './todo-row-mapping'
+import { rowToTodoItem, type TodoItemRow } from './todo-row-mapping'
 
 function nowIso(): string {
   return new Date().toISOString()
@@ -78,46 +89,41 @@ export class TodoRepository {
   // --- Templates ---
 
   listTemplates(): TodoTemplate[] {
-    const rows = this.db
-      .prepare('SELECT * FROM todo_templates ORDER BY created_at ASC')
-      .all() as TodoTemplateRow[]
-    return rows.map(rowToTemplate)
+    return listTodoTemplates(this.db)
   }
 
   createTemplate(input: CreateTodoTemplateInput): TodoTemplate {
-    const timestamp = nowIso()
-    const id = randomUUID()
-    this.db
-      .prepare(
-        `INSERT INTO todo_templates (id, name, body, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?)`
-      )
-      .run(id, input.name, input.body, timestamp, timestamp)
-    return this.requireTemplate(id)
+    return createTodoTemplate(this.db, input)
   }
 
   updateTemplate(input: UpdateTodoTemplateInput): TodoTemplate {
-    const current = this.requireTemplate(input.id)
-    const name = input.name ?? current.name
-    const body = input.body ?? current.body
-    this.db
-      .prepare('UPDATE todo_templates SET name = ?, body = ?, updated_at = ? WHERE id = ?')
-      .run(name, body, nowIso(), input.id)
-    return this.requireTemplate(input.id)
+    return updateTodoTemplate(this.db, input)
   }
 
   deleteTemplate(id: string): void {
-    this.db.prepare('DELETE FROM todo_templates WHERE id = ?').run(id)
+    deleteTodoTemplate(this.db, id)
   }
 
-  private requireTemplate(id: string): TodoTemplate {
-    const row = this.db.prepare('SELECT * FROM todo_templates WHERE id = ?').get(id) as
-      | TodoTemplateRow
-      | undefined
-    if (!row) {
-      throw new Error(`TodoRepository: template not found: ${id}`)
-    }
-    return rowToTemplate(row)
+  // --- Clarification templates ---
+
+  listClarificationTemplates(): TodoClarificationTemplate[] {
+    return listTodoClarificationTemplates(this.db)
+  }
+
+  createClarificationTemplate(
+    input: CreateTodoClarificationTemplateInput
+  ): TodoClarificationTemplate {
+    return createTodoClarificationTemplate(this.db, input)
+  }
+
+  updateClarificationTemplate(
+    input: UpdateTodoClarificationTemplateInput
+  ): TodoClarificationTemplate {
+    return updateTodoClarificationTemplate(this.db, input)
+  }
+
+  deleteClarificationTemplate(id: string): void {
+    deleteTodoClarificationTemplate(this.db, id)
   }
 
   // --- Items ---

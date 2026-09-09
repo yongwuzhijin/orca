@@ -14,6 +14,13 @@ import type {
   CreateTodoTemplateInput,
   UpdateTodoTemplateInput
 } from '../../shared/todo/todo-template'
+import type {
+  TodoClarificationTemplate,
+  CreateTodoClarificationTemplateInput,
+  UpdateTodoClarificationTemplateInput,
+  ClarificationState
+} from '../../shared/todo/todo-clarification-template'
+import type { ParsedClarificationState } from '../../shared/todo/clarification-state'
 import type { TodoStatus } from '../../shared/todo/todo-status'
 import type { MergeOutcome, MergePlan } from '../../shared/todo/todo-merge'
 import type { TodoDashboardMetrics, TodoDashboardRange } from '../../shared/todo/todo-dashboard'
@@ -40,6 +47,22 @@ export type TodosApi = {
     create: (input: CreateTodoTemplateInput) => Promise<TodoTemplate>
     update: (input: UpdateTodoTemplateInput) => Promise<TodoTemplate>
     delete: (id: string) => Promise<void>
+  }
+  clarificationTemplates: {
+    list: () => Promise<TodoClarificationTemplate[]>
+    create: (input: CreateTodoClarificationTemplateInput) => Promise<TodoClarificationTemplate>
+    update: (input: UpdateTodoClarificationTemplateInput) => Promise<TodoClarificationTemplate>
+    delete: (id: string) => Promise<void>
+  }
+  requirement: {
+    initWorktree: (args: {
+      worktreePath: string
+      todoId: string
+      title: string
+      prdLink?: string | null
+    }) => Promise<void>
+    readClarification: (args: { worktreePath: string }) => Promise<ParsedClarificationState>
+    writeClarification: (args: { worktreePath: string; state: ClarificationState }) => Promise<void>
   }
   review: {
     scanPorts: (input: { taskId: string }) => Promise<WorkspacePort[]>

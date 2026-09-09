@@ -1,5 +1,6 @@
 import { ArtifactsSettingsPane } from './ArtifactsSettingsPane'
 import { AutomationsSettingsPane } from './AutomationsSettingsPane'
+import { RequirementSettingsPane } from './RequirementSettingsPane'
 import { GeneralPane } from './GeneralPane'
 import { IntegrationsPane } from './IntegrationsPane'
 import { MobileSettingsPane } from './MobileSettingsPane'
@@ -133,6 +134,28 @@ export function renderAutomationsSettingsSection(
       {view.isSectionMounted('automations') ? (
         <AutomationsSettingsPane settings={model.settings} updateSettings={model.updateSettings} />
       ) : null}
+    </SettingsSection>
+  )
+}
+
+export function renderRequirementSettingsSection(
+  context: SettingsRenderContext
+): React.JSX.Element {
+  const { navigation, view } = context
+  return (
+    <SettingsSection
+      id="requirement-settings"
+      title={translate(
+        'auto.components.settings.requirementSettings.title',
+        'Requirement settings'
+      )}
+      description={translate(
+        'auto.components.settings.requirementSettings.description',
+        'Manage start-task and clarification prompt templates for the requirements board.'
+      )}
+      searchEntries={navigation.getSectionSearchEntries('requirement-settings')}
+    >
+      {view.isSectionMounted('requirement-settings') ? <RequirementSettingsPane /> : null}
     </SettingsSection>
   )
 }

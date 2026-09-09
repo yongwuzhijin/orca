@@ -834,7 +834,9 @@
         "artifactsTitle": "Artifacts",
         "artifactsDescription": "Comparte archivos HTML y Markdown con tu equipo y gestiona sus enlaces públicos.",
         "automationsTitle": "Automatizaciones",
-        "automationsDescription": "Programa el trabajo del agente y elige si Automatizaciones aparece en la barra lateral."
+        "automationsDescription": "Programa el trabajo del agente y elige si Automatizaciones aparece en la barra lateral.",
+        "requirementSettingsTitle": "Configuración de requisitos",
+        "requirementSettingsDescription": "Administra plantillas de inicio de tarea y de aclaración de requisitos."
       },
       "useAppMenuPaste": {
         "pasteTooLarge": "El contenido pegado es demasiado grande."
@@ -10420,6 +10422,25 @@
           "title": "Automatizaciones",
           "description": "Programa el trabajo del agente y elige si Automatizaciones aparece en la barra lateral."
         },
+        "RequirementSettingsPane": {
+          "startTaskTab": "Plantillas de inicio de tarea",
+          "clarificationTab": "Plantillas de aclaración",
+          "startTaskEmpty": "Aún no hay plantillas de inicio de tarea.",
+          "clarificationEmpty": "Aún no hay plantillas de aclaración."
+        },
+        "RequirementTemplateListEditor": {
+          "saveError": "No se pudo guardar la plantilla",
+          "listTitle": "Plantillas",
+          "new": "Nueva",
+          "name": "Nombre",
+          "body": "Cuerpo del prompt",
+          "delete": "Eliminar",
+          "save": "Guardar"
+        },
+        "requirementSettings": {
+          "title": "Configuración de requisitos",
+          "description": "Administra plantillas de inicio de tarea y aclaración para el tablero de requisitos."
+        },
         "artifacts": {
           "enable": "Habilitar Artifacts",
           "enableDescription": "Añade Artifacts a la barra lateral para poder abrir y eliminar archivos compartidos.",
@@ -14968,7 +14989,45 @@
             "exitFullscreen": "Salir de pantalla completa",
             "close": "Cerrar",
             "openInEditor": "Abrir en el editor del espacio de trabajo"
+          },
+          "RequirementClarificationPane": {
+            "started": "Aclaración iniciada.",
+            "noAnswers": "Responde al menos un punto de aclaración primero.",
+            "applyStarted": "Actualizando el PRD según las respuestas de aclaración.",
+            "noWorktree": "El espacio de trabajo aún no está listo.",
+            "loading": "Cargando…",
+            "start": "Iniciar aclaración",
+            "apply": "Aplicar al PRD",
+            "empty": "Aún no hay puntos de aclaración.",
+            "answerPlaceholder": "Tu respuesta",
+            "invalid": "Inválido"
+          },
+          "RequirementPrdPane": {
+            "noWorktree": "El espacio de trabajo aún no está listo.",
+            "openPrd": "Editar prd.md"
+          },
+          "RequirementPrdSupplementPane": {
+            "noWorktree": "El espacio de trabajo aún no está listo.",
+            "hint": "Inicia una sesión de suplemento para que el agente edite prd.md según tus instrucciones.",
+            "start": "Iniciar suplemento"
+          },
+          "TodoRequirementPanel": {
+            "tabOverview": "Requisito",
+            "tabPrd": "PRD",
+            "tabClarification": "Aclaración",
+            "tabSupplement": "Suplemento PRD"
           }
+        },
+        "ClarificationTemplatePicker": {
+          "placeholder": "Seleccionar plantilla de aclaración",
+          "none": "Sin plantilla"
+        },
+        "todoCreateRequirementWorkspace": {
+          "initFailed": "No se pudieron inicializar los archivos del espacio de requisitos"
+        },
+        "todoPrdParse": {
+          "mcpMissing": "MCP de documentos DingTalk no configurado. No se puede analizar el PRD.",
+          "started": "Análisis de PRD iniciado en segundo plano."
         },
         "dashboard": {
           "CycleTimeCard": {

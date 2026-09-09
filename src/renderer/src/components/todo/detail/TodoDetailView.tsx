@@ -12,6 +12,7 @@ import type { TodoPriority } from '../../../../../shared/todo/todo-priority'
 import { TodoStatusMenu } from '../TodoStatusMenu'
 import { TodoPriorityMenu } from '../TodoPriorityMenu'
 import { TodoDetailOverview } from './TodoDetailOverview'
+import { TodoRequirementPanel } from './TodoRequirementPanel'
 import { InProgressPanel } from './InProgressPanel'
 import { EnterInProgressDialog } from './EnterInProgressDialog'
 import { HumanReviewPanel } from './HumanReviewPanel'
@@ -67,7 +68,11 @@ function TodoDetailBody({ item }: { item: TodoItem }): React.JSX.Element {
         <Button size="sm" variant="ghost" onClick={() => closeTodoDetail()}>
           <ArrowLeft className="size-4" />
         </Button>
-        <span className="text-xs text-muted-foreground">{item.identifier}</span>
+        <div className="flex min-w-0 items-center gap-1.5 text-xs">
+          <span className="shrink-0 text-muted-foreground">{item.identifier}</span>
+          <span className="text-muted-foreground/60">·</span>
+          <span className="truncate font-medium text-foreground">{item.title}</span>
+        </div>
         <div className="flex-1" />
         {item.status === 'todo' ? (
           <Button size="sm" onClick={() => setEnterOpen(true)}>
@@ -88,6 +93,8 @@ function TodoDetailBody({ item }: { item: TodoItem }): React.JSX.Element {
               <HumanReviewPanel item={item} />
             ) : item.status === 'merging' ? (
               <MergingPanel item={item} />
+            ) : item.status === 'todo' ? (
+              <TodoRequirementPanel item={item} />
             ) : (
               <TodoDetailOverview item={item} />
             )}

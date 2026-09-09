@@ -837,7 +837,9 @@
         "artifactsTitle": "Artifacts",
         "artifactsDescription": "与团队共享 HTML 和 Markdown 文件，并管理它们的公开链接。",
         "automationsTitle": "自动化",
-        "automationsDescription": "排定 Agent 任务，并选择是否在侧边栏中显示自动化。"
+        "automationsDescription": "排定 Agent 任务，并选择是否在侧边栏中显示自动化。",
+        "requirementSettingsTitle": "需求设置",
+        "requirementSettingsDescription": "管理开始任务与需求澄清的提示词模板。"
       },
       "useAppMenuPaste": {
         "pasteTooLarge": "粘贴内容过大。"
@@ -10476,6 +10478,25 @@
           "title": "自动化",
           "description": "排定 Agent 任务，并选择是否在侧边栏中显示自动化。"
         },
+        "RequirementSettingsPane": {
+          "startTaskTab": "开始任务模板",
+          "clarificationTab": "需求澄清模板",
+          "startTaskEmpty": "还没有开始任务模板。",
+          "clarificationEmpty": "还没有需求澄清模板。"
+        },
+        "RequirementTemplateListEditor": {
+          "saveError": "保存模板失败",
+          "listTitle": "模板列表",
+          "new": "新建",
+          "name": "名称",
+          "body": "提示词内容",
+          "delete": "删除",
+          "save": "保存"
+        },
+        "requirementSettings": {
+          "title": "需求设置",
+          "description": "管理需求看板的开始任务模板与需求澄清模板。"
+        },
         "artifacts": {
           "enable": "启用 Artifacts",
           "enableDescription": "将 Artifacts 添加到侧边栏，以便打开和删除已共享的文件。",
@@ -14893,7 +14914,8 @@
         },
         "TodoTemplatePicker": {
           "none": "无模板",
-          "manage": "管理模板"
+          "manage": "管理模板",
+          "openRequirementSettings": "打开需求设置"
         },
         "TodoTemplateManagerDialog": {
           "title": "管理模板",
@@ -15032,7 +15054,53 @@
             "exitFullscreen": "退出全屏",
             "close": "关闭",
             "openInEditor": "在工作区编辑器中打开"
+          },
+          "RequirementClarificationPane": {
+            "started": "已开始需求澄清。",
+            "noAnswers": "请先回复至少一条澄清项。",
+            "applyStarted": "正在根据澄清答复更新 PRD。",
+            "noWorktree": "工作区尚未就绪。",
+            "loading": "加载中…",
+            "start": "开始澄清",
+            "apply": "应用到 PRD",
+            "empty": "还没有澄清项。",
+            "answerPlaceholder": "你的回复",
+            "invalid": "无效",
+            "refreshFailed": "刷新澄清项失败。",
+            "refresh": "刷新"
+          },
+          "RequirementPrdPane": {
+            "noWorktree": "工作区尚未就绪。",
+            "openPrd": "编辑 prd.md",
+            "refreshPreview": "刷新 PRD 预览"
+          },
+          "RequirementPrdPreview": {
+            "loading": "正在加载 PRD…",
+            "empty": "暂无 PRD 内容。请编辑 prd.md 或运行 PRD 解析。"
+          },
+          "RequirementPrdSupplementPane": {
+            "noWorktree": "工作区尚未就绪。",
+            "hint": "启动补充会话，让智能体根据你的说明修改 prd.md。",
+            "start": "开始补充"
+          },
+          "TodoRequirementPanel": {
+            "tabOverview": "需求",
+            "tabPrd": "PRD",
+            "tabClarification": "澄清",
+            "tabSupplement": "PRD 补充"
           }
+        },
+        "ClarificationTemplatePicker": {
+          "placeholder": "选择澄清模板",
+          "none": "无模板",
+          "openRequirementSettings": "打开澄清模板设置"
+        },
+        "todoCreateRequirementWorkspace": {
+          "initFailed": "初始化需求工作区文件失败"
+        },
+        "todoPrdParse": {
+          "mcpMissing": "未配置钉钉文档 MCP，无法自动解析 PRD。",
+          "started": "已在后台开始解析 PRD。"
         },
         "dashboard": {
           "CycleTimeCard": {

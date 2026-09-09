@@ -41,6 +41,7 @@ const SETTINGS_NAV_TARGETS = [
   'artifacts',
   'share-skills',
   'automations',
+  'requirement-settings',
   'orca-account',
   'linear',
   'setup-guide',

@@ -834,7 +834,9 @@
         "artifactsTitle": "Artifacts",
         "artifactsDescription": "HTML と Markdown ファイルをチームと共有し、公開リンクを管理します。",
         "automationsTitle": "自動化",
-        "automationsDescription": "Agent の作業をスケジュールし、自動化をサイドバーに表示するかどうかを選択します。"
+        "automationsDescription": "Agent の作業をスケジュールし、自動化をサイドバーに表示するかどうかを選択します。",
+        "requirementSettingsTitle": "要件設定",
+        "requirementSettingsDescription": "タスク開始と要件明確化のプロンプトテンプレートを管理します。"
       },
       "useAppMenuPaste": {
         "pasteTooLarge": "貼り付け内容が大きすぎます。"
@@ -10420,6 +10422,25 @@
           "title": "自動化",
           "description": "Agent の作業をスケジュールし、自動化をサイドバーに表示するかどうかを選択します。"
         },
+        "RequirementSettingsPane": {
+          "startTaskTab": "タスク開始テンプレート",
+          "clarificationTab": "要件明確化テンプレート",
+          "startTaskEmpty": "タスク開始テンプレートはまだありません。",
+          "clarificationEmpty": "要件明確化テンプレートはまだありません。"
+        },
+        "RequirementTemplateListEditor": {
+          "saveError": "テンプレートの保存に失敗しました",
+          "listTitle": "テンプレート",
+          "new": "新規",
+          "name": "名前",
+          "body": "プロンプト本文",
+          "delete": "削除",
+          "save": "保存"
+        },
+        "requirementSettings": {
+          "title": "要件設定",
+          "description": "要件ボード向けのタスク開始テンプレートと要件明確化テンプレートを管理します。"
+        },
         "artifacts": {
           "enable": "Artifacts を有効にする",
           "enableDescription": "共有ファイルを開いたり削除したりできるように、Artifacts をサイドバーに追加します。",
@@ -14968,7 +14989,45 @@
             "exitFullscreen": "全画面を終了",
             "close": "閉じる",
             "openInEditor": "ワークスペースエディターで開く"
+          },
+          "RequirementClarificationPane": {
+            "started": "要件明確化を開始しました。",
+            "noAnswers": "先に少なくとも1件の明確化項目に回答してください。",
+            "applyStarted": "明確化の回答に基づいて PRD を更新しています。",
+            "noWorktree": "ワークスペースの準備ができていません。",
+            "loading": "読み込み中…",
+            "start": "明確化を開始",
+            "apply": "PRD に反映",
+            "empty": "明確化項目はまだありません。",
+            "answerPlaceholder": "回答",
+            "invalid": "無効"
+          },
+          "RequirementPrdPane": {
+            "noWorktree": "ワークスペースの準備ができていません。",
+            "openPrd": "prd.md を編集"
+          },
+          "RequirementPrdSupplementPane": {
+            "noWorktree": "ワークスペースの準備ができていません。",
+            "hint": "補足セッションを開始して、エージェントに prd.md を編集させます。",
+            "start": "補足を開始"
+          },
+          "TodoRequirementPanel": {
+            "tabOverview": "要件",
+            "tabPrd": "PRD",
+            "tabClarification": "明確化",
+            "tabSupplement": "PRD 補足"
           }
+        },
+        "ClarificationTemplatePicker": {
+          "placeholder": "明確化テンプレートを選択",
+          "none": "テンプレートなし"
+        },
+        "todoCreateRequirementWorkspace": {
+          "initFailed": "要件ワークスペースファイルの初期化に失敗しました"
+        },
+        "todoPrdParse": {
+          "mcpMissing": "DingTalk ドキュメント MCP が設定されていないため、PRD を解析できません。",
+          "started": "バックグラウンドで PRD 解析を開始しました。"
         },
         "dashboard": {
           "CycleTimeCard": {

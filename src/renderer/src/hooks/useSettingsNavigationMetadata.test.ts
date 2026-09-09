@@ -118,7 +118,12 @@ describe('settings navigation metadata', () => {
     )
     expect(shareSkills).toMatchObject({ group: 'workflows', badge: 'Beta' })
     expect(shareSkills?.searchEntries[0]?.title).toBe('Unlisted skill links')
-    expect(workflowIds.slice(0, 3)).toEqual(['automations', 'artifacts', 'share-skills'])
+    expect(workflowIds.slice(0, 4)).toEqual([
+      'automations',
+      'requirement-settings',
+      'artifacts',
+      'share-skills'
+    ])
   })
 
   it('places the Orca account in Set Up on desktop only', () => {

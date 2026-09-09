@@ -14,6 +14,26 @@ export type TodoStartWorkspaceResult =
 
 export async function startTodoWorkspace(item: TodoItem): Promise<TodoStartWorkspaceResult> {
   const state = useAppStore.getState()
+
+  if (item.boundWorktreeId) {
+    const existing = state.getKnownWorktreeById(
+      item.boundWorktreeId,
+      state.activeWorkspaceExecutionHostId ?? undefined
+    )
+    if (existing) {
+      return {
+        ok: true,
+        worktreeId: existing.id,
+        path: existing.path,
+        displayName:
+          existing.displayName ||
+          item.title.trim() ||
+          existing.path.split(/[/\\]/).pop() ||
+          existing.id
+      }
+    }
+  }
+
   const resolved = resolveTodoStartRepo({
     workspaceProjectId: item.workspaceProjectId,
     projectHostSetups: state.projectHostSetups

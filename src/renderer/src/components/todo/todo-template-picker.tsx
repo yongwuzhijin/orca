@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import type { TodoTemplate } from '../../../../shared/todo/todo-template'
-import { TodoTemplateManagerDialog } from './TodoTemplateManagerDialog'
+import { openRequirementSettings } from './open-requirement-settings'
 
 const SELECT_CLASS =
   'h-9 flex-1 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
@@ -20,7 +20,6 @@ export function TodoTemplatePicker({
   onSelect
 }: TodoTemplatePickerProps): React.JSX.Element {
   const templates = useAppStore((s) => s.todoTemplates)
-  const [managerOpen, setManagerOpen] = React.useState(false)
 
   return (
     <div className="flex items-center gap-2">
@@ -45,12 +44,14 @@ export function TodoTemplatePicker({
         type="button"
         size="icon"
         variant="outline"
-        aria-label={translate('auto.components.todo.TodoTemplatePicker.manage', 'Manage templates')}
-        onClick={() => setManagerOpen(true)}
+        aria-label={translate(
+          'auto.components.todo.TodoTemplatePicker.openRequirementSettings',
+          'Open requirement settings'
+        )}
+        onClick={() => openRequirementSettings('start-task')}
       >
         <Settings2 className="size-4" />
       </Button>
-      {managerOpen ? <TodoTemplateManagerDialog onClose={() => setManagerOpen(false)} /> : null}
     </div>
   )
 }

@@ -1,8 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 const createWorktree = vi.fn()
+const getKnownWorktreeById = vi.fn()
 const mockState = {
   createWorktree,
+  getKnownWorktreeById,
+  activeWorkspaceExecutionHostId: null,
   projectHostSetups: [
     {
       id: 's1',
@@ -39,10 +42,32 @@ const { startTodoWorkspace } = await import('./todo-start-workspace')
 
 beforeEach(() => {
   createWorktree.mockReset()
+  getKnownWorktreeById.mockReset()
   mockState.repos = [{ id: 'repo-1', kind: 'git' as const, name: 'repo', path: '/repo' }]
 })
 
 describe('startTodoWorkspace', () => {
+  it('reuses boundWorktreeId when worktree is known', async () => {
+    getKnownWorktreeById.mockReturnValue({
+      id: 'wt-bound',
+      path: '/repo/bound',
+      displayName: 'bound',
+      name: 'bound'
+    })
+    const result = await startTodoWorkspace({
+      boundWorktreeId: 'wt-bound',
+      workspaceProjectId: 'proj-1',
+      title: 'Ship'
+    } as never)
+    expect(result).toEqual({
+      ok: true,
+      worktreeId: 'wt-bound',
+      path: '/repo/bound',
+      displayName: 'bound'
+    })
+    expect(createWorktree).not.toHaveBeenCalled()
+  })
+
   it('returns no-project when workspaceProjectId is missing', async () => {
     const result = await startTodoWorkspace({
       workspaceProjectId: null,

@@ -13,6 +13,7 @@ import { TodoDashboard } from './dashboard/TodoDashboard'
 export default function TodoPage(): React.JSX.Element {
   const loadTodoProjects = useAppStore((s) => s.loadTodoProjects)
   const loadTodoTemplates = useAppStore((s) => s.loadTodoTemplates)
+  const loadTodoClarificationTemplates = useAppStore((s) => s.loadTodoClarificationTemplates)
   const loadTodoItems = useAppStore((s) => s.loadTodoItems)
   const activeProjectId = useAppStore((s) => s.todoActiveProjectId)
   const items = useAppStore((s) => s.todoItems)
@@ -27,7 +28,8 @@ export default function TodoPage(): React.JSX.Element {
   React.useEffect(() => {
     void loadTodoProjects()
     void loadTodoTemplates()
-  }, [loadTodoProjects, loadTodoTemplates])
+    void loadTodoClarificationTemplates()
+  }, [loadTodoClarificationTemplates, loadTodoProjects, loadTodoTemplates])
 
   React.useEffect(() => {
     // Reset transient state so it can't reference the previous project's item.

@@ -43,6 +43,20 @@ export function buildWorkflowSettingsSections(
       group: 'workflows'
     },
     {
+      id: 'requirement-settings',
+      title: translate(
+        'auto.hooks.useSettingsNavigationMetadata.requirementSettingsTitle',
+        'Requirement settings'
+      ),
+      description: translate(
+        'auto.hooks.useSettingsNavigationMetadata.requirementSettingsDescription',
+        'Manage start-task and clarification prompt templates.'
+      ),
+      icon: ListChecks,
+      searchEntries: [],
+      group: 'workflows'
+    },
+    {
       id: 'artifacts',
       title: translate('auto.hooks.useSettingsNavigationMetadata.artifactsTitle', 'Artifacts'),
       description: translate(

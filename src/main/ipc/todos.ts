@@ -11,6 +11,10 @@ import type {
   CreateTodoTemplateInput,
   UpdateTodoTemplateInput
 } from '../../shared/todo/todo-template'
+import type {
+  CreateTodoClarificationTemplateInput,
+  UpdateTodoClarificationTemplateInput
+} from '../../shared/todo/todo-clarification-template'
 
 export function registerTodoHandlers(repo: TodoRepository): void {
   // Projects
@@ -51,4 +55,17 @@ export function registerTodoHandlers(repo: TodoRepository): void {
     repo.updateTemplate(input)
   )
   ipcMain.handle('todos:templates:delete', (_event, id: string) => repo.deleteTemplate(id))
+
+  ipcMain.handle('todos:clarification-templates:list', () => repo.listClarificationTemplates())
+  ipcMain.handle(
+    'todos:clarification-templates:create',
+    (_event, input: CreateTodoClarificationTemplateInput) => repo.createClarificationTemplate(input)
+  )
+  ipcMain.handle(
+    'todos:clarification-templates:update',
+    (_event, input: UpdateTodoClarificationTemplateInput) => repo.updateClarificationTemplate(input)
+  )
+  ipcMain.handle('todos:clarification-templates:delete', (_event, id: string) =>
+    repo.deleteClarificationTemplate(id)
+  )
 }

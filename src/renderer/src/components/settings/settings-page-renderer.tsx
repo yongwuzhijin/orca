@@ -14,6 +14,7 @@ import {
 import {
   renderArtifactsSettingsSection,
   renderAutomationsSettingsSection,
+  renderRequirementSettingsSection,
   renderGeneralSettingsSection,
   renderIntegrationsSettingsSection,
   renderMobileSettingsSection,
@@ -125,6 +126,7 @@ export function renderSettingsPage(context: SettingsRenderContext): React.JSX.El
                 {renderIntegrationsSettingsSection(context)}
                 {renderMobileSettingsSection(context)}
                 {renderAutomationsSettingsSection(context)}
+                {renderRequirementSettingsSection(context)}
                 {renderArtifactsSettingsSection(context)}
                 {renderShareSkillsSettingsSection(context)}
                 {renderGitSettingsSection(context)}
