@@ -65,7 +65,7 @@ import {
 import { withMacTailscaleDnsHint } from '../network/macos-tailscale-dns-diagnostic'
 import { wslAwareSpawn } from '../git/runner'
 import { terminateWindowsProcessTree } from '../windows-process-tree-kill'
-import { isSshMuxRequestTimeoutError } from '../ssh/ssh-channel-multiplexer'
+import { isSshRequestOutcomeUnverifiable } from '../ssh/ssh-channel-multiplexer'
 
 const GENERATION_TIMEOUT_MS = 60_000
 const MAX_AGENT_OUTPUT_BYTES = 4 * 1024 * 1024
@@ -535,7 +535,7 @@ export async function discoverCommitMessageModelsRemote(
     result = await execute(planned.plan, cwd, GENERATION_TIMEOUT_MS)
   } catch (error) {
     console.error('[commit-message] Remote model discovery request failed:', error)
-    if (isSshMuxRequestTimeoutError(error)) {
+    if (isSshRequestOutcomeUnverifiable(error)) {
       return {
         success: false,
         error: `${spec.label} model discovery took longer than ${GENERATION_TIMEOUT_MS / 1000}s and may still be running on the remote host.`
@@ -1033,7 +1033,7 @@ async function runRemotePlan(
     result = await target.execute(plan, target.cwd, GENERATION_TIMEOUT_MS, operation)
   } catch (error) {
     console.error('[commit-message] Remote generator request failed:', error)
-    if (isSshMuxRequestTimeoutError(error)) {
+    if (isSshRequestOutcomeUnverifiable(error)) {
       return {
         success: false,
         error: `${label} took longer than ${GENERATION_TIMEOUT_MS / 1000}s to respond and may still be running on the remote host.`

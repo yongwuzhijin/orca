@@ -77,6 +77,7 @@ export type KeybindingActionId =
   | 'tab.selectByIndex'
   | 'tab.openQuickCommandsMenu'
   | 'browser.find'
+  | 'browser.networkTools'
   | 'browser.back'
   | 'browser.forward'
   | 'browser.reload'

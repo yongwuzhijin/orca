@@ -36,7 +36,6 @@ function installModuleMocks(
     partition,
     setUserAgent: vi.fn(),
     getUserAgent: vi.fn(() => 'Mozilla/5.0 Electron/31 Orca'),
-    webRequest: { onBeforeSendHeaders: vi.fn() },
     setPermissionRequestHandler: vi.fn(),
     setPermissionCheckHandler: vi.fn(),
     setDevicePermissionHandler: vi.fn(),

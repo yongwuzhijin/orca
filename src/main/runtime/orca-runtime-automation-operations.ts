@@ -34,7 +34,7 @@ import type { LegacyWorkerTerminalRecoveryResult } from './runtime-legacy-worker
 import { makePaneKey } from '../../shared/stable-pane-id'
 import { runtimeWorktreeIdsEqual } from './runtime-worktree-path-identity'
 
-export class OrcaRuntimeWithFenceAutomationOwner extends OrcaRuntimeWithPtyForegroundProcessReads {
+export class OrcaRuntimeWithAutomationOperations extends OrcaRuntimeWithPtyForegroundProcessReads {
   protected fenceAutomationOwner(
     id: string,
     expectedOwner: AutomationOwnerPrecondition | undefined,
@@ -61,6 +61,23 @@ export class OrcaRuntimeWithFenceAutomationOwner extends OrcaRuntimeWithPtyForeg
         this.fenceAutomationOwner(automationId, expectedOwner, 'read')
       }
       return this.automation.listRuns(automationId)
+    })
+  }
+
+  listAutomationRunsPage(
+    automationId?: string,
+    expectedOwner?: AutomationOwnerPrecondition,
+    limit?: number,
+    cursor?: string
+  ) {
+    if (expectedOwner && !automationId) {
+      throw new Error('An expected owner requires an automation id.')
+    }
+    return this.automation.withExternalProbePriority(() => {
+      if (automationId) {
+        this.fenceAutomationOwner(automationId, expectedOwner, 'read')
+      }
+      return this.automation.listRunsPage(automationId, limit, cursor)
     })
   }
 
@@ -223,10 +240,6 @@ export class OrcaRuntimeWithFenceAutomationOwner extends OrcaRuntimeWithPtyForeg
       })
     }
     return this._todoOrchestratorService
-  }
-
-  prepareLegacyWorkerTerminalRecovery(): LegacyWorkerTerminalRecoveryPlan {
-    return this.legacyWorkerRecovery.prepare()
   }
 
   protected async flushWorkspaceSessionOrThrowAsync(): Promise<void> {

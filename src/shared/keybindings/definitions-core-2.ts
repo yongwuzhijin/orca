@@ -256,6 +256,14 @@ export const KEYBINDING_DEFINITION_CORE_2: readonly KeybindingDefinition[] = [
     defaultBindings: platformBindings(['Mod+F'])
   },
   {
+    id: 'browser.networkTools',
+    title: 'Toggle Browser Network Tools',
+    group: 'Browser',
+    scope: 'browser',
+    searchKeywords: ['shortcut', 'browser', 'network', 'header', 'request', 'devtools'],
+    defaultBindings: platformBindings(['Mod+Alt+N'])
+  },
+  {
     id: 'browser.back',
     title: 'Go Back in Browser',
     group: 'Browser',

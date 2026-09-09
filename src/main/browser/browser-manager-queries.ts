@@ -13,6 +13,15 @@ export abstract class BrowserManagerQueries extends BrowserManagerRegistration {
     return this.webContentsIdByTabId.get(browserTabId) ?? null
   }
 
+  // Why: request-pipeline events expose only the guest id, while rules are scoped by page id.
+  resolveBrowserPageIdForGuestWebContentsId(guestWebContentsId: number): string | null {
+    return this.resolveBrowserTabIdForGuestWebContentsId(guestWebContentsId)
+  }
+
+  hasRegisteredGuestForBrowserPage(browserPageId: string): boolean {
+    return this.webContentsIdByTabId.has(browserPageId)
+  }
+
   getWebContentsIdByTabId(): Map<string, number> {
     return this.webContentsIdByTabId
   }
