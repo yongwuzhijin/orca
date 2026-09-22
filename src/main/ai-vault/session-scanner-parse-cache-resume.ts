@@ -61,5 +61,7 @@ export function resumableStateFactoryFor(
     case 'opencode':
     case 'rovo':
       return null
+    default:
+      return null
   }
 }

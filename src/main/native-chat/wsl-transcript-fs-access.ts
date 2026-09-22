@@ -175,10 +175,11 @@ export async function wslGatedRead(
 
 /** Never gated; process-owned handles retire on the client's bounded deadline. */
 export function closeTranscriptHandle(handle: TranscriptFileHandle, path: string): Promise<void> {
-  if (isWslTranscriptFsProcessHandle(handle) || isMacosQoderTranscriptHandle(handle)) {
-    if (isWslTranscriptFsProcessHandle(handle)) {
-      void closeWslTranscriptFsProcess(handle).catch(() => {})
-    }
+  if (isMacosQoderTranscriptHandle(handle)) {
+    return Promise.resolve()
+  }
+  if (isWslTranscriptFsProcessHandle(handle)) {
+    void closeWslTranscriptFsProcess(handle).catch(() => {})
     return Promise.resolve()
   }
   if (!isWslUncPath(path)) {

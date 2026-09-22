@@ -34,6 +34,7 @@ describe('remote issue command ignore rules', () => {
   }
   const commands = new RuntimeRepositoryIssueCommand({
     resolveRepo: async () => repo,
+    getWorkspaceOrcaDirName: () => '.orca',
     getLocalGitArgs: () => []
   })
 
@@ -121,6 +122,7 @@ describe('local issue command runtime routing', () => {
       })
       const commands = new RuntimeRepositoryIssueCommand({
         resolveRepo: async () => repo,
+        getWorkspaceOrcaDirName: () => '.orca',
         getLocalGitArgs
       })
       try {
@@ -152,14 +154,20 @@ describe('local issue command runtime routing', () => {
     try {
       const commands = new RuntimeRepositoryIssueCommand({
         resolveRepo: async () => repo,
+        getWorkspaceOrcaDirName: () => '.orca',
         getLocalGitArgs
       })
       await commands.write(repo.id, 'command')
-      const options = write.mock.calls[0]?.[2]
+      const options = write.mock.calls[0]?.[3]
       expect(typeof options).toBe('function')
       expect(typeof options === 'function' ? options() : options).toEqual({ wslDistro: 'Ubuntu' })
       expect(getLocalGitArgs).toHaveBeenCalledWith(repo)
-      expect(write).toHaveBeenCalledExactlyOnceWith(repo.path, 'command', expect.any(Function))
+      expect(write).toHaveBeenCalledExactlyOnceWith(
+        repo.path,
+        '.orca',
+        'command',
+        expect.any(Function)
+      )
     } finally {
       write.mockRestore()
     }

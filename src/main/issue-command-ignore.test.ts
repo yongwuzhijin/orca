@@ -37,7 +37,7 @@ describe('issue command ignore rules', () => {
       writeFileSync(join(root, 'ignore'), `${pattern}\n`)
       writeFileSync(join(repo, '.gitignore'), 'node_modules/\n')
 
-      await writeIssueCommand(repo, 'local command')
+      await writeIssueCommand(repo, '.orca', 'local command')
 
       expect(readFileSync(join(repo, '.gitignore'), 'utf8')).toBe('node_modules/\n')
       expect(readFileSync(join(repo, '.orca', 'issue-command'), 'utf8')).toBe('local command\n')
@@ -47,7 +47,7 @@ describe('issue command ignore rules', () => {
   it('does not create .gitignore when the repository exclude already ignores .orca', async () => {
     writeFileSync(join(repo, '.git', 'info', 'exclude'), '.orca/\n')
 
-    await writeIssueCommand(repo, 'local command')
+    await writeIssueCommand(repo, '.orca', 'local command')
 
     expect(existsSync(join(repo, '.gitignore'))).toBe(false)
     expect((await git(['status', '--porcelain'])).stdout).toBe('')
@@ -56,13 +56,13 @@ describe('issue command ignore rules', () => {
   it('respects anchored repository rules', async () => {
     writeFileSync(join(repo, '.gitignore'), '/.orca/\n')
 
-    await writeIssueCommand(repo, 'local command')
+    await writeIssueCommand(repo, '.orca', 'local command')
 
     expect(readFileSync(join(repo, '.gitignore'), 'utf8')).toBe('/.orca/\n')
   })
 
   it('creates .gitignore when no ignore rules exist', async () => {
-    await writeIssueCommand(repo, 'local command')
+    await writeIssueCommand(repo, '.orca', 'local command')
 
     expect(readFileSync(join(repo, '.gitignore'), 'utf8')).toBe('.orca\n')
   })
@@ -82,7 +82,7 @@ describe('issue command ignore rules', () => {
     await git(['worktree', 'add', '-q', '-b', 'issue-command-test', worktree])
     writeFileSync(join(repo, '.git', 'info', 'exclude'), '.orca/\n')
 
-    await writeIssueCommand(worktree, 'local command')
+    await writeIssueCommand(worktree, '.orca', 'local command')
 
     expect(existsSync(join(worktree, '.gitignore'))).toBe(false)
     expect((await gitExecFileAsync(['status', '--porcelain'], { cwd: worktree })).stdout).toBe('')
@@ -91,8 +91,8 @@ describe('issue command ignore rules', () => {
   it('adds the rule once when .orca is not ignored', async () => {
     writeFileSync(join(repo, '.gitignore'), 'node_modules/')
 
-    await writeIssueCommand(repo, 'first command')
-    await writeIssueCommand(repo, 'second command')
+    await writeIssueCommand(repo, '.orca', 'first command')
+    await writeIssueCommand(repo, '.orca', 'second command')
 
     expect(readFileSync(join(repo, '.gitignore'), 'utf8')).toBe('node_modules/\n.orca\n')
     expect(readFileSync(join(repo, '.orca', 'issue-command'), 'utf8')).toBe('second command\n')
@@ -102,7 +102,7 @@ describe('issue command ignore rules', () => {
     writeFileSync(join(root, 'ignore'), '.orca/\n')
     writeFileSync(join(repo, '.gitignore'), '!.orca/\n')
 
-    await writeIssueCommand(repo, 'local command')
+    await writeIssueCommand(repo, '.orca', 'local command')
 
     expect(readFileSync(join(repo, '.gitignore'), 'utf8')).toBe('!.orca/\n.orca\n')
   })

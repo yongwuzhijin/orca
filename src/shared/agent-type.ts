@@ -1,27 +1,6 @@
+import type { TuiAgent } from './tui-agent'
+
 // Why: agent types aren't a fixed set (custom agents exist); any non-empty string is
-// accepted — these well-known names are just a convenience union for pattern-matching.
-export type WellKnownAgentType =
-  | 'claude'
-  | 'openclaude'
-  | 'codex'
-  | 'gemini'
-  | 'antigravity'
-  | 'amp'
-  | 'opencode'
-  | 'mimo-code'
-  | 'cursor'
-  | 'copilot'
-  | 'aider'
-  | 'pi'
-  | 'omp'
-  | 'prime-agent'
-  | 'qoder'
-  | 'droid'
-  | 'command-code'
-  | 'grok'
-  | 'hermes'
-  | 'devin'
-  | 'ante'
-  | 'trae'
-  | 'unknown'
+// accepted — well-known names track launchable TuiAgent ids plus the unknown sentinel.
+export type WellKnownAgentType = TuiAgent | 'unknown'
 export type AgentType = WellKnownAgentType | (string & {})

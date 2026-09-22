@@ -6,7 +6,7 @@ import type { AgentProviderSessionMetadata } from './agent-session-resume'
 import type { AgentType } from './agent-type'
 import type { OrchestrationFleetAttention } from './orchestration-fleet-attention'
 
-export type { AgentType } from './agent-type'
+export type { AgentType, WellKnownAgentType } from './agent-type'
 import type { AgentStatusRowFacets } from './agent-status-observation'
 import {
   normalizeInteractivePromptField,

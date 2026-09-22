@@ -142,12 +142,13 @@ describe('registerWorktreeHandlers', () => {
     const write = vi.spyOn(issueCommandFile, 'writeIssueCommand').mockResolvedValue(undefined)
     try {
       await handlers['hooks:writeIssueCommand'](null, { repoId: 'repo-1', content: 'command' })
-      const options = write.mock.calls[0]?.[2]
+      const options = write.mock.calls[0]?.[3]
       expect(typeof options).toBe('function')
       expect(typeof options === 'function' ? options() : options).toEqual({ wslDistro: 'Ubuntu' })
       expect(resolveOptions).toHaveBeenCalledWith(store, expect.objectContaining({ id: 'repo-1' }))
       expect(write).toHaveBeenCalledExactlyOnceWith(
         '/workspace/repo',
+        '.orca',
         'command',
         expect.any(Function)
       )
