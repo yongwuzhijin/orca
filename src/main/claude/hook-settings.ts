@@ -17,6 +17,7 @@ import { getOrcaHomeDirName } from '../../shared/orca-home-dir-name'
 import { wrapRuntimeHomeHookCommand } from '../agent-hooks/runtime-home-hook-command'
 import { wrapWindowsDirectCmdHookCommand } from '../agent-hooks/windows-direct-cmd-hook-command'
 import { isGitBashAvailable } from '../git-bash'
+import { claudeVersionSupportsSessionEnd } from './claude-session-end-hook-capability'
 
 export type ClaudeCompatibleHookSettings = {
   configDirName: '.claude' | '.openclaude' | '.qoder'
@@ -111,6 +112,15 @@ export const CLAUDE_EVENTS = [
     definition: { hooks: [{ type: 'command', command: '' }] }
   }
 ] as const
+
+const CLAUDE_SESSION_END_EVENT = {
+  eventName: 'SessionEnd',
+  definition: { hooks: [{ type: 'command', command: '' }] }
+} as const
+
+export type ApplyManagedClaudeHooksOptions = {
+  claudeVersion?: string
+}
 
 export function getConfigPath(settings = CLAUDE_HOOK_SETTINGS): string {
   return join(homedir(), settings.configDirName, 'settings.json')
@@ -225,12 +235,15 @@ export function getRemoteManagedCommand(scriptPath: string): string {
 export function applyManagedHooks(
   config: HooksConfig,
   hook: HookCommandConfig,
-  scriptFileName = getManagedScriptFileName()
+  scriptFileName = getManagedScriptFileName(),
+  options: ApplyManagedClaudeHooksOptions = {}
 ): HooksConfig {
   const nextHooks = { ...config.hooks }
   const isManagedCommand = createManagedCommandMatcher(scriptFileName)
+  const sessionEndCapable = claudeVersionSupportsSessionEnd(options.claudeVersion)
+  const events = sessionEndCapable ? [...CLAUDE_EVENTS, CLAUDE_SESSION_END_EVENT] : CLAUDE_EVENTS
 
-  for (const event of CLAUDE_EVENTS) {
+  for (const event of events) {
     const current = Array.isArray(nextHooks[event.eventName]) ? nextHooks[event.eventName] : []
     const cleaned = removeManagedCommands(current, isManagedCommand)
     const definition: HookDefinition = {
@@ -238,6 +251,16 @@ export function applyManagedHooks(
       hooks: [hook]
     }
     nextHooks[event.eventName] = [...cleaned, definition]
+  }
+
+  if (!sessionEndCapable) {
+    const current = Array.isArray(nextHooks.SessionEnd) ? nextHooks.SessionEnd : []
+    const cleaned = removeManagedCommands(current, isManagedCommand)
+    if (cleaned.length === 0) {
+      delete nextHooks.SessionEnd
+    } else {
+      nextHooks.SessionEnd = cleaned
+    }
   }
 
   return { ...config, hooks: nextHooks }

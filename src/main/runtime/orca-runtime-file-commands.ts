@@ -202,7 +202,8 @@ export class OrcaRuntimeWithFileCommands extends OrcaRuntimeWithPreservedBranchC
 
   protected readonly repositoryIssueCommand = new RuntimeRepositoryIssueCommand({
     resolveRepo: (selector) => this.resolveRepoSelector(selector),
-    getWorkspaceOrcaDirName: () => resolveWorkspaceOrcaDirName(this.requireStore().getSettings())
+    getWorkspaceOrcaDirName: () => resolveWorkspaceOrcaDirName(this.requireStore().getSettings()),
+    getLocalGitArgs: (repo) => this.getLocalGitExecutionOptionArgs(repo)
   })
 
   protected readonly orchestrationPointerAdmissionByPtyId = new Map<

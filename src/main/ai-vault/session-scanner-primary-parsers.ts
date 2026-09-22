@@ -1,4 +1,7 @@
-import { remoteSessionContentLines } from './remote-session-content-lines'
+import {
+  remoteSessionContentLines,
+  type RemoteSessionContent
+} from './remote-session-content-lines'
 import { openTranscriptReadStream } from '../native-chat/wsl-transcript-fs-access'
 import { createInterface } from 'node:readline'
 import type { AiVaultAgent, AiVaultSession } from '../../shared/ai-vault-types'
@@ -10,7 +13,9 @@ import type {
   ResumableSessionParseState,
   SessionAccumulator
 } from './session-scanner-types'
+import type { TranscriptMessageSink } from './session-transcript-consumers'
 import {
+  accumulatorSessionIdentity,
   addPreviewContent,
   createAccumulator,
   finalizeSession,
@@ -33,6 +38,24 @@ type ParserSessionOptions = {
   executionHostPlatform?: NodeJS.Platform | null
 }
 
+function resolveClaudeParseArgs(
+  agentOrMessages?: AiVaultAgent | TranscriptMessageSink,
+  messages?: TranscriptMessageSink
+): { agent: AiVaultAgent; messages?: TranscriptMessageSink } {
+  if (
+    agentOrMessages &&
+    typeof agentOrMessages === 'object' &&
+    'active' in agentOrMessages &&
+    'push' in agentOrMessages
+  ) {
+    return { agent: 'claude', messages: agentOrMessages }
+  }
+  return {
+    agent: (agentOrMessages as AiVaultAgent | undefined) ?? 'claude',
+    messages
+  }
+}
+
 // Parse state kept resumable so the scan cache can append newly written
 // transcript lines without re-reading the whole (potentially huge) file.
 export type ClaudeSessionParseState = {
@@ -44,13 +67,15 @@ export type ClaudeSessionParseState = {
 
 export function createClaudeSessionParseState(
   file: FileWithMtime,
-  agent: AiVaultAgent = 'claude'
+  agent: AiVaultAgent = 'claude',
+  messages?: TranscriptMessageSink
 ): ClaudeSessionParseState {
   return {
     accumulator: createAccumulator({
       agent,
       file,
-      sessionId: sessionIdFromFileName(file.path)
+      sessionId: sessionIdFromFileName(file.path),
+      messages
     }),
     metaTitle: null,
     generatedTitle: null,
@@ -193,9 +218,10 @@ export async function finalizeClaudeSessionParseState(
 
 export function createClaudeSessionResumeState(
   file: FileWithMtime,
-  agent: AiVaultAgent = 'claude'
+  agent: AiVaultAgent = 'claude',
+  messages?: TranscriptMessageSink
 ): ResumableSessionParseState {
-  return claudeResumeStateFromParseState(createClaudeSessionParseState(file, agent))
+  return claudeResumeStateFromParseState(createClaudeSessionParseState(file, agent, messages))
 }
 
 function claudeResumeStateFromParseState(
@@ -203,6 +229,7 @@ function claudeResumeStateFromParseState(
 ): ResumableSessionParseState {
   return {
     consumeLine: (line) => consumeClaudeSessionLine(state, line),
+    identity: () => accumulatorSessionIdentity(state.accumulator),
     clone: () => claudeResumeStateFromParseState(cloneClaudeSessionParseState(state)),
     touchFile: (file) => {
       state.accumulator.modifiedAt = file.modifiedAt
@@ -214,18 +241,20 @@ function claudeResumeStateFromParseState(
 export async function parseClaudeSessionFile(
   file: FileWithMtime,
   platform: NodeJS.Platform = process.platform,
-  agent: AiVaultAgent = 'claude'
+  agentOrMessages?: AiVaultAgent | TranscriptMessageSink,
+  messages?: TranscriptMessageSink
 ): Promise<AiVaultSession | null> {
+  const { agent, messages: sink } = resolveClaudeParseArgs(agentOrMessages, messages)
   const lines = createInterface({
     input: openTranscriptReadStream(file.path, { encoding: 'utf-8' }, 'scan'),
     crlfDelay: Infinity
   })
-  return parseClaudeSessionLines({ file, lines, platform, agent })
+  return parseClaudeSessionLines({ file, lines, platform, agent, messages: sink })
 }
 
 export async function parseClaudeSessionContent(
   file: FileWithMtime,
-  content: string,
+  content: RemoteSessionContent,
   platform: NodeJS.Platform = process.platform,
   options: ParserSessionOptions = {},
   signal?: AbortSignal,
@@ -246,8 +275,13 @@ async function parseClaudeSessionLines(args: {
   platform: NodeJS.Platform
   options?: ParserSessionOptions
   agent?: AiVaultAgent
+  messages?: TranscriptMessageSink
 }): Promise<AiVaultSession | null> {
-  const state = createClaudeSessionParseState(args.file, args.agent ?? 'claude')
+  const state = createClaudeSessionParseState(
+    args.file,
+    args.agent ?? 'claude',
+    args.messages
+  )
   for await (const line of args.lines) {
     consumeClaudeSessionLine(state, line)
   }

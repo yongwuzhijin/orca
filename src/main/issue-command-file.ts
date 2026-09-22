@@ -3,6 +3,11 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync, rmSync } from 'node
 import { join } from 'node:path'
 import { appendOrcaDirIgnore } from '../shared/orca-dir-gitignore-entry'
 import { loadHooks } from './hooks'
+import type { GitRuntimeOptions } from './git/git-runtime-options'
+import { checkIgnoredPaths } from './git/check-ignored-paths'
+import { requireSshGitProvider } from './providers/ssh-git-dispatch'
+
+type IssueCommandGitOptions = GitRuntimeOptions | (() => GitRuntimeOptions)
 
 const ISSUE_COMMAND_FILENAME = 'issue-command'
 
@@ -55,7 +60,12 @@ export function readIssueCommand(repoPath: string, orcaDirName: string): Resolve
  * Write the per-user issue command override to `{repoRoot}/{orcaDirName}/issue-command`.
  * Empty content deletes the override so the shared `orca.yaml` command applies again.
  */
-export function writeIssueCommand(repoPath: string, orcaDirName: string, content: string): void {
+export async function writeIssueCommand(
+  repoPath: string,
+  orcaDirName: string,
+  content: string,
+  options: IssueCommandGitOptions = {}
+): Promise<void> {
   const filePath = getIssueCommandFilePath(repoPath, orcaDirName)
   const trimmed = content.trim()
 
@@ -69,12 +79,38 @@ export function writeIssueCommand(repoPath: string, orcaDirName: string, content
     if (!existsSync(orcaDir)) {
       mkdirSync(orcaDir, { recursive: true })
     }
-    ensureOrcaDirIgnored(repoPath, orcaDirName)
+    if (!(await isIssueCommandIgnoredByGit(repoPath, orcaDirName, undefined, options))) {
+      ensureOrcaDirIgnored(repoPath, orcaDirName)
+    }
     writeFileSync(filePath, `${trimmed}\n`, 'utf-8')
   } catch (err) {
     console.error('[hooks] Failed to write issue command:', err)
     // Why: re-throw so the IPC handler surfaces the write failure to the renderer's .catch().
     throw err
+  }
+}
+
+/** Consult the execution host before changing shared ignore rules for a private override. */
+export async function isIssueCommandIgnoredByGit(
+  repoPath: string,
+  orcaDirName: string,
+  connectionId?: string,
+  options: IssueCommandGitOptions = {}
+): Promise<boolean> {
+  try {
+    const issueCommandPath = `${orcaDirName}/${ISSUE_COMMAND_FILENAME}`
+    const ignored = connectionId
+      ? await requireSshGitProvider(connectionId).checkIgnoredPaths(repoPath, [issueCommandPath])
+      : await checkIgnoredPaths(
+          repoPath,
+          [issueCommandPath],
+          // Runtime repair must not block saving or clearing the local override.
+          typeof options === 'function' ? options() : options
+        )
+    return ignored.includes(issueCommandPath)
+  } catch {
+    // Preserve the existing ignore-file fallback if Git cannot inspect the rules.
+    return false
   }
 }
 

@@ -1,6 +1,12 @@
+import type { GitRuntimeOptions } from '../git/git-runtime-options'
 import type { Repo } from '../../shared/repo-types'
+import { isOrcaDirIgnored } from '../../shared/orca-dir-gitignore-entry'
 import { parseOrcaYaml } from '../hooks'
-import { readIssueCommand, writeIssueCommand } from '../issue-command-file'
+import {
+  isIssueCommandIgnoredByGit,
+  readIssueCommand,
+  writeIssueCommand
+} from '../issue-command-file'
 import { isENOENT } from '../ipc/filesystem-auth'
 import { getSshFilesystemProvider } from '../providers/ssh-filesystem-dispatch'
 import type { IFilesystemProvider } from '../providers/types'
@@ -10,6 +16,7 @@ import { joinWorktreeRelativePath } from './runtime-relative-paths'
 type RuntimeRepositoryIssueCommandDeps = {
   resolveRepo: (selector: string) => Promise<Repo>
   getWorkspaceOrcaDirName: () => string
+  getLocalGitArgs: (repo: Repo) => [] | [GitRuntimeOptions]
 }
 
 export class RuntimeRepositoryIssueCommand {
@@ -26,10 +33,11 @@ export class RuntimeRepositoryIssueCommand {
         source: 'none' as const
       }
     }
+    const orcaDirName = this.deps.getWorkspaceOrcaDirName()
     if (!repo.connectionId) {
-      return readIssueCommand(repo.path, this.deps.getWorkspaceOrcaDirName())
+      return readIssueCommand(repo.path, orcaDirName)
     }
-    const issueCommandPath = joinWorktreeRelativePath(repo.path, '.orca/issue-command')
+    const issueCommandPath = joinWorktreeRelativePath(repo.path, `${orcaDirName}/issue-command`)
     const fsProvider = getSshFilesystemProvider(repo.connectionId)
     if (!fsProvider) {
       return {
@@ -55,16 +63,20 @@ export class RuntimeRepositoryIssueCommand {
     }
   }
 
+  /** Save a private override on its execution host; blank content restores the shared command. */
   async write(repoSelector: string, content: string): Promise<{ ok: true }> {
     const repo = await this.deps.resolveRepo(repoSelector)
     if (isFolderRepo(repo)) {
       return { ok: true }
     }
+    const orcaDirName = this.deps.getWorkspaceOrcaDirName()
     if (!repo.connectionId) {
-      writeIssueCommand(repo.path, this.deps.getWorkspaceOrcaDirName(), content)
+      await writeIssueCommand(repo.path, orcaDirName, content, () =>
+        this.deps.getLocalGitArgs(repo)[0] ?? {}
+      )
       return { ok: true }
     }
-    const issueCommandPath = joinWorktreeRelativePath(repo.path, '.orca/issue-command')
+    const issueCommandPath = joinWorktreeRelativePath(repo.path, `${orcaDirName}/issue-command`)
     const fsProvider = getSshFilesystemProvider(repo.connectionId)
     if (!fsProvider) {
       return { ok: true }
@@ -78,8 +90,10 @@ export class RuntimeRepositoryIssueCommand {
       })
       return { ok: true }
     }
-    await fsProvider.createDir(joinWorktreeRelativePath(repo.path, '.orca'))
-    await ensureRemoteOrcaDirIgnored(fsProvider, repo.path)
+    await fsProvider.createDir(joinWorktreeRelativePath(repo.path, orcaDirName))
+    if (!(await isIssueCommandIgnoredByGit(repo.path, orcaDirName, repo.connectionId))) {
+      await ensureRemoteOrcaDirIgnored(fsProvider, repo.path, orcaDirName)
+    }
     await fsProvider.writeFile(issueCommandPath, `${trimmed}\n`)
     return { ok: true }
   }
@@ -111,7 +125,8 @@ async function readRemoteShared(
 
 async function ensureRemoteOrcaDirIgnored(
   fsProvider: IFilesystemProvider,
-  repoPath: string
+  repoPath: string,
+  orcaDirName: string
 ): Promise<void> {
   const gitignorePath = joinWorktreeRelativePath(repoPath, '.gitignore')
   let result: Awaited<ReturnType<IFilesystemProvider['readFile']>>
@@ -119,23 +134,23 @@ async function ensureRemoteOrcaDirIgnored(
     result = await fsProvider.readFile(gitignorePath)
   } catch (error) {
     if (!isENOENT(error)) {
-      console.warn('[runtime] Could not inspect remote .gitignore for .orca', error)
+      console.warn('[runtime] Could not inspect remote .gitignore for orca dir', error)
       return
     }
     try {
-      await fsProvider.writeFile(gitignorePath, '.orca\n')
+      await fsProvider.writeFile(gitignorePath, `${orcaDirName}\n`)
     } catch (writeError) {
-      console.warn('[runtime] Could not update remote .gitignore to exclude .orca', writeError)
+      console.warn('[runtime] Could not update remote .gitignore to exclude orca dir', writeError)
     }
     return
   }
-  if (result.isBinary || /^\.orca\/?$/m.test(result.content)) {
+  if (result.isBinary || isOrcaDirIgnored(result.content, orcaDirName)) {
     return
   }
   const separator = result.content.endsWith('\n') ? '' : '\n'
   try {
-    await fsProvider.writeFile(gitignorePath, `${result.content}${separator}.orca\n`)
+    await fsProvider.writeFile(gitignorePath, `${result.content}${separator}${orcaDirName}\n`)
   } catch (writeError) {
-    console.warn('[runtime] Could not update remote .gitignore to exclude .orca', writeError)
+    console.warn('[runtime] Could not update remote .gitignore to exclude orca dir', writeError)
   }
 }

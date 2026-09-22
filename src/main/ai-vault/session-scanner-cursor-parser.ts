@@ -1,4 +1,7 @@
-import { remoteSessionContentLines } from './remote-session-content-lines'
+import {
+  remoteSessionContentLines,
+  type RemoteSessionContent
+} from './remote-session-content-lines'
 import { openTranscriptReadStream } from '../native-chat/wsl-transcript-fs-access'
 import { createInterface } from 'node:readline'
 import type { AiVaultSession } from '../../shared/ai-vault-types'
@@ -8,6 +11,7 @@ import type {
   ResumableSessionParseState,
   SessionAccumulator
 } from './session-scanner-types'
+import type { TranscriptMessageSink } from './session-transcript-consumers'
 import {
   accumulatorFoldResumeState,
   addPreviewContent,
@@ -34,18 +38,19 @@ type ParserSessionOptions = {
 
 export async function parseCursorSessionFile(
   file: FileWithMtime,
-  platform: NodeJS.Platform = process.platform
+  platform: NodeJS.Platform = process.platform,
+  messages?: TranscriptMessageSink
 ): Promise<AiVaultSession | null> {
   const lines = createInterface({
     input: openTranscriptReadStream(file.path, { encoding: 'utf-8' }, 'scan'),
     crlfDelay: Infinity
   })
-  return parseCursorSessionLines({ file, lines, platform })
+  return parseCursorSessionLines({ file, lines, platform, messages })
 }
 
 export async function parseCursorSessionContent(
   file: FileWithMtime,
-  content: string,
+  content: RemoteSessionContent,
   platform: NodeJS.Platform = process.platform,
   options: ParserSessionOptions = {},
   signal?: AbortSignal
@@ -82,11 +87,15 @@ function consumeCursorRecordLine(accumulator: SessionAccumulator, line: string):
   }
 }
 
-export function createCursorSessionResumeState(file: FileWithMtime): ResumableSessionParseState {
+export function createCursorSessionResumeState(
+  file: FileWithMtime,
+  messages?: TranscriptMessageSink
+): ResumableSessionParseState {
   const accumulator = createAccumulator({
     agent: 'cursor',
     file,
-    sessionId: sessionIdFromFileName(file.path)
+    sessionId: sessionIdFromFileName(file.path),
+    messages
   })
   accumulator.cwd = resolveCursorSessionCwdFromPath(file.path)
   return accumulatorFoldResumeState(accumulator, consumeCursorRecordLine)
@@ -97,8 +106,9 @@ async function parseCursorSessionLines(args: {
   lines: AsyncIterable<string> | Iterable<string>
   platform: NodeJS.Platform
   options?: ParserSessionOptions
+  messages?: TranscriptMessageSink
 }): Promise<AiVaultSession | null> {
-  const state = createCursorSessionResumeState(args.file)
+  const state = createCursorSessionResumeState(args.file, args.messages)
   for await (const line of args.lines) {
     state.consumeLine(line)
   }

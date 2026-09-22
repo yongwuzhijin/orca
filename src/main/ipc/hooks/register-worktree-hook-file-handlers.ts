@@ -1,3 +1,4 @@
+import { getLocalProjectWorktreeGitOptions } from '../../project-runtime-git-options'
 import { ipcMain } from 'electron'
 import type { ExecutionHostId } from '../../../shared/execution-host'
 import { isFolderRepo } from '../../../shared/repo-kind'
@@ -5,11 +6,17 @@ import { joinWorktreeRelativePath } from '../../runtime/runtime-relative-paths'
 import { getSshFilesystemProvider } from '../../providers/ssh-filesystem-dispatch'
 import { isENOENT } from '../filesystem-path-containment'
 import { parseOrcaYaml } from '../../hooks'
-import { readIssueCommand, writeIssueCommand } from '../../issue-command-file'
+import { isOrcaDirIgnored } from '../../../shared/orca-dir-gitignore-entry'
+import {
+  isIssueCommandIgnoredByGit,
+  readIssueCommand,
+  writeIssueCommand
+} from '../../issue-command-file'
 import { resolveRepoForExecutionHost } from '../worktrees/repo-host-ownership'
 import type { WorktreeIpcContext } from '../worktrees/worktree-ipc-context'
 import { resolveWorkspaceOrcaDirName } from '../../../shared/orca-dir-names'
 
+/** Route private command overrides to the owning host without changing shared hook settings. */
 export function registerWorktreeHookFileHandlers(context: WorktreeIpcContext): void {
   const { store } = context
 
@@ -107,23 +114,32 @@ export function registerWorktreeHookFileHandlers(context: WorktreeIpcContext): v
           return
         }
         await fsProvider.createDir(joinWorktreeRelativePath(repo.path, orcaDirName))
+        if (await isIssueCommandIgnoredByGit(repo.path, orcaDirName, repo.connectionId)) {
+          await fsProvider.writeFile(issueCommandPath, `${trimmed}\n`)
+          return
+        }
         const gitignorePath = joinWorktreeRelativePath(repo.path, '.gitignore')
         try {
           const result = await fsProvider.readFile(gitignorePath)
-          if (!result.isBinary && !/^\.orca\/?$/m.test(result.content)) {
+          if (!result.isBinary && !isOrcaDirIgnored(result.content, orcaDirName)) {
             const separator = result.content.endsWith('\n') ? '' : '\n'
-            await fsProvider.writeFile(gitignorePath, `${result.content}${separator}.orca\n`)
+            await fsProvider.writeFile(gitignorePath, `${result.content}${separator}${orcaDirName}\n`)
           }
         } catch (error) {
           if (!isENOENT(error)) {
             throw error
           }
-          await fsProvider.writeFile(gitignorePath, '.orca\n')
+          await fsProvider.writeFile(gitignorePath, `${orcaDirName}\n`)
         }
         await fsProvider.writeFile(issueCommandPath, `${trimmed}\n`)
         return
       }
-      writeIssueCommand(repo.path, resolveWorkspaceOrcaDirName(store.getSettings()), args.content)
+      await writeIssueCommand(
+        repo.path,
+        resolveWorkspaceOrcaDirName(store.getSettings()),
+        args.content,
+        () => getLocalProjectWorktreeGitOptions(store, repo)
+      )
     }
   )
 }
