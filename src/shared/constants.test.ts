@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getDefaultSettings } from './constants'
+import { getDefaultNotificationSettings, getDefaultSettings } from './constants'
 import {
   getDefaultPrimarySelectionMiddleClickPaste,
   getDefaultTerminalRightClickToPaste

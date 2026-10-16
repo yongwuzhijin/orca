@@ -124,6 +124,8 @@ export type OpenFile = {
   skippedConflicts?: CombinedDiffSkippedConflict[]
   conflictReview?: ConflictReviewState
   isPreview?: boolean // preview tabs are replaced when another file is single-clicked
+  csvPreviewOnly?: boolean
+  terminalArtifactGrantId?: string
   isUntitled?: boolean // true for files created via "New Markdown" that haven't been renamed yet
   // Why: templated New Markdown files have real content at creation, unlike blank placeholders that can be discarded.
   deleteUntouchedOnClose?: boolean
@@ -181,9 +183,12 @@ export type ClosedEditorTabSnapshot = Omit<
 
 export const MAX_RECENT_CLOSED_EDITOR_TABS = 10
 
+export type EditorTabSelection = 'none' | 'background' | 'focus'
+
 export type EditorOpenTargetOptions = {
   targetGroupId?: string
   preview?: boolean
   runtimeEnvironmentId?: string | null
   forceContentReload?: boolean
+  selection?: EditorTabSelection
 }

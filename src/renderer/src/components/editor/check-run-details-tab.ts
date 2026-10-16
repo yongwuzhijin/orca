@@ -1,5 +1,7 @@
 import type { GitLabProjectRef } from '../../../../shared/gitlab-types'
 import type { OpenCheckRunDetailsState } from '../../../../shared/editor-tab-view-types'
+
+export type { OpenCheckRunDetailsState }
 import type { PRCheckDetail } from '../../../../shared/github/check-types'
 import type { GitHubRepositoryIdentity } from '../../../../shared/github/pull-request-types'
 

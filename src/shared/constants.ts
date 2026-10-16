@@ -1,5 +1,4 @@
 import type { GlobalSettings } from './global-settings-types'
-import type { NotificationSettings } from './notification-settings-types'
 import type { OnboardingChecklistState, OnboardingState } from './onboarding-state-types'
 import type { RepoHookSettings } from './orca-yaml-hook-types'
 import type { PersistedState } from './persisted-state-types'
@@ -125,17 +124,9 @@ export const DEFAULT_REPO_BADGE_COLOR = REPO_COLORS[0]
 // Why: the requirements-analysis command is the only skill that reliably emits design docs today.
 export const DEFAULT_TODO_DESIGN_STAGE_SKILL = '/ddd-requirements-analysis'
 
-export function getDefaultNotificationSettings(): NotificationSettings {
-  return {
-    enabled: true,
-    agentTaskComplete: true,
-    terminalBell: false,
-    suppressWhenFocused: true,
-    customSoundId: 'system',
-    customSoundPath: null,
-    customSoundVolume: 100
-  }
-}
+import { getDefaultNotificationSettings } from './notification-settings-defaults'
+
+export { getDefaultNotificationSettings }
 
 export function getDefaultOnboardingState(): OnboardingState {
   return {
@@ -242,7 +233,6 @@ export function getDefaultPersistedState(homedir: string): PersistedState {
     deletedSshConfigAliases: [],
     sshRemotePtyLeases: [],
     sshPtyConsumerRecoveries: [],
-    claudeLivePtySessionIds: [],
     migrationUnsupportedPtyEntries: [],
     legacyPaneKeyAliasEntries: [],
     automations: [],

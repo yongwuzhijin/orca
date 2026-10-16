@@ -130,7 +130,7 @@ async function uploadRuntimeDropPaths(
   const targetShell = getTerminalTargetShellForWorktreePath(args.worktreePath)
   const destinationDir = joinRuntimeTerminalDropDir(
     args.worktreePath,
-    resolveWorkspaceOrcaDirName(useAppStore.getState())
+    resolveWorkspaceOrcaDirName(useAppStore.getState().settings)
   )
   const pending = toast.loading(
     translate(

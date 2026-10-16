@@ -23,7 +23,12 @@ export async function maybeStartPrdParse(args: {
     return
   }
 
-  const inspections = await loadMcpConfigInspections(args.worktreePath, args.connectionId)
+  const inspections = await loadMcpConfigInspections(args.worktreePath, {
+    target: { kind: 'local' },
+    worktreeId: null,
+    worktreePath: args.worktreePath,
+    connectionId: args.connectionId
+  })
   if (!hasEnabledDingTalkDocMcp(inspections)) {
     toast.error(
       translate(

@@ -70,6 +70,7 @@ describe('recent project rank scan budget', () => {
       result: [],
       groupBy: 'repo',
       collapsedGroups: new Set(grouped.map(([key]) => key)),
+      activeBoundWorktreeIds: new Set<string>(),
       workspaceStatuses: [],
       repoMap: new Map(),
       defaultHostId: 'local',

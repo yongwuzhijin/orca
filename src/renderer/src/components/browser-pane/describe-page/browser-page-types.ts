@@ -18,6 +18,7 @@ export type BrowserPageUrlSetter = (
 ) => void
 
 export type BrowserChromeShortcutScope = 'focused' | 'inactive' | 'owned-target'
+export type BrowserFindShortcutScope = BrowserChromeShortcutScope
 
 export type { GrabIntent } from '../../../../../shared/browser-grab-types'
 

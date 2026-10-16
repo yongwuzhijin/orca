@@ -163,6 +163,7 @@ describe('issue command writes under a WSL move', () => {
     const write = vi.spyOn(issueCommandFile, 'writeIssueCommand')
     const commands = new RuntimeRepositoryIssueCommand({
       resolveRepo: async (id) => repo(id),
+      getWorkspaceOrcaDirName: () => '.orca',
       getLocalGitArgs: () => [],
       getStore: () => store
     })

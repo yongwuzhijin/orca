@@ -4,8 +4,10 @@ import { translate } from '@/i18n/i18n'
 import { searchKeywords, translateSearchKeyword } from './settings-search-keywords'
 import { createLocalizedCatalog } from '@/i18n/localized-catalog'
 import { getGeneralProjectRuntimeSearchEntries } from './general-project-runtime-search'
+import { getGeneralSupportSearchEntries } from './general-support-search'
 
 export { getGeneralEditorSearchEntries } from './general-editor-search'
+export { getGeneralSupportSearchEntries } from './general-support-search'
 
 export const getGeneralWorkspaceSearchEntries = createLocalizedCatalog(() => [
   {
@@ -19,25 +21,6 @@ export const getGeneralWorkspaceSearchEntries = createLocalizedCatalog(() => [
       ...translateSearchKeyword('auto.components.settings.general.search.7887a2c262', 'folder'),
       ...translateSearchKeyword('auto.components.settings.general.search.fb4f338a3d', 'path'),
       ...translateSearchKeyword('auto.components.settings.general.search.df10666259', 'worktree')
-    ]
-  },
-  {
-    title: translate(
-      'auto.components.settings.general.search.orcaDirectoryNames',
-      'Orca Directory Names'
-    ),
-    description: translate(
-      'auto.components.settings.general.search.orcaDirectoryNamesDescription',
-      'Rename the directories Orca uses for its own state in a workspace and under your home directory.'
-    ),
-    keywords: [
-      ...translateSearchKeyword('auto.components.settings.general.search.orcaDir', 'orca dir'),
-      ...translateSearchKeyword(
-        'auto.components.settings.general.search.tempFolder',
-        'temp folder'
-      ),
-      ...translateSearchKeyword('auto.components.settings.general.search.scratch', 'scratch'),
-      ...translateSearchKeyword('auto.components.settings.general.search.dotOrca', '.orca')
     ]
   },
   {
@@ -283,6 +266,7 @@ export function getGeneralPaneSearchEntries(
     ...(options.includeProjectRuntime === false ? [] : getGeneralProjectRuntimeSearchEntries()),
     ...getGeneralEditorSearchEntries(),
     ...getGeneralCliSearchEntries(),
-    ...getGeneralUpdateSearchEntries()
+    ...getGeneralUpdateSearchEntries(),
+    ...getGeneralSupportSearchEntries()
   ]
 }

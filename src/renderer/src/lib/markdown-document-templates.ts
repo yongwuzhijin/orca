@@ -5,9 +5,16 @@ import { readRuntimeDirectory } from '@/runtime/runtime-file-mutation-client'
 import { readRuntimeFileContent } from '@/runtime/runtime-file-read-client'
 import { runtimePathExists } from '@/runtime/runtime-file-metadata-client'
 import { basename, joinPath, normalizeRelativePath } from './path'
-import { resolveWorkspaceOrcaDirName } from '../../../shared/orca-dir-names'
+import {
+  resolveWorkspaceOrcaDirName,
+  type OrcaDirNameSettingsSlice
+} from '../../../shared/orca-dir-names'
 
-function markdownTemplateRoot(settings: RuntimeFileOperationArgs['settings']): string {
+type MarkdownTemplateContext = RuntimeFileOperationArgs & {
+  settings?: OrcaDirNameSettingsSlice | null
+}
+
+function markdownTemplateRoot(settings: OrcaDirNameSettingsSlice | null | undefined): string {
   return `${resolveWorkspaceOrcaDirName(settings)}/templates`
 }
 
@@ -134,7 +141,7 @@ export function applyMarkdownTemplatePlaceholders(
 }
 
 export async function listMarkdownDocumentTemplates(
-  context: RuntimeFileOperationArgs,
+  context: MarkdownTemplateContext,
   worktreePath: string
 ): Promise<MarkdownDocumentTemplate[]> {
   const templates: MarkdownDocumentTemplate[] = []

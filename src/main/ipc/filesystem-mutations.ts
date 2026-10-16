@@ -12,7 +12,6 @@ import type { LocalFileAccess } from '../../shared/local-file-access'
 import { SshHostNotServedError } from '../providers/ssh-host-not-served-error'
 import { resolveLocalDroppedPathsForAgent } from './dropped-path-resolution'
 import type { SshMutationExpectation } from '../../shared/ssh-types'
-import { resolveWorkspaceOrcaDirName } from '../../shared/orca-dir-names'
 import { assertSshMutationExpectation } from '../ssh/ssh-connection-generation'
 import { renameLocalPathSerializedByDestination } from '../destination-serialized-local-rename'
 import { assertNotExists, rethrowWithUserMessage } from './filesystem-create-path-guards'
@@ -258,13 +257,8 @@ export function registerFilesystemMutationHandlers(store: Store): void {
     }
   )
 
-  // Why: terminal drag-and-drop resolver. Local worktrees pass paths through
-  // unchanged (reference-in-place; preserves zero-latency drop). SSH worktrees
-  // upload each path into the workspace's Orca scratch `drops/` directory first
-  // (that directory's name is `workspaceOrcaDirName`) and return remote
-  // paths the remote agent can read. Kept as a separate IPC from
-  // fs:importExternalPaths because terminal semantics differ from the
-  // explorer's "copy into user-picked destDir". See docs/terminal-drop-ssh.md.
+  // Terminal drag-and-drop. Local worktrees pass paths through unchanged.
+  // An SSH host is served by that host's runtime, not this process.
   ipcMain.handle(
     'fs:resolveDroppedPathsForAgent',
     async (
@@ -290,32 +284,7 @@ export function registerFilesystemMutationHandlers(store: Store): void {
           failed: []
         }
       }
-      const worktreePath = args.worktreePath.replace(/\/+$/, '')
-      const destDir = `${worktreePath}/${resolveWorkspaceOrcaDirName(store.getSettings())}/drops`
-      const { results } = await importExternalPathsSsh(args.paths, destDir, args.connectionId, {
-        ensureDir: true,
-        assertCurrent: () =>
-          assertSshMutationExpectation(
-            args.connectionId,
-            args.expectedSshTargetId,
-            args.expectedSshConnectionGeneration,
-            args.expectedExecutionHostId
-          )
-      })
-      const resolvedPaths: string[] = []
-      const skipped: { sourcePath: string; reason: ImportSkipReason }[] = []
-      const failed: { sourcePath: string; reason: string }[] = []
-      // Iterate in input order so injected paths align with the user's drop order.
-      for (const r of results) {
-        if (r.status === 'imported') {
-          resolvedPaths.push(r.destPath)
-        } else if (r.status === 'skipped') {
-          skipped.push({ sourcePath: r.sourcePath, reason: r.reason })
-        } else {
-          failed.push({ sourcePath: r.sourcePath, reason: r.reason })
-        }
-      }
-      return { resolvedPaths, skipped, failed }
+      throw new SshHostNotServedError(args.connectionId)
     }
   )
 }

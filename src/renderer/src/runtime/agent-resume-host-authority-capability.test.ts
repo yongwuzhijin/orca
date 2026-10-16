@@ -11,7 +11,6 @@ import {
   AGENT_SESSION_MUSE_RESUME_RUNTIME_CAPABILITY,
   AGENT_SESSION_OPENCODE2_RESUME_RUNTIME_CAPABILITY,
   AGENT_SESSION_OMP_RESUME_PATH_RUNTIME_CAPABILITY,
-  AGENT_SESSION_QODER_RESUME_RUNTIME_CAPABILITY,
   RUNTIME_CAPABILITIES
 } from '../../../shared/protocol-version'
 import { agentResumeHostAuthorityCapability } from './agent-resume-host-authority-capability'

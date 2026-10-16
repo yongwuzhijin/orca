@@ -134,7 +134,7 @@ export function StatusBarSurface({
         data-overflowing={overflowing}
       >
         <div ref={usageRef} className="flex shrink-0 items-center gap-3">
-          {showTranslate ? <TranslateStatusSegment iconOnly={iconOnly} /> : null}
+          {showTranslate ? <TranslateStatusSegment iconOnly={segmentsIconOnly} /> : null}
           {isEmptyUsageState ? (
             showEmptyUsageCta ? (
               <StatusBarUsageEmptyCta />

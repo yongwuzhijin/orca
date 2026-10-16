@@ -97,7 +97,6 @@ function makeShellProps(activeFile: OpenFile): React.ComponentProps<typeof Edito
     onOpenDiffTargetFile: noop,
     onOpenPreviewToSide: noop,
     onOpenMarkdownPreview: noop,
-    onOpenContainingFolder: noop,
     onToggleSideBySide: noop,
     onEditorToggleChange: noop,
     onToggleMarkdownTableOfContents: noop,

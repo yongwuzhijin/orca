@@ -48,15 +48,6 @@ export const OPENCLAUDE_HOOK_SETTINGS: ClaudeCompatibleHookSettings = {
   usesWindowsCompatLauncher: false
 }
 
-// Why: verified against qodercli v1.1.3 — ~/.qoder/settings.json uses Claude's
-// exact hook event names and `{matcher, hooks:[{type:'command',command,timeout}]}`
-// shape, so the Claude applier/remover works unchanged.
-export const QODER_HOOK_SETTINGS: ClaudeCompatibleHookSettings = {
-  configDirName: '.qoder',
-  scriptBaseName: 'qoder-hook',
-  usesWindowsCompatLauncher: false
-}
-
 export function getConfigPath(settings = CLAUDE_HOOK_SETTINGS, configDir?: string): string {
   return join(configDir ?? join(homedir(), settings.configDirName), 'settings.json')
 }

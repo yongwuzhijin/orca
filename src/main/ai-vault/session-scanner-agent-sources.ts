@@ -25,7 +25,6 @@ import {
   claudeProjectsRootDirs,
   codexHomeSessionsDir,
   ompSessionsRootDirs,
-  qoderProjectsRootDirs,
   sessionRootDirs,
   wslHomeSessionDirs
 } from './session-scanner-roots'
@@ -318,14 +317,6 @@ export const AI_VAULT_AGENT_SOURCES: AiVaultAgentSourceTable = {
     // only those (not the sibling agents/*/wire.jsonl transcripts).
     filePredicate: (filePath) =>
       basename(filePath) === 'state.json' && basename(dirname(filePath)).startsWith('session_')
-  },
-  qoder: {
-    rootDirs: (options, wslHomeDirs) =>
-      qoderProjectsRootDirs({ qoderProjectsDir: options.qoderProjectsDir, wslHomeDirs }),
-    // Why: `<slug>/` also holds bare `<uuid>/` dirs (each with only a state.json)
-    // and a `transcript/` dir. The extension filter already excludes them — only
-    // a `<uuid>.jsonl` is a resumable session, which matches `--list-sessions`.
-    extensions: ['.jsonl']
   },
   muse: {
     rootDirs: (options, wslHomeDirs) =>

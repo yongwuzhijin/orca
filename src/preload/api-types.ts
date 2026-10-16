@@ -18,6 +18,7 @@ import type {
   RateLimitsApi
 } from './api/agent-usage-api'
 import type { AiVaultApi } from './api/ai-vault-api'
+import type { AcpApi } from './acp-api'
 import type { AppApi, E2EApi, PlatformApi } from './api/app-api'
 import type { AutomationsApi } from './api/automation-api'
 import type { BrowserApi } from './api/browser-api'
@@ -56,6 +57,8 @@ import type { RuntimeApi } from './api/runtime-api'
 import type { KeybindingsApi, SettingsApi } from './api/settings-api'
 import type { ShellApi } from './api/shell-api'
 import type { SpeechApi } from './api/speech-api'
+import type { TextTranslationApi } from './api/text-translation-api'
+import type { TodosApi } from './api/todo-api'
 import type { SshApi } from './api/ssh-api'
 import type { LegacyRelayBridgeApi } from './api/legacy-relay-bridge-api'
 import type { DiagnosticsApi, MemoryApi, StatsApi, TelemetryApi } from './api/telemetry-api'
@@ -72,6 +75,8 @@ type Merged<T> = { [K in keyof T]: T[K] }
 
 export type PreloadApi = {
   app: AppApi
+  acp: AcpApi
+  todos: TodosApi
   orcaProfiles: OrcaProfileApi
   platform: PlatformApi
   e2e: E2EApi
@@ -162,6 +167,7 @@ export type PreloadApi = {
   agentStatus: AgentStatusApi
   mobile: MobileApi
   speech: SpeechApi
+  translation: TextTranslationApi
 }
 
 export type {

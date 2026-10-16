@@ -173,7 +173,8 @@ describe('markdown document templates', () => {
     await expect(
       listMarkdownDocumentTemplates(
         {
-          settings: { activeRuntimeEnvironmentId: null, workspaceOrcaDirName: '.tmp/orca' },
+          target: { kind: 'local' },
+          settings: { workspaceOrcaDirName: '.tmp/orca' },
           worktreeId: 'wt-1',
           worktreePath: '/repo'
         },
@@ -198,7 +199,8 @@ describe('markdown document templates', () => {
 
     const templates = await listMarkdownDocumentTemplates(
       {
-        settings: { activeRuntimeEnvironmentId: null },
+        target: { kind: 'local' },
+        settings: {},
         worktreeId: 'wt-1',
         worktreePath: '/repo'
       },

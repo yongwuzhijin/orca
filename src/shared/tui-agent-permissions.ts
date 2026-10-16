@@ -35,11 +35,7 @@ export const YOLO_TUI_AGENT_ARGS: Partial<Record<TuiAgent, string>> = {
   devin: '--permission-mode bypass --respect-workspace-trust false',
   ante: '--yolo',
   trae: '--yolo',
-  droid: '--auto high',
-  // Why: verified against qodercli v1.1.3 — there is no `--yolo`. `--permission-mode
-  // bypass_permissions` also exists, but resolveAgentPermissionMode compares the
-  // persisted args string for exact equality, so only one spelling may be stored.
-  qoder: '--dangerously-skip-permissions'
+  droid: '--auto high'
 }
 
 export const YOLO_TUI_AGENT_ENV: Partial<Record<TuiAgent, Record<string, string>>> = {

@@ -28,6 +28,7 @@ import { createRateLimitSlice } from './slices/rate-limits'
 import { createSshSlice } from './slices/ssh'
 import { createRuntimeEnvironmentSshSlice } from './slices/runtime-environment-ssh'
 import { createWslHostsSlice } from './slices/wsl-hosts'
+import { createAcpSlice } from './slices/acp'
 import { createAgentStatusSlice } from './slices/agent-status'
 import { createPaneForegroundAgentSlice } from './slices/pane-foreground-agent'
 import { createDiffCommentsSlice } from './slices/diffComments'
@@ -46,6 +47,7 @@ import { createOrcaProfilesSlice } from './slices/orca-profiles'
 import { createNewIssueDraftSlice } from './slices/new-issue-draft'
 import { createFeedbackDraftSlice } from './slices/feedback-draft'
 import { createTaskCreationDraftsSlice } from './slices/task-creation-drafts'
+import { createTodosSlice } from './slices/todos'
 import { createRemoteServerUpdatesSlice } from './slices/remote-server-updates'
 import { createTerminalQuickCommandHostsSlice } from './slices/terminal-quick-command-hosts'
 import { createStructuredSessionLaunchDirectorySlice } from './slices/structured-session-launch-directories'
@@ -126,6 +128,8 @@ export const useAppStore = create<AppState>()(
         ...createOrcaProfilesSlice(...a),
         ...createNewIssueDraftSlice(...a),
         ...createFeedbackDraftSlice(...a),
+        ...createAcpSlice(...a),
+        ...createTodosSlice(...a),
         ...createTaskCreationDraftsSlice(...a),
         ...createRemoteServerUpdatesSlice(...a),
         ...createTerminalQuickCommandHostsSlice(...a),

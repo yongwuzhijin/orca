@@ -98,8 +98,7 @@ export function createOpenUnstagedDiff(
         relativePath,
         'diff',
         isPreview,
-        editorItemTargetGroupId,
-        selection
+        editorItemTargetGroupId
       )
     }
   }

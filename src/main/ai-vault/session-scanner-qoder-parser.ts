@@ -26,7 +26,7 @@ function createQoderState(
   file: FileWithMtime,
   messages?: TranscriptMessageSink
 ): ClaudeSessionParseState {
-  const state = createClaudeSessionParseState(file, messages)
+  const state = createClaudeSessionParseState(file, 'qoder', messages)
   state.accumulator.agent = 'qoder'
   return state
 }

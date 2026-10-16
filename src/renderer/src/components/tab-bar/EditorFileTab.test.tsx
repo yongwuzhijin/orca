@@ -266,7 +266,7 @@ async function renderEditorFileTab(
     hasTabsToRight: false,
     hasTabsToLeft: false,
     tabCount: 1,
-    gitStatus: null,
+    statusByRelativePath: new Map(),
     onActivate,
     onClose: () => {},
     onCloseOthers: () => {},

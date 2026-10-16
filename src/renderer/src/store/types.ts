@@ -47,6 +47,8 @@ import type { TaskCreationDraftsSlice } from './slices/task-creation-drafts'
 import type { RemoteServerUpdatesSlice } from './slices/remote-server-updates'
 import type { TerminalQuickCommandHostsSlice } from './slices/terminal-quick-command-hosts'
 import type { StructuredSessionLaunchDirectorySlice } from './slices/structured-session-launch-directories'
+import type { AcpSlice } from './slices/acp'
+import type { TodosSlice } from './slices/todos'
 import type { WorkspaceAttentionSlice } from './slices/workspace-attention/workspace-attention-contract'
 
 export type AppState = RepoSlice &
@@ -96,4 +98,6 @@ export type AppState = RepoSlice &
   RemoteServerUpdatesSlice &
   TerminalQuickCommandHostsSlice &
   StructuredSessionLaunchDirectorySlice &
-  WorkspaceAttentionSlice
+  WorkspaceAttentionSlice &
+  AcpSlice &
+  TodosSlice

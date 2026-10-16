@@ -170,6 +170,7 @@ describe.each(owners)('runtime hooks: $label', ({ fields, target }) => {
       const hooks = new RuntimeRepositoryHooksCommands({ resolveRepo: async () => repo })
       const issue = new RuntimeRepositoryIssueCommand({
         resolveRepo: async () => repo,
+        getWorkspaceOrcaDirName: () => '.orca',
         getLocalGitArgs: () => []
       })
       if (method === 'get') {

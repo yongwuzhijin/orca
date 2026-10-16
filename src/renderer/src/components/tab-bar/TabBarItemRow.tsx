@@ -10,6 +10,7 @@ import BrowserTab from './BrowserTab'
 import type { DropIndicator } from './drop-indicator'
 import type { TabDragItemData } from '../tab-group/useTabDragSplit'
 import { getTabDragLabel, resolveTerminalItemTab, type TabBarItem } from './tab-bar-item-model'
+import { normalizeRelativePath } from '@/lib/path'
 import type { TabBarItemActions } from './use-tab-bar-item-actions'
 import { useStructuredChatTabConversationName } from '@/runtime/structured-conversation-name'
 import { agentTypeToIconAgent } from '@/lib/agent-status'
@@ -152,11 +153,12 @@ function TabBarItemRow({
   const fileTabProps = {
     ...shared,
     ...closeScope,
-    gitStatus,
     onActivate: () => actions.activateFile(item.id),
     onClose: () => actions.closeFile(item.id),
     onCloseAll: actions.closeAllFiles
   }
+  const statusByRelativePath = (relativePath: string): Map<string, GitFileStatus> =>
+    gitStatus ? new Map([[normalizeRelativePath(relativePath), gitStatus]]) : new Map()
   if (item.type === 'simulator') {
     const simulatorLabel = item.data.label || 'Mobile Emulator'
     const simulatorFile: OpenFile & { tabId: string } = {
@@ -170,12 +172,20 @@ function TabBarItemRow({
       isDirty: false,
       mode: 'edit'
     }
-    return <EditorFileTab {...fileTabProps} file={simulatorFile} onMakePermanent={() => {}} />
+    return (
+      <EditorFileTab
+        {...fileTabProps}
+        file={simulatorFile}
+        statusByRelativePath={statusByRelativePath(simulatorLabel)}
+        onMakePermanent={() => {}}
+      />
+    )
   }
   return (
     <EditorFileTab
       {...fileTabProps}
       file={item.data}
+      statusByRelativePath={statusByRelativePath(item.data.relativePath)}
       onMakePermanent={() => actions.makePreviewFilePermanent(item.data.id, item.data.tabId)}
     />
   )

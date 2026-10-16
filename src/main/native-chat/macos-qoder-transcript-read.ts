@@ -1,6 +1,6 @@
 import { stat } from 'node:fs/promises'
 import { resolveCliCommand } from '../../shared/node-cli-command-resolution'
-import { runProcessSync } from '../../shared/child-process/run-process'
+import { runProcessSync } from '@orca/process-host'
 
 const READ_FILE_SCRIPT = String.raw`
 const fs = require('node:fs');

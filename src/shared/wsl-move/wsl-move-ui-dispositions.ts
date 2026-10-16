@@ -179,6 +179,7 @@ export const UI_STATE_GLOBAL_FIELDS = [
   '_minimaxStatusBarDefaultAdded',
   '_portsStatusBarDefaultAdded',
   '_sortBySmartMigrated',
+  '_translateStatusBarDefaultAdded',
   '_workspaceStatusesDefaultOrderMigrated',
   '_workspaceStatusesDefaultVisualsMigrated',
   '_workspaceStatusesDefaultWorkflowMigrated',

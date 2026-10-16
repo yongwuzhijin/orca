@@ -10,7 +10,7 @@ import {
 } from '../issue-command-file'
 import { isENOENT } from '../ipc/filesystem-auth'
 import { getSshFilesystemProvider } from '../providers/ssh-filesystem-dispatch'
-import type { IFilesystemProvider } from '../providers/types'
+import type { IFilesystemProvider } from '../providers/filesystem-provider-contract'
 import { isFolderRepo } from '../../shared/repo-kind'
 import { joinWorktreeRelativePath } from './runtime-relative-paths'
 import type { RuntimeStore } from './runtime-store-contract'
@@ -61,7 +61,11 @@ export class RuntimeRepositoryIssueCommand {
       sharedContent,
       effectiveContent,
       localFilePath: issueCommandPath,
-      source: localContent ? ('local' as const) : sharedContent ? ('shared' as const) : ('none' as const)
+      source: localContent
+        ? ('local' as const)
+        : sharedContent
+          ? ('shared' as const)
+          : ('none' as const)
     }
   }
 
@@ -75,8 +79,11 @@ export class RuntimeRepositoryIssueCommand {
     const orcaDirName = this.deps.getWorkspaceOrcaDirName()
     const connectionId = getStoredRepoSshConnectionId(repo)
     if (!connectionId) {
-      await writeIssueCommand(repo.path, orcaDirName, content, () =>
-        this.deps.getLocalGitArgs(repo)[0] ?? {}
+      await writeIssueCommand(
+        repo.path,
+        orcaDirName,
+        content,
+        () => this.deps.getLocalGitArgs(repo)[0] ?? {}
       )
       return { ok: true }
     }

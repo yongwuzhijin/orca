@@ -26,7 +26,7 @@ export function createOpenFileState(
     // main window while acting on a tab that lives elsewhere (e.g. the floating workspace).
     setActiveTabType: (type, worktreeId) =>
       set((s) => ({
-        ...(ownsGlobalSelection(s, worktreeId) ? { activeTabType: type } : {}),
+        ...(ownsGlobalSelection(s, worktreeId ?? null) ? { activeTabType: type } : {}),
         activeTabTypeByWorktree: worktreeId
           ? { ...s.activeTabTypeByWorktree, [worktreeId]: type }
           : s.activeTabTypeByWorktree

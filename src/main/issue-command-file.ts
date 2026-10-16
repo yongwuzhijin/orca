@@ -5,7 +5,6 @@ import { appendOrcaDirIgnore } from '../shared/orca-dir-gitignore-entry'
 import { loadHooks } from './hooks'
 import type { GitRuntimeOptions } from './git/git-runtime-options'
 import { checkIgnoredPaths } from './git/check-ignored-paths'
-import { requireSshGitProvider } from './providers/ssh-git-dispatch'
 
 type IssueCommandGitOptions = GitRuntimeOptions | (() => GitRuntimeOptions)
 
@@ -91,7 +90,7 @@ export async function writeIssueCommand(
 }
 
 /** Consult Git before changing shared ignore rules for a private override. */
-async function isIssueCommandIgnoredByGit(
+export async function isIssueCommandIgnoredByGit(
   repoPath: string,
   orcaDirName: string,
   connectionId?: string,
@@ -99,8 +98,9 @@ async function isIssueCommandIgnoredByGit(
 ): Promise<boolean> {
   try {
     const issueCommandPath = `${orcaDirName}/${ISSUE_COMMAND_FILENAME}`
+    // SSH hosts are not served by this process; skip the remote ignore probe.
     const ignored = connectionId
-      ? await requireSshGitProvider(connectionId).checkIgnoredPaths(repoPath, [issueCommandPath])
+      ? []
       : await checkIgnoredPaths(
           repoPath,
           [issueCommandPath],

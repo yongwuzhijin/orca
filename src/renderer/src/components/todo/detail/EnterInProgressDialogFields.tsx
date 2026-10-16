@@ -154,10 +154,6 @@ export function EnterInProgressDialogFields({
             onValueChange={onTerminalAgentChange}
             allowBlankTerminal={false}
             allowNarrowTrigger
-            emptyLabel={translate(
-              'auto.components.todo.detail.EnterInProgressDialog.noInstalledAgents',
-              'No installed agents'
-            )}
             triggerClassName="h-9 w-full min-w-0 border-input text-sm focus:border-ring focus:ring-[3px] focus:ring-ring/50"
           />
         </div>
