@@ -90,8 +90,8 @@ export async function writeIssueCommand(
   }
 }
 
-/** Consult the execution host before changing shared ignore rules for a private override. */
-export async function isIssueCommandIgnoredByGit(
+/** Consult Git before changing shared ignore rules for a private override. */
+async function isIssueCommandIgnoredByGit(
   repoPath: string,
   orcaDirName: string,
   connectionId?: string,

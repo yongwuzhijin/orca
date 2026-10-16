@@ -1,3 +1,4 @@
+import { AGENT_JOURNAL_THREAD_SCOPE } from '../../../shared/agent-session-journal-types'
 // Wiring the restart reconciler: what provider history is allowed to decide
 // about a submission the crash boundary could only doubt.
 
@@ -14,14 +15,18 @@ import type {
 import { digestPayload } from './journal-payload-bounds'
 import { reconcileJournalSubmissionsAgainstHistory } from './journal-restart-reconciliation'
 import type { ProviderHistoryItem, ProviderHistoryWindow } from './journal-submission-reconciler'
-import { createTrackedJournalOpener } from './journal-store-test-open'
+import { createTrackedJournalOpener } from './journal-host-database-test-support'
+import { agentSessionFailureFact } from '../../../shared/agent-session-failure'
+import { agentSessionFailureWords } from '../../../shared/agent-session-failure-words'
+import { classifyDispatchRejection } from '../../../shared/structured-agent-session-dispatch-rejection'
+import { claudeProviderHandle } from '../../../shared/agent-session-provider-handle-encoding'
 
 const IDENTITY: AgentSessionJournalIdentity = {
   sessionId: 'session-1',
   workspaceId: 'ws-1',
   hostId: 'host-1',
   agent: 'claude',
-  providerHandle: { kind: 'claude', sessionId: 'provider-1', leafUuid: null }
+  providerHandle: claudeProviderHandle('provider-1', null)
 }
 
 function claudeIdentity(uuid: string): AgentJournalItemIdentity {
@@ -45,7 +50,7 @@ const journals = createTrackedJournalOpener()
 async function open() {
   return journals.open({
     identity: IDENTITY,
-    journalDir: root,
+    stateDirectory: root,
     now: tick,
     mintEpoch: () => `epoch-${clock}`
   })
@@ -122,7 +127,18 @@ describe('reconcileJournalSubmissionsAgainstHistory', () => {
     expect(settled).toEqual(['cm_1'])
     const submission = journal.submissions()[0]
     expect(submission?.dispatchState).toBe('rejected')
-    expect(submission?.reason).toBe('not_delivered')
+    // A sentence, since released clients print the reason as it is, and the fact beside it.
+    expect(submission?.reason).toBe(
+      agentSessionFailureWords(agentSessionFailureFact('notDelivered'), { surface: 'rejection' })
+        .reason
+    )
+    expect(submission?.rejection).toEqual({ kind: 'notDelivered' })
+    // Nobody failed: the crash stranded it before the provider took it.
+    expect(submission && classifyDispatchRejection(submission)).toEqual({
+      category: 'undelivered',
+      verdict: null,
+      kind: 'notDelivered'
+    })
   })
 
   it('leaves a submission unknown while the provider reports a turn in flight', async () => {
@@ -174,6 +190,38 @@ describe('reconcileJournalSubmissionsAgainstHistory', () => {
     expect(journal.submissions()[0]?.dispatchState).toBe('unknown')
   })
 
+  it('leaves a send that carried stopped history unknown: its provider copy leads with that history', async () => {
+    const journal = await open()
+    for (const clientMessageId of ['stopped', 'cm_1']) {
+      await journal.appendSubmission({
+        clientMessageId,
+        payloadFingerprint: digestPayload(clientMessageId),
+        body: userMessage(clientMessageId),
+        fence: 1,
+        handoverRecorded: true
+      })
+    }
+    await journal.resolveDispatch({
+      clientMessageId: 'cm_1',
+      state: 'pending',
+      fence: 1,
+      turnScope: AGENT_JOURNAL_THREAD_SCOPE,
+      carries: ['stopped']
+    })
+    const restarted = await open()
+    await restarted.markPendingSubmissionsUnknown(2)
+
+    const settled = await reconcileJournalSubmissionsAgainstHistory({
+      journal: restarted,
+      fence: 2,
+      history: window([])
+    })
+
+    expect(settled).toEqual([])
+    expect(restarted.submission('cm_1')?.dispatchState).toBe('unknown')
+    expect(restarted.stoppedHistoryCarried().get('cm_1')).toEqual(['stopped'])
+  })
+
   it('leaves multi-block text sends unknown because Claude joins them before recording history', async () => {
     const journal = await reopenAfterCrash(
       {
@@ -201,7 +249,8 @@ describe('reconcileJournalSubmissionsAgainstHistory', () => {
     const journal = await open()
     // An identical message, delivered and committed BEFORE the one that crashed.
     await journal.appendItem(claudeIdentity('uuid-old'), userMessage('deploy the thing'), {
-      fence: 1
+      fence: 1,
+      turnScope: AGENT_JOURNAL_THREAD_SCOPE
     })
     await journal.appendSubmission({
       clientMessageId: 'cm_1',
@@ -254,7 +303,7 @@ describe('reconcileJournalSubmissionsAgainstHistory', () => {
       'accepted',
       'rejected'
     ])
-    expect(restarted.submissions()[1]?.reason).toBe('not_delivered')
+    expect(restarted.submissions()[1]?.rejection).toEqual({ kind: 'notDelivered' })
   })
 
   it('leaves two identical unsettled sends unknown rather than guessing between them', async () => {

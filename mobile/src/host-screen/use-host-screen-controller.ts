@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useLocalSearchParams, usePathname } from 'expo-router'
 import { useRouteHandoff } from '../navigation/route-handoff'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useHostProtocolGates } from '../components/HostProtocolGate'
+import { useHostProtocolGates } from '../components/host-protocol-gates-context'
 import { visibleHostRouteNotice } from '../host-route-notice'
 import { resolveHostRouteActionState } from '../host-route-action-state'
 import { useActiveWorktreeScroll } from '../hooks/use-active-worktree-scroll'
@@ -14,15 +14,17 @@ import {
   useReconnectAttempt,
   useRelayRecoveryStatus
 } from '../transport/client-context-connection-metrics'
-import { applyWorktreeRowDisplayState } from '../worktree/worktree-host-row-identity'
-import { applyWorktreeHostContextLabels } from '../worktree/worktree-host-context-labels'
 import { useWorkspaceSections } from '../worktree/use-workspace-sections'
-import { useHostRepoMetadata } from './use-host-repo-metadata'
+import { useHostDisplayWorktrees } from './use-host-display-worktrees'
+import { buildProjectSectionCatalog } from '../worktree/project-section-catalog'
+import { useHostProjectSections } from './use-host-project-sections'
+import { useHostRepoMetadata, type FetchHostRepoMetadata } from './use-host-repo-metadata'
 import { useHostScreenIdentity } from './use-host-screen-identity'
 import { useHostScreenState } from './use-host-screen-state'
 import { useHostViewSettings } from './use-host-view-settings'
 import { useHostWorktreeActions } from './use-host-worktree-actions'
 import { useHostWorktreeCatalog } from './use-host-worktree-catalog'
+import { useHostDisplay } from '../transport/use-host-display'
 
 export type HostScreenProps = {
   // When true, rendered as the persistent tablet sidebar by the host layout, not as its own routed screen.
@@ -65,14 +67,28 @@ export function useHostScreenController({
   const { hostCapabilities, floatingWorkspaceEnabled } = useHostProtocolGates()
   const state = useHostScreenState(hostId, action)
   const settings = useHostViewSettings({ client, connState, hostId, state })
+  const hostDisplay = useHostDisplay(
+    hostId && state.hostName
+      ? { id: hostId, name: state.hostName, ...state.hostStoredDescriptor }
+      : null
+  )
 
   useHostScreenIdentity({ client, hostId, state })
-  const fetchRepoMetadata = useHostRepoMetadata({ client, connState, hostId, state })
+  const fetchRepoMetadataOnly = useHostRepoMetadata({ client, connState, hostId, state })
+  const fetchProjectSections = useHostProjectSections({ client, connState, hostId, state })
+  const fetchRepoMetadata = useCallback<FetchHostRepoMetadata>(
+    (options) => {
+      void fetchProjectSections(options)
+      return fetchRepoMetadataOnly(options)
+    },
+    [fetchProjectSections, fetchRepoMetadataOnly]
+  )
   const catalog = useHostWorktreeCatalog({
     client,
     connState,
     embedded,
     fetchRepoMetadata,
+    hostCapabilities,
     hostId,
     state,
     syncViewSettingsFromDesktop: settings.syncViewSettingsFromDesktop
@@ -83,6 +99,7 @@ export function useHostScreenController({
     embedded,
     fetchWorktrees: catalog.fetchWorktrees,
     forgetHostClient,
+    hostCapabilities,
     hostId,
     pathname,
     router,
@@ -96,28 +113,16 @@ export function useHostScreenController({
   }
   const showNewWorktree = resolvedRouteActionState.showNewWorktree
 
-  const displayWorktrees = useMemo(() => {
-    // Why: live `worktrees` is authoritative only while connected; under the amber
-    // mount default, connecting/handshaking must keep the pre-reconnect list too.
-    const base = connState === 'connected' ? state.worktrees : state.lastKnownWorktrees
-    return applyWorktreeHostContextLabels(
-      applyWorktreeRowDisplayState(base, state.sleptIds, state.optimisticActiveWorktreeIdentity),
-      {
-        repoHostIdByRepoId: state.repoHostIdByRepoId,
-        hostLabelById: state.hostLabelById,
-        hostPlatform: state.hostPlatform
-      }
-    )
-  }, [
-    connState,
-    state.worktrees,
-    state.lastKnownWorktrees,
-    state.sleptIds,
-    state.optimisticActiveWorktreeIdentity,
-    state.repoHostIdByRepoId,
-    state.hostLabelById,
-    state.hostPlatform
-  ])
+  const displayWorktrees = useHostDisplayWorktrees(connState, state, hostId)
+  const projectCatalog = useMemo(
+    () =>
+      buildProjectSectionCatalog(
+        state.servedProjectSections,
+        state.desktopRepos,
+        state.visibleHostIds
+      ),
+    [state.servedProjectSections, state.desktopRepos, state.visibleHostIds]
+  )
   const sectionsResult = useWorkspaceSections({
     displayWorktrees,
     sortMode: state.sortMode,
@@ -125,8 +130,9 @@ export function useHostScreenController({
     search: state.search,
     groupMode: state.groupMode,
     pinnedIds: state.pinnedIds,
-    repoIdsByName: state.repoIdsByName,
-    repoColorsByName: state.repoColorsByName,
+    showPinnedInGroups: state.showPinnedInGroups,
+    projectCatalog,
+    filterCatalogRepos: state.servedProjectSections?.repos ?? state.desktopRepos,
     collapsedGroups: state.collapsedGroups,
     workspaceStatuses: state.workspaceStatuses
   })
@@ -146,6 +152,7 @@ export function useHostScreenController({
     floatingWorkspaceEnabled,
     forceReconnectHost,
     hostCapabilities,
+    hostDisplay,
     hostId,
     insets,
     isReadOnly: connState === 'auth-failed',

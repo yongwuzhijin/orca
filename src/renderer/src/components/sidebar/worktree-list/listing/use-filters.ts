@@ -15,17 +15,18 @@ import {
   getWorktreeExecutionHostId,
   getSettingsFocusedExecutionHostId
 } from '../../../../../../shared/execution-host'
-import { isDefaultBranchWorkspace } from '../../default-branch-workspace'
+import { isDefaultBranchWorkspace } from '../../../../../../shared/worktree/workspace-kinds'
 import { getFolderWorkspaceExecutionHostIdForRows } from './host-filtering'
 import {
   getPairedDeviceIdsByEnvironment,
-  isWorkspaceFromOtherDevice
-} from '../../workspace-creator-visibility'
+  isWorkspaceOwnedBySomeoneElse
+} from '../../../../../../shared/workspace-creator-visibility'
 import { getAgentStatusEpochNow } from '@/lib/agent-status-epoch-clock'
 import { getWorktreeIdsWithLiveAgent, isInactiveWorkspace } from '@/lib/worktree-activity-state'
 import {
   getVisibleWorktreeBrowserActivityTabs,
-  getVisibleWorktreeTerminalActivityTabs
+  getVisibleWorktreeTerminalActivityTabs,
+  getWorktreeIdsWithStructuredChat
 } from '../../visible-worktree-activity-inputs'
 
 export type SidebarWorktreeFilters = ReturnType<typeof useSidebarWorktreeFilters>
@@ -95,7 +96,7 @@ export function useSidebarWorktreeFilters() {
     if (scopedHostIds && !scopedHostIds.includes(targetHostId)) {
       state.setVisibleWorkspaceHostIds([...scopedHostIds, targetHostId])
     }
-    if (state.hideDefaultBranchWorkspace && isDefaultBranchWorkspace(worktree)) {
+    if (state.hideDefaultBranchWorkspace && isDefaultBranchWorkspace(worktree, repo)) {
       state.setHideDefaultBranchWorkspace(false)
     }
     if (state.hideAutomationGeneratedWorkspaces && isAutomationGeneratedWorkspace(worktree)) {
@@ -112,7 +113,7 @@ export function useSidebarWorktreeFilters() {
         state.runtimeEnvironments,
         state.runtimeStatusByEnvironmentId
       )
-      if (isWorkspaceFromOtherDevice(worktree, pairedDeviceIds)) {
+      if (isWorkspaceOwnedBySomeoneElse(worktree, pairedDeviceIds)) {
         state.setHideWorkspacesFromOtherDevices(false)
       }
     }
@@ -133,7 +134,8 @@ export function useSidebarWorktreeFilters() {
           tabsByWorktree,
           state.ptyIdsByTabId,
           browserTabsByWorktree,
-          liveAgentWorktrees
+          liveAgentWorktrees,
+          getWorktreeIdsWithStructuredChat(state.unifiedTabsByWorktree)
         )
       ) {
         state.setShowSleepingWorkspaces(true)

@@ -4,7 +4,7 @@
  * STA-3811: imports never touch the Google cookie family, so every import menu must disclose it
  * at the moment of decision.
  */
-import { act, type ReactNode } from 'react'
+import { act, createRef, type ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import en from '@/i18n/locales/en.json'
@@ -14,11 +14,13 @@ const DISCLOSURE_DESCRIPTION = 'Sign in to Google directly in Orca.'
 
 vi.mock('@/components/ui/dropdown-menu', () => dropdownMenuStubs())
 vi.mock('../ui/dropdown-menu', () => dropdownMenuStubs())
+vi.mock('@/components/ui/popover', () => popoverStubs())
 vi.mock('@/store', () => ({ useAppStore: appStoreStub() }))
 vi.mock('../../store', () => ({ useAppStore: appStoreStub() }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 import { BrowserCookieImportDisclosure } from './BrowserCookieImportDisclosure'
+import { BrowserImportHintButton } from './browser-pane/assemble-chrome/BrowserImportHintButton'
 import { BrowserToolbarMenuDropdown } from './browser-pane/assemble-chrome/browser-toolbar-menu-dropdown'
 import { BrowserProfileRow } from './settings/BrowserProfileRow'
 import { BrowserUseCookieImportStep } from './settings/BrowserUseCookieImportStep'
@@ -65,19 +67,23 @@ describe('cookie-import Google disclosure footer', () => {
           onImportFromFile={vi.fn()}
           viewportPresetId={null}
           onApplyViewportPreset={vi.fn()}
-          worktreeId="wt-1"
-          pageUrl="https://example.com"
-          pageTitle="Example"
+          overflow={{
+            triggerRef: createRef<HTMLButtonElement>(),
+            tools: [],
+            deferUntilClose: vi.fn(),
+            onMenuCloseAutoFocus: vi.fn()
+          }}
         />
       )
     ],
+    ['browser toolbar hint', () => <BrowserImportHintButton profileId="default" />],
     [
       'Settings browser-use setup',
       () => (
         <BrowserUseCookieImportStep
           cookiesImported={false}
           isImportingDefault={false}
-          step3Blocked={false}
+          disabled={false}
           sourceLabel={null}
         />
       )
@@ -152,8 +158,15 @@ function dropdownMenuStubs(): Record<string, unknown> {
   }
 }
 
+function popoverStubs(): Record<string, unknown> {
+  const passthrough = ({ children }: { children?: ReactNode }): ReactNode => children
+  const block = ({ children }: { children?: ReactNode }): ReactNode => <div>{children}</div>
+  return { Popover: passthrough, PopoverContent: block, PopoverTrigger: passthrough }
+}
+
 function appStoreStub(): unknown {
   const state = {
+    browserImportHintHidden: false,
     browserSessionImportState: null,
     detectedBrowsers: [
       {
@@ -165,9 +178,12 @@ function appStoreStub(): unknown {
     ],
     detectedBrowsersLoaded: true,
     fetchDetectedBrowsers: vi.fn(),
-    getKnownWorktreeById: vi.fn(() => null),
     importCookiesFromBrowser: vi.fn(),
     importCookiesToProfile: vi.fn(),
+    openSettingsTarget: vi.fn(),
+    openSettingsPage: vi.fn(),
+    persistedUIReady: true,
+    setBrowserImportHintHidden: vi.fn(),
     settingsSearchQuery: ''
   }
   const useAppStore = (selector?: (s: typeof state) => unknown): unknown =>

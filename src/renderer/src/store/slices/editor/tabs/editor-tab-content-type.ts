@@ -1,6 +1,14 @@
 import type { Tab } from '../../../../../../shared/tab-types'
+import type { OpenFile } from '../types/open-file'
 
-export function isEditorTabContentType(contentType: Tab['contentType']): boolean {
+export type EditorTabContentType = Extract<
+  Tab['contentType'],
+  'editor' | 'diff' | 'conflict-review' | 'check-details'
+>
+
+export function isEditorTabContentType(
+  contentType: Tab['contentType']
+): contentType is EditorTabContentType {
   return (
     contentType === 'editor' ||
     contentType === 'diff' ||
@@ -8,4 +16,9 @@ export function isEditorTabContentType(contentType: Tab['contentType']): boolean
     contentType === 'check-details' ||
     contentType === 'json-formatter'
   )
+}
+
+/** Editor tabs with no file behind them: their path is a synthetic id, never a workspace path. */
+export function isVirtualEditorFile(file: Pick<OpenFile, 'mode'>): boolean {
+  return file.mode === 'check-details'
 }

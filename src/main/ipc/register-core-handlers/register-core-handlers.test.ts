@@ -22,12 +22,6 @@ const {
   registerTerminalRenderDesyncEvidenceHandlerMock,
   registerShellHandlersMock,
   registerPetHandlersMock,
-  registerTextTranslationHandlersMock,
-  registerTodoHandlersMock,
-  registerAcpHandlersMock,
-  registerTodoReviewHandlersMock,
-  registerTodoMergeHandlersMock,
-  registerTodoDashboardHandlersMock,
   registerSessionHandlersMock,
   registerUIHandlersMock,
   setTrustedUIRendererWebContentsIdMock,
@@ -40,10 +34,12 @@ const {
   registerOrcaProfileHandlersMock,
   registerCodexAccountHandlersMock,
   registerAgentHookHandlersMock,
-  registerAgentTrustHandlersMock,
   registerClaudeAccountHandlersMock,
+  registerOpenCodeGoCredentialsHandlersMock,
   registerMiniMaxCredentialsHandlersMock,
+  registerZcodePlanCredentialsHandlersMock,
   registerGrokAccountHandlersMock,
+  registerCursorAccountHandlersMock,
   registerClipboardHandlersMock,
   setTrustedClipboardRendererWebContentsIdMock,
   registerUpdaterHandlersMock,
@@ -55,6 +51,7 @@ const {
   registerAppHandlersMock,
   registerLinearHandlersMock,
   registerJiraHandlersMock,
+  registerJiraIssueSummaryGenerationHandlersMock,
   registerBitbucketHandlersMock,
   registerGitLabHandlersMock,
   registerHostedReviewHandlersMock,
@@ -66,6 +63,7 @@ const {
   registerTerminalPreviewHandlersMock,
   registerSpeechHandlersMock,
   registerSkillsHandlersMock,
+  registerSkillDeleteIpcHandlersMock,
   registerWorkspaceSpaceHandlersMock,
   registerWorkspacePortHandlersMock,
   registerLocalhostWorktreeLabelHandlersMock,
@@ -94,12 +92,6 @@ const {
   registerTerminalRenderDesyncEvidenceHandlerMock: vi.fn(),
   registerShellHandlersMock: vi.fn(),
   registerPetHandlersMock: vi.fn(),
-  registerTextTranslationHandlersMock: vi.fn(),
-  registerTodoHandlersMock: vi.fn(),
-  registerAcpHandlersMock: vi.fn(),
-  registerTodoReviewHandlersMock: vi.fn(),
-  registerTodoMergeHandlersMock: vi.fn(),
-  registerTodoDashboardHandlersMock: vi.fn(),
   registerSessionHandlersMock: vi.fn(),
   registerUIHandlersMock: vi.fn(),
   setTrustedUIRendererWebContentsIdMock: vi.fn(),
@@ -112,10 +104,12 @@ const {
   registerOrcaProfileHandlersMock: vi.fn(),
   registerCodexAccountHandlersMock: vi.fn(),
   registerAgentHookHandlersMock: vi.fn(),
-  registerAgentTrustHandlersMock: vi.fn(),
   registerClaudeAccountHandlersMock: vi.fn(),
+  registerOpenCodeGoCredentialsHandlersMock: vi.fn(),
   registerMiniMaxCredentialsHandlersMock: vi.fn(),
+  registerZcodePlanCredentialsHandlersMock: vi.fn(),
   registerGrokAccountHandlersMock: vi.fn(),
+  registerCursorAccountHandlersMock: vi.fn(),
   registerClipboardHandlersMock: vi.fn(),
   setTrustedClipboardRendererWebContentsIdMock: vi.fn(),
   registerUpdaterHandlersMock: vi.fn(),
@@ -127,6 +121,7 @@ const {
   registerAppHandlersMock: vi.fn(),
   registerLinearHandlersMock: vi.fn(),
   registerJiraHandlersMock: vi.fn(),
+  registerJiraIssueSummaryGenerationHandlersMock: vi.fn(),
   registerBitbucketHandlersMock: vi.fn(),
   registerGitLabHandlersMock: vi.fn(),
   registerHostedReviewHandlersMock: vi.fn(),
@@ -138,6 +133,7 @@ const {
   registerTerminalPreviewHandlersMock: vi.fn(),
   registerSpeechHandlersMock: vi.fn(),
   registerSkillsHandlersMock: vi.fn(),
+  registerSkillDeleteIpcHandlersMock: vi.fn(),
   registerWorkspaceSpaceHandlersMock: vi.fn(),
   registerWorkspacePortHandlersMock: vi.fn(),
   registerLocalhostWorktreeLabelHandlersMock: vi.fn(),
@@ -173,7 +169,7 @@ vi.mock('../dashboard-popout', () => ({
   registerDashboardPopoutHandlers: registerDashboardPopoutHandlersMock
 }))
 
-vi.mock('../window/dashboard-popout-window', () => ({
+vi.mock('../../window/dashboard-popout-window', () => ({
   isDashboardPopoutRenderer: isDashboardPopoutRendererMock
 }))
 
@@ -241,6 +237,10 @@ vi.mock('../skills', () => ({
   registerSkillsHandlers: registerSkillsHandlersMock
 }))
 
+vi.mock('../skill-delete/handlers', () => ({
+  registerSkillDeleteIpcHandlers: registerSkillDeleteIpcHandlersMock
+}))
+
 vi.mock('../workspace-space', () => ({
   registerWorkspaceSpaceHandlers: registerWorkspaceSpaceHandlersMock
 }))
@@ -267,30 +267,6 @@ vi.mock('../diagnostics', () => ({
 
 vi.mock('../shell', () => ({
   registerShellHandlers: registerShellHandlersMock
-}))
-
-vi.mock('../text-translation-ipc', () => ({
-  registerTextTranslationHandlers: registerTextTranslationHandlersMock
-}))
-
-vi.mock('../todos', () => ({
-  registerTodoHandlers: registerTodoHandlersMock
-}))
-
-vi.mock('../acp', () => ({
-  registerAcpHandlers: registerAcpHandlersMock
-}))
-
-vi.mock('../todo-review', () => ({
-  registerTodoReviewHandlers: registerTodoReviewHandlersMock
-}))
-
-vi.mock('../todo-merge', () => ({
-  registerTodoMergeHandlers: registerTodoMergeHandlersMock
-}))
-
-vi.mock('../todo-dashboard', () => ({
-  registerTodoDashboardHandlers: registerTodoDashboardHandlersMock
 }))
 
 vi.mock('../pet', () => ({
@@ -331,7 +307,12 @@ vi.mock('../runtime', () => ({
 }))
 
 vi.mock('../runtime-environments', () => ({
+  invalidateRuntimeEnvironmentTransport: vi.fn(),
   registerRuntimeEnvironmentHandlers: registerRuntimeEnvironmentHandlersMock
+}))
+
+vi.mock('../wsl-host-handlers', () => ({
+  registerWslHostHandlers: vi.fn()
 }))
 
 vi.mock('../ephemeral-vm', () => ({
@@ -358,27 +339,35 @@ vi.mock('../agent-hooks', () => ({
   registerAgentHookHandlers: registerAgentHookHandlersMock
 }))
 
-vi.mock('../agent-trust', () => ({
-  registerAgentTrustHandlers: registerAgentTrustHandlersMock
-}))
-
 vi.mock('../claude-accounts', () => ({
   registerClaudeAccountHandlers: registerClaudeAccountHandlersMock
+}))
+
+vi.mock('../opencode-go-credentials', () => ({
+  registerOpenCodeGoCredentialsHandlers: registerOpenCodeGoCredentialsHandlersMock
 }))
 
 vi.mock('../minimax-credentials', () => ({
   registerMiniMaxCredentialsHandlers: registerMiniMaxCredentialsHandlersMock
 }))
 
+vi.mock('../zcode-plan-credentials', () => ({
+  registerZcodePlanCredentialsHandlers: registerZcodePlanCredentialsHandlersMock
+}))
+
 vi.mock('../grok-accounts', () => ({
   registerGrokAccountHandlers: registerGrokAccountHandlersMock
 }))
 
-vi.mock('../window/attach-main-window-services', () => ({
+vi.mock('../cursor-accounts', () => ({
+  registerCursorAccountHandlers: registerCursorAccountHandlersMock
+}))
+
+vi.mock('../../window/attach-main-window-services', () => ({
   registerUpdaterHandlers: registerUpdaterHandlersMock
 }))
 
-vi.mock('../window/clipboard-ipc-handlers', () => ({
+vi.mock('../../window/clipboard-ipc-handlers', () => ({
   registerClipboardHandlers: registerClipboardHandlersMock,
   setTrustedClipboardRendererWebContentsId: setTrustedClipboardRendererWebContentsIdMock
 }))
@@ -408,6 +397,10 @@ vi.mock('../jira', () => ({
   registerJiraHandlers: registerJiraHandlersMock
 }))
 
+vi.mock('../jira-issue-summary-generation', () => ({
+  registerJiraIssueSummaryGenerationHandlers: registerJiraIssueSummaryGenerationHandlersMock
+}))
+
 vi.mock('../bitbucket', () => ({
   registerBitbucketHandlers: registerBitbucketHandlersMock
 }))
@@ -424,14 +417,20 @@ vi.mock('../native-chat', () => ({
   registerNativeChatHandlers: registerNativeChatHandlersMock
 }))
 
+import { agentSessionRefusalError } from '../../../shared/agent-session-wire-refusals'
+import { recordStructuredAgentSessionHostInstallRefusal } from '../../runtime/structured-agent-session-host-refusal'
 import { registerCoreHandlers } from './register-core-handlers'
 
-const todoRepository = { marker: 'todoRepository', listItems: () => [] }
-const acpKernel = {
-  executeRouter: { marker: 'executeRouter' },
-  sessionManager: { marker: 'sessionManager', listSessions: () => [] },
-  permissionBridge: { marker: 'permissionBridge' }
+let registeredAiVaultOptions: {
+  ensureStructuredSessionOwnership: () => Promise<void>
 }
+let registeredRuntime:
+  | {
+      ensureStructuredAgentSessionHost: ReturnType<typeof vi.fn>
+      closeNotificationDismissals: ReturnType<typeof vi.fn>
+    }
+  | undefined
+let registeredRelaunchExit: (() => Promise<void>) | undefined
 
 describe('registerCoreHandlers', () => {
   beforeEach(() => {
@@ -458,12 +457,6 @@ describe('registerCoreHandlers', () => {
     registerTerminalRenderDesyncEvidenceHandlerMock.mockReset()
     registerShellHandlersMock.mockReset()
     registerPetHandlersMock.mockReset()
-    registerTextTranslationHandlersMock.mockReset()
-    registerTodoHandlersMock.mockReset()
-    registerAcpHandlersMock.mockReset()
-    registerTodoReviewHandlersMock.mockReset()
-    registerTodoMergeHandlersMock.mockReset()
-    registerTodoDashboardHandlersMock.mockReset()
     registerSessionHandlersMock.mockReset()
     registerUIHandlersMock.mockReset()
     setTrustedUIRendererWebContentsIdMock.mockReset()
@@ -475,9 +468,10 @@ describe('registerCoreHandlers', () => {
     registerOrcaProfileHandlersMock.mockReset()
     registerCodexAccountHandlersMock.mockReset()
     registerAgentHookHandlersMock.mockReset()
-    registerAgentTrustHandlersMock.mockReset()
     registerClaudeAccountHandlersMock.mockReset()
+    registerOpenCodeGoCredentialsHandlersMock.mockReset()
     registerMiniMaxCredentialsHandlersMock.mockReset()
+    registerZcodePlanCredentialsHandlersMock.mockReset()
     registerClipboardHandlersMock.mockReset()
     setTrustedClipboardRendererWebContentsIdMock.mockReset()
     registerUpdaterHandlersMock.mockReset()
@@ -489,6 +483,7 @@ describe('registerCoreHandlers', () => {
     registerAppHandlersMock.mockReset()
     registerLinearHandlersMock.mockReset()
     registerJiraHandlersMock.mockReset()
+    registerJiraIssueSummaryGenerationHandlersMock.mockReset()
     registerBitbucketHandlersMock.mockReset()
     registerGitLabHandlersMock.mockReset()
     registerHostedReviewHandlersMock.mockReset()
@@ -497,6 +492,7 @@ describe('registerCoreHandlers', () => {
     registerTerminalPreviewHandlersMock.mockReset()
     registerSpeechHandlersMock.mockReset()
     registerSkillsHandlersMock.mockReset()
+    registerSkillDeleteIpcHandlersMock.mockReset()
     registerWorkspaceSpaceHandlersMock.mockReset()
     registerWorkspacePortHandlersMock.mockReset()
     registerLocalhostWorktreeLabelHandlersMock.mockReset()
@@ -510,13 +506,14 @@ describe('registerCoreHandlers', () => {
     const runtime = {
       marker: 'runtime',
       getAgentBrowserBridge: () => null,
-      getTodoRepository: () => todoRepository,
-      getAcpKernel: () => acpKernel
+      ensureStructuredAgentSessionHost: vi.fn(),
+      closeNotificationDismissals: vi.fn(async () => {})
     }
     const stats = { marker: 'stats' }
     const claudeUsage = { marker: 'claudeUsage' }
     const codexUsage = { marker: 'codexUsage' }
     const openCodeUsage = { marker: 'openCodeUsage' }
+    const museUsage = { marker: 'museUsage' }
     const codexAccounts = { marker: 'codexAccounts', runtimeHomeService: { marker: 'runtimeHome' } }
     const claudeAccounts = { marker: 'claudeAccounts' }
     const rateLimits = { marker: 'rateLimits' }
@@ -531,6 +528,8 @@ describe('registerCoreHandlers', () => {
       claudeUsage as never,
       codexUsage as never,
       openCodeUsage as never,
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: registration only forwards this marker to the mocked usage registrar.
+      museUsage as never,
       codexAccounts as never,
       claudeAccounts as never,
       rateLimits as never,
@@ -545,6 +544,9 @@ describe('registerCoreHandlers', () => {
 
     const aiVaultOptions = registerAiVaultHandlersMock.mock.calls[0]?.[0]
     expect(aiVaultOptions).toBeDefined()
+    // Registration happens once per module: later tests reach these handlers through here.
+    registeredAiVaultOptions = aiVaultOptions
+    registeredRuntime = runtime
 
     callRuntimeEnvironmentMock.mockResolvedValueOnce({
       ok: true,
@@ -554,9 +556,16 @@ describe('registerCoreHandlers', () => {
     expect(registerUsageProviderHandlersMock).toHaveBeenCalledWith({
       claudeUsage,
       codexUsage,
-      openCodeUsage
+      openCodeUsage,
+      museUsage
     })
-    expect(registerAppHandlersMock).toHaveBeenCalledWith(store, { onBeforeRelaunch })
+    expect(registerAppHandlersMock).toHaveBeenCalledWith(store, {
+      onBeforeRelaunch,
+      onBeforeRelaunchExit: expect.any(Function)
+    })
+    registeredRelaunchExit = registerAppHandlersMock.mock.calls[0]?.[1]?.onBeforeRelaunchExit
+    await registeredRelaunchExit?.()
+    expect(runtime.closeNotificationDismissals).toHaveBeenCalledOnce()
     expect(registerCodexAccountHandlersMock).toHaveBeenCalledWith(
       codexAccounts,
       expect.any(Function)
@@ -568,25 +577,17 @@ describe('registerCoreHandlers', () => {
       codexAccounts.runtimeHomeService
     )
     expect(registerPetHandlersMock).toHaveBeenCalled()
-    expect(registerTextTranslationHandlersMock).toHaveBeenCalledWith({
-      getSettings: expect.any(Function)
-    })
-    expect(registerTodoHandlersMock).toHaveBeenCalledWith(todoRepository)
-    expect(registerAcpHandlersMock).toHaveBeenCalledWith({
-      executeRouter: acpKernel.executeRouter,
-      sessionManager: acpKernel.sessionManager,
-      permissionBridge: acpKernel.permissionBridge
-    })
-    expect(registerTodoReviewHandlersMock).toHaveBeenCalled()
-    expect(registerTodoMergeHandlersMock).toHaveBeenCalled()
-    expect(registerTodoDashboardHandlersMock).toHaveBeenCalled()
     expect(registerClaudeAccountHandlersMock).toHaveBeenCalledWith(claudeAccounts)
+    expect(registerOpenCodeGoCredentialsHandlersMock).toHaveBeenCalledWith(rateLimits)
     expect(registerMiniMaxCredentialsHandlersMock).toHaveBeenCalledWith(rateLimits)
+    expect(registerZcodePlanCredentialsHandlersMock).toHaveBeenCalledWith(rateLimits)
     expect(registerGrokAccountHandlersMock).toHaveBeenCalled()
+    expect(registerCursorAccountHandlersMock).toHaveBeenCalled()
     expect(registerRateLimitHandlersMock).toHaveBeenCalledWith(rateLimits, codexAccounts)
     expect(registerGitHubHandlersMock).toHaveBeenCalledWith(store, stats)
     expect(registerLinearHandlersMock).toHaveBeenCalled()
     expect(registerJiraHandlersMock).toHaveBeenCalled()
+    expect(registerJiraIssueSummaryGenerationHandlersMock).toHaveBeenCalledWith(store, undefined)
     expect(registerBitbucketHandlersMock).toHaveBeenCalled()
     expect(registerGitLabHandlersMock).toHaveBeenCalledWith(store)
     expect(registerHostedReviewHandlersMock).toHaveBeenCalledWith(store, stats)
@@ -601,12 +602,13 @@ describe('registerCoreHandlers', () => {
     expect(registerTerminalPreviewHandlersMock).toHaveBeenCalledWith(runtime)
     expect(registerSettingsHandlersMock).toHaveBeenCalledWith(store, agentAwakeService)
     expect(registerSkillsHandlersMock).toHaveBeenCalledWith(store, runtime)
+    expect(registerSkillDeleteIpcHandlersMock).toHaveBeenCalledWith(store, runtime)
     expect(registerWorkspaceSpaceHandlersMock).toHaveBeenCalledWith(store)
     expect(registerWorkspacePortHandlersMock).toHaveBeenCalledWith(store)
     expect(registerLocalhostWorktreeLabelHandlersMock).toHaveBeenCalledWith(store)
     expect(registerTelemetryHandlersMock).toHaveBeenCalledWith(store)
     expect(registerOrcaProfileHandlersMock).toHaveBeenCalledWith(store, { onBeforeRelaunch })
-    expect(registerSessionHandlersMock).toHaveBeenCalledWith(store)
+    expect(registerSessionHandlersMock).toHaveBeenCalledWith(store, runtime)
     expect(registerUIHandlersMock).toHaveBeenCalledWith(store, {
       isDashboardPopoutRenderer: isDashboardPopoutRendererMock
     })
@@ -693,20 +695,61 @@ describe('registerCoreHandlers', () => {
     )
   })
 
+  // Session history and terminal resume are not chats: the refusal chats get leaves them no host
+  // to check, and any other host failure still fails them.
+  it('serves session history while chats are refused', async () => {
+    const aiVaultOptions = registeredAiVaultOptions
+    expect(aiVaultOptions).toBeDefined()
+    const refusal = agentSessionRefusalError(
+      'agent_session_journal_unreadable',
+      { reason: 'journalCorrupt' },
+      'Unable to load this chat.'
+    )
+    recordStructuredAgentSessionHostInstallRefusal(refusal)
+    try {
+      registeredRuntime?.ensureStructuredAgentSessionHost.mockRejectedValueOnce(refusal)
+      await expect(aiVaultOptions.ensureStructuredSessionOwnership()).resolves.toBeUndefined()
+      registeredRuntime?.ensureStructuredAgentSessionHost.mockRejectedValueOnce(
+        new Error('the record store would not open')
+      )
+      await expect(aiVaultOptions.ensureStructuredSessionOwnership()).rejects.toThrow(
+        'the record store would not open'
+      )
+    } finally {
+      recordStructuredAgentSessionHostInstallRefusal(null)
+    }
+  })
+
+  it('lets relaunch exit after 2 s when the dismissal close never settles', async () => {
+    vi.useFakeTimers()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      registeredRuntime?.closeNotificationDismissals.mockReturnValueOnce(new Promise(() => {}))
+      let exited = false
+      void registeredRelaunchExit?.().then(() => {
+        exited = true
+      })
+      await vi.advanceTimersByTimeAsync(1_999)
+      expect(exited).toBe(false)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(exited).toBe(true)
+      expect(warn).toHaveBeenCalledOnce()
+    } finally {
+      warn.mockRestore()
+      vi.useRealTimers()
+    }
+  })
+
   it('only registers IPC handlers once but always updates web contents id', () => {
     // The first test already called registerCoreHandlers, so the module-level
     // guard is now set. beforeEach reset all mocks, so call counts are 0.
     const store2 = { marker: 'store2' }
-    const runtime2 = {
-      marker: 'runtime2',
-      getAgentBrowserBridge: () => null,
-      getTodoRepository: () => todoRepository,
-      getAcpKernel: () => acpKernel
-    }
+    const runtime2 = { marker: 'runtime2', getAgentBrowserBridge: () => null }
     const stats2 = { marker: 'stats2' }
     const claudeUsage2 = { marker: 'claudeUsage2' }
     const codexUsage2 = { marker: 'codexUsage2' }
     const openCodeUsage2 = { marker: 'openCodeUsage2' }
+    const museUsage2 = { marker: 'museUsage2' }
     const codexAccounts2 = { marker: 'codexAccounts2' }
     const claudeAccounts2 = { marker: 'claudeAccounts2' }
     const rateLimits2 = { marker: 'rateLimits2' }
@@ -718,6 +761,8 @@ describe('registerCoreHandlers', () => {
       claudeUsage2 as never,
       codexUsage2 as never,
       openCodeUsage2 as never,
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: registration only forwards this marker to the mocked usage registrar.
+      museUsage2 as never,
       codexAccounts2 as never,
       claudeAccounts2 as never,
       rateLimits2 as never,

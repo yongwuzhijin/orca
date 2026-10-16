@@ -1,3 +1,4 @@
+import { getStoredRepoSshConnectionId } from '../repo-execution-host'
 import type { GitRuntimeOptions } from '../git/git-runtime-options'
 import type { Repo } from '../../shared/repo-types'
 import { isOrcaDirIgnored } from '../../shared/orca-dir-gitignore-entry'
@@ -12,11 +13,14 @@ import { getSshFilesystemProvider } from '../providers/ssh-filesystem-dispatch'
 import type { IFilesystemProvider } from '../providers/types'
 import { isFolderRepo } from '../../shared/repo-kind'
 import { joinWorktreeRelativePath } from './runtime-relative-paths'
+import type { RuntimeStore } from './runtime-store-contract'
+import { assertWslMoveRepoWritable } from '../persistence/moving-wsl-projects/wsl-move-scope-guard'
 
 type RuntimeRepositoryIssueCommandDeps = {
   resolveRepo: (selector: string) => Promise<Repo>
   getWorkspaceOrcaDirName: () => string
   getLocalGitArgs: (repo: Repo) => [] | [GitRuntimeOptions]
+  getStore?: () => RuntimeStore | null
 }
 
 export class RuntimeRepositoryIssueCommand {
@@ -34,11 +38,12 @@ export class RuntimeRepositoryIssueCommand {
       }
     }
     const orcaDirName = this.deps.getWorkspaceOrcaDirName()
-    if (!repo.connectionId) {
+    const connectionId = getStoredRepoSshConnectionId(repo)
+    if (!connectionId) {
       return readIssueCommand(repo.path, orcaDirName)
     }
     const issueCommandPath = joinWorktreeRelativePath(repo.path, `${orcaDirName}/issue-command`)
-    const fsProvider = getSshFilesystemProvider(repo.connectionId)
+    const fsProvider = getSshFilesystemProvider(connectionId)
     if (!fsProvider) {
       return {
         localContent: null,
@@ -50,34 +55,33 @@ export class RuntimeRepositoryIssueCommand {
     }
     const localContent = await readRemoteOverride(fsProvider, issueCommandPath)
     const sharedContent = await readRemoteShared(fsProvider, repo.path)
+    const effectiveContent = localContent ?? sharedContent
     return {
       localContent,
       sharedContent,
-      effectiveContent: localContent ?? sharedContent,
+      effectiveContent,
       localFilePath: issueCommandPath,
-      source: localContent
-        ? ('local' as const)
-        : sharedContent
-          ? ('shared' as const)
-          : ('none' as const)
+      source: localContent ? ('local' as const) : sharedContent ? ('shared' as const) : ('none' as const)
     }
   }
 
   /** Save a private override on its execution host; blank content restores the shared command. */
   async write(repoSelector: string, content: string): Promise<{ ok: true }> {
     const repo = await this.deps.resolveRepo(repoSelector)
+    assertWslMoveRepoWritable(this.deps.getStore?.() ?? undefined, repo)
     if (isFolderRepo(repo)) {
       return { ok: true }
     }
     const orcaDirName = this.deps.getWorkspaceOrcaDirName()
-    if (!repo.connectionId) {
+    const connectionId = getStoredRepoSshConnectionId(repo)
+    if (!connectionId) {
       await writeIssueCommand(repo.path, orcaDirName, content, () =>
         this.deps.getLocalGitArgs(repo)[0] ?? {}
       )
       return { ok: true }
     }
     const issueCommandPath = joinWorktreeRelativePath(repo.path, `${orcaDirName}/issue-command`)
-    const fsProvider = getSshFilesystemProvider(repo.connectionId)
+    const fsProvider = getSshFilesystemProvider(connectionId)
     if (!fsProvider) {
       return { ok: true }
     }
@@ -91,7 +95,7 @@ export class RuntimeRepositoryIssueCommand {
       return { ok: true }
     }
     await fsProvider.createDir(joinWorktreeRelativePath(repo.path, orcaDirName))
-    if (!(await isIssueCommandIgnoredByGit(repo.path, orcaDirName, repo.connectionId))) {
+    if (!(await isIssueCommandIgnoredByGit(repo.path, orcaDirName, connectionId))) {
       await ensureRemoteOrcaDirIgnored(fsProvider, repo.path, orcaDirName)
     }
     await fsProvider.writeFile(issueCommandPath, `${trimmed}\n`)

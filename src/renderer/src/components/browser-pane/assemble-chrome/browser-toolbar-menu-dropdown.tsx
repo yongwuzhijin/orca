@@ -1,4 +1,4 @@
-import { Bookmark, Check, Ellipsis, Folder, Import, Monitor, Plus, Settings } from 'lucide-react'
+import { Check, Ellipsis, FileCode2, Import, Monitor, Plus, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -16,17 +16,11 @@ import {
 import { BrowserCookieImportDisclosure } from '@/components/BrowserCookieImportDisclosure'
 import { BrowserCookieImportMachineNotice } from '@/components/BrowserCookieImportMachineNotice'
 import { useAppStore } from '@/store'
-import { BROWSER_FAMILY_LABELS, ORCA_BROWSER_BLANK_URL } from '../../../../../shared/constants'
-import { parseWorkspaceKey } from '../../../../../shared/workspace-scope'
+import { BROWSER_FAMILY_LABELS } from '../../../../../shared/constants'
 import type {
   BrowserSessionProfile,
   BrowserViewportPresetId
 } from '../../../../../shared/browser-workspace-types'
-import {
-  addBookmarkToBranchDocs,
-  addBookmarkToProjectLinks,
-  addBookmarkToQuickLinks
-} from '../browser-bookmark-add'
 
 type DetectedBrowserEntry = {
   family: string
@@ -36,6 +30,10 @@ type DetectedBrowserEntry = {
 }
 import { BROWSER_VIEWPORT_PRESETS } from '../../../../../shared/browser-viewport-presets'
 import { translate } from '@/i18n/i18n'
+import {
+  BrowserChromeFoldedMenuItems,
+  type BrowserChromeOverflowMenuProps
+} from './browser-chrome-folded-tools'
 
 type BrowserToolbarMenuDropdownProps = {
   menuOpen: boolean
@@ -51,9 +49,8 @@ type BrowserToolbarMenuDropdownProps = {
   onImportFromFile: () => void
   viewportPresetId: BrowserViewportPresetId | null
   onApplyViewportPreset: (nextId: BrowserViewportPresetId | null) => void
-  worktreeId: string
-  pageUrl: string
-  pageTitle: string
+  onOpenSourceFile?: (() => void) | null
+  overflow: BrowserChromeOverflowMenuProps
 }
 
 export function BrowserToolbarMenuDropdown({
@@ -70,21 +67,14 @@ export function BrowserToolbarMenuDropdown({
   onImportFromFile,
   viewportPresetId,
   onApplyViewportPreset,
-  worktreeId,
-  pageUrl,
-  pageTitle
+  onOpenSourceFile = null,
+  overflow
 }: BrowserToolbarMenuDropdownProps): React.JSX.Element {
-  const quickLinkFolders = useAppStore((s) => s.settings?.browserQuickLinkFolders) ?? []
-  const repoId = useAppStore((s) => s.getKnownWorktreeById(worktreeId)?.repoId ?? null)
-  // Why: folder workspaces have no branch, and their meta channel drops unknown fields.
-  const canAddToBranchDocs = parseWorkspaceKey(worktreeId)?.type !== 'folder'
-  const canBookmarkPage = Boolean(
-    pageUrl && pageUrl !== 'about:blank' && pageUrl !== ORCA_BROWSER_BLANK_URL
-  )
   return (
     <DropdownMenu modal={false} open={menuOpen} onOpenChange={onMenuOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button
+          ref={overflow.triggerRef}
           size="icon"
           variant="ghost"
           className="h-8 w-8"
@@ -96,7 +86,27 @@ export function BrowserToolbarMenuDropdown({
           <Ellipsis className="size-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent
+        align="end"
+        className="w-56"
+        onCloseAutoFocus={overflow.onMenuCloseAutoFocus}
+      >
+        <BrowserChromeFoldedMenuItems
+          tools={overflow.tools}
+          deferUntilClose={overflow.deferUntilClose}
+        />
+        {onOpenSourceFile ? (
+          <>
+            <DropdownMenuItem onSelect={onOpenSourceFile}>
+              <FileCode2 className="mr-2 size-3.5" />
+              {translate(
+                'auto.components.editor.HtmlDocPreview.openSourceControl',
+                'Open source file'
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        ) : null}
         {allProfiles.map((profile) => {
           const isSelectedProfile = profile.id === effectiveProfileId
           return (
@@ -236,70 +246,6 @@ export function BrowserToolbarMenuDropdown({
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>
-            </DropdownMenuSubContent>
-          </DropdownMenuPortal>
-        </DropdownMenuSub>
-
-        <DropdownMenuSeparator />
-
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger disabled={!canBookmarkPage}>
-            <Bookmark className="mr-2 size-3.5" />
-            {translate(
-              'auto.components.browser.pane.BrowserToolbarMenu.addToBookmarks',
-              'Add to Bookmarks'
-            )}
-          </DropdownMenuSubTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuSubContent>
-              <DropdownMenuItem
-                disabled={!canAddToBranchDocs}
-                onSelect={() => addBookmarkToBranchDocs(worktreeId, pageTitle, pageUrl)}
-              >
-                {translate(
-                  'auto.components.browser.pane.BrowserToolbarMenu.bookmarkBranchDocs',
-                  'Branch Docs'
-                )}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={!repoId}
-                onSelect={() => repoId && addBookmarkToProjectLinks(repoId, pageTitle, pageUrl)}
-              >
-                {translate(
-                  'auto.components.browser.pane.BrowserToolbarMenu.bookmarkProjectLinks',
-                  'Project Links'
-                )}
-              </DropdownMenuItem>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  {translate(
-                    'auto.components.browser.pane.BrowserToolbarMenu.bookmarkQuickLinks',
-                    'Quick Links'
-                  )}
-                </DropdownMenuSubTrigger>
-                <DropdownMenuPortal>
-                  <DropdownMenuSubContent>
-                    <DropdownMenuItem
-                      onSelect={() => addBookmarkToQuickLinks(pageTitle, pageUrl, null)}
-                    >
-                      {translate(
-                        'auto.components.browser.pane.BrowserToolbarMenu.bookmarkQuickLinksRoot',
-                        'Root (no folder)'
-                      )}
-                    </DropdownMenuItem>
-                    {quickLinkFolders.length > 0 ? <DropdownMenuSeparator /> : null}
-                    {quickLinkFolders.map((folder) => (
-                      <DropdownMenuItem
-                        key={folder.id}
-                        onSelect={() => addBookmarkToQuickLinks(pageTitle, pageUrl, folder.id)}
-                      >
-                        <Folder className="mr-2 size-3.5 text-muted-foreground" />
-                        <span className="truncate">{folder.name}</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuPortal>
-              </DropdownMenuSub>
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
         </DropdownMenuSub>

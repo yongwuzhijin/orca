@@ -1,3 +1,5 @@
+import { tokenizeCommandLine } from '../../shared/agent-command-line-entrypoint'
+import { qoderHookService } from '../qoder/hook-service'
 import { describe, expect, it, vi } from 'vitest'
 import { parse as parseJsonc } from 'jsonc-parser'
 import type { SFTPWrapper } from 'ssh2'
@@ -8,23 +10,43 @@ vi.mock('electron', () => ({
   }
 }))
 
-import { CodexHookService, codexHookService } from '../codex/hook-service'
-import { DroidHookService, droidHookService } from '../droid/hook-service'
-import { CursorHookService, cursorHookService } from '../cursor/hook-service'
+import { CodexHookService } from '../codex/hook-service'
+import { DroidHookService } from '../droid/hook-service'
+import { CursorHookService } from '../cursor/hook-service'
 import { CURSOR_EVENTS, type CursorEvent } from '../cursor/hook-events'
-import { CommandCodeHookService, commandCodeHookService } from '../command-code/hook-service'
-import { GeminiHookService, geminiHookService } from '../gemini/hook-service'
-import { AntigravityHookService, antigravityHookService } from '../antigravity/hook-service'
-import { AmpHookService, ampHookService } from '../amp/hook-service'
+import { CommandCodeHookService } from '../command-code/hook-service'
+import { GeminiHookService } from '../gemini/hook-service'
+import { AntigravityHookService } from '../antigravity/hook-service'
+import { AmpHookService } from '../amp/hook-service'
 import { ClaudeHookService, claudeHookService } from '../claude/hook-service'
-import { GrokHookService, grokHookService } from '../grok/hook-service'
-import { CopilotHookService, copilotHookService } from '../copilot/hook-service'
-import { HermesHookService, hermesHookService } from '../hermes/hook-service'
-import { DevinHookService, devinHookService } from '../devin/hook-service'
-import { KimiHookService, kimiHookService } from '../kimi/hook-service'
+import { GrokHookService } from '../grok/hook-service'
+import { CopilotHookService } from '../copilot/hook-service'
+import { HermesHookService } from '../hermes/hook-service'
+import { DevinHookService } from '../devin/hook-service'
+import { KimiHookService } from '../kimi/hook-service'
+import { JcodeHookService } from '../jcode/hook-service'
 import { openClaudeHookService } from '../openclaude/hook-service'
-import { qoderHookService } from '../qoder/hook-service'
-import { MANAGED_AGENT_HOOK_INSTALLERS } from './managed-agent-hook-controls'
+import { codexHookService } from '../codex/hook-service'
+import { geminiHookService } from '../gemini/hook-service'
+import { antigravityHookService } from '../antigravity/hook-service'
+import { ampHookService } from '../amp/hook-service'
+import { cursorHookService } from '../cursor/hook-service'
+import { commandCodeHookService } from '../command-code/hook-service'
+import { grokHookService } from '../grok/hook-service'
+import { copilotHookService } from '../copilot/hook-service'
+import { hermesHookService } from '../hermes/hook-service'
+import { devinHookService } from '../devin/hook-service'
+import { kimiHookService } from '../kimi/hook-service'
+import { codebuddyHookService } from '../codebuddy/hook-service'
+import { qoderCnHookService } from '../qoder/hook-service'
+import { qwenCodeHookService } from '../qwen-code/hook-service'
+import { museHookService } from '../muse/hook-service'
+import { zcodeHookService } from '../zcode/hook-service'
+import { dshHookService } from '../dsh/hook-service'
+import { jcodeHookService } from '../jcode/hook-service'
+import { kiroHookService } from '../kiro/hook-service'
+import { droidHookService } from '../droid/hook-service'
+import { MANAGED_AGENT_HOOK_INSTALLERS } from './managed-agent-hook-registry'
 import {
   installRemoteManagedAgentHooks,
   REMOTE_MANAGED_HOOK_INSTALLER_AGENTS
@@ -93,6 +115,10 @@ describe('remote hook service installers', () => {
         {
           path: '/home/dev/.orca/agent-hooks/devin-hook.sh',
           install: (sftp: SFTPWrapper) => new DevinHookService().installRemote(sftp, '/home/dev')
+        },
+        {
+          path: '/home/dev/.orca/agent-hooks/jcode-hook.sh',
+          install: (sftp: SFTPWrapper) => new JcodeHookService().installRemote(sftp, '/home/dev')
         },
         {
           path: '/home/dev/.orca/agent-hooks/droid-hook.sh',
@@ -258,23 +284,36 @@ describe('remote hook service installers', () => {
     }
     for (const eventName of ['PreInvocation', 'PostInvocation', 'Stop']) {
       const command = antigravityConfig['orca-status'][eventName]?.[0]?.command
-      expect(command).toContain('/home/dev/.orca/agent-hooks/antigravity-hook.sh')
-      expect(command).toContain(`ORCA_ANTIGRAVITY_EVENT='${eventName}'`)
+      expect(tokenizeCommandLine(command ?? '').slice(0, 2)).toEqual(['/bin/sh', '-c'])
+      expect(tokenizeCommandLine(command ?? '')[2]).toContain(
+        '/home/dev/.orca/agent-hooks/antigravity-hook.sh'
+      )
+      expect(tokenizeCommandLine(command ?? '')[2]).toContain(
+        `ORCA_ANTIGRAVITY_EVENT='${eventName}'`
+      )
     }
     for (const eventName of ['PreToolUse', 'PostToolUse']) {
       const definition = antigravityConfig['orca-status'][eventName]?.[0]
       const command = definition?.hooks?.[0]?.command
       expect(definition?.matcher).toBe('*')
-      expect(command).toContain('/home/dev/.orca/agent-hooks/antigravity-hook.sh')
-      expect(command).toContain(`ORCA_ANTIGRAVITY_EVENT='${eventName}'`)
+      expect(tokenizeCommandLine(command ?? '')[2]).toContain(
+        '/home/dev/.orca/agent-hooks/antigravity-hook.sh'
+      )
+      expect(tokenizeCommandLine(command ?? '')[2]).toContain(
+        `ORCA_ANTIGRAVITY_EVENT='${eventName}'`
+      )
     }
     // Why: #2426 was an SSH report — a remote host missing the script must still answer the gate, not deny every tool.
-    expect(antigravityConfig['orca-status'].PreToolUse[0].hooks?.[0]?.command).toContain(
-      `printf '%s\\n' '{"decision":"ask"}'`
-    )
-    expect(antigravityConfig['orca-status'].PostToolUse[0].hooks?.[0]?.command).not.toContain(
-      '{"decision"'
-    )
+    expect(
+      tokenizeCommandLine(
+        antigravityConfig['orca-status'].PreToolUse[0].hooks?.[0]?.command ?? ''
+      )[2]
+    ).toContain(`printf '%s\\n' '{"decision":"ask"}'`)
+    expect(
+      tokenizeCommandLine(
+        antigravityConfig['orca-status'].PostToolUse[0].hooks?.[0]?.command ?? ''
+      )[2]
+    ).not.toContain('{"decision"')
 
     const ampPlugin = amp.fs.files.get('/home/dev/.config/amp/plugins/orca-agent-status.ts')
     expect(ampPlugin).toContain('/hook/amp')
@@ -608,6 +647,10 @@ describe('remote hook service installers', () => {
       ['openclaude', openClaudeHookService],
       ['codex', codexHookService],
       ['gemini', geminiHookService],
+      ['qoder', qoderHookService],
+      ['qoder-cn', qoderCnHookService],
+      ['qwen-code', qwenCodeHookService],
+      ['codebuddy', codebuddyHookService],
       ['antigravity', antigravityHookService],
       ['amp', ampHookService],
       ['cursor', cursorHookService],
@@ -618,7 +661,11 @@ describe('remote hook service installers', () => {
       ['hermes', hermesHookService],
       ['devin', devinHookService],
       ['kimi', kimiHookService],
-      ['qoder', qoderHookService]
+      ['muse', museHookService],
+      ['zcode', zcodeHookService],
+      ['dsh', dshHookService],
+      ['jcode', jcodeHookService],
+      ['kiro', kiroHookService]
     ])
 
     // Guard against a service silently missing from the map above as new agents land.
@@ -636,6 +683,17 @@ describe('remote hook service installers', () => {
     expect(missing).toEqual([])
   })
 
+  it('installs Qoder on the execution host with its own event endpoint', async () => {
+    const { sftp, fs } = createFakeSftp()
+    const result = await qoderHookService.installRemote(sftp, '/home/dev/')
+    expect(result.state).toBe('installed')
+    expect(result.configPath).toBe('/home/dev/.qoder/settings.json')
+    const settings = JSON.parse(fs.files.get(result.configPath) ?? '{}')
+    expect(settings.hooks.SessionEnd).toHaveLength(1)
+    expect(settings.hooks.Notification).toHaveLength(1)
+    expect(settings.hooks.TeammateIdle).toBeUndefined()
+    expect(fs.files.get('/home/dev/.orca/agent-hooks/qoder-hook.sh')).toContain('/hook/qoder')
+  })
   it('installs Droid and Copilot when running the aggregate remote installer (issue #7253)', async () => {
     const { sftp } = createFakeSftp()
     const results = await installRemoteManagedAgentHooks(sftp, '/home/dev', {

@@ -10,7 +10,7 @@ import {
 import type { AgentStatusEntry } from '../../../shared/agent-status-types'
 import type { AgentType } from '../../../shared/agent-type'
 import type { TerminalLayoutSnapshot, TerminalTab } from '../../../shared/terminal-tab-types'
-import type { TuiAgent } from '../../../shared/tui-agent'
+import type { TerminalAgent } from '../../../shared/terminal-agent'
 import type { RetainedAgentEntry } from '@/store/slices/agent-status'
 
 // Composed exactly the way useTabAgent layers the resolvers: focused pane
@@ -19,7 +19,7 @@ function resolveTabAgent(
   map: Record<string, AgentStatusEntry>,
   layout: TerminalLayoutSnapshot | undefined,
   tabId: string
-): TuiAgent | null {
+): TerminalAgent | null {
   return resolveFocusedTabAgent(map, layout, tabId) ?? resolveSiblingTabAgent(map, layout, tabId)
 }
 

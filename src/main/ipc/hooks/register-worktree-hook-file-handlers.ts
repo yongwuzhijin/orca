@@ -1,3 +1,4 @@
+import { getStoredRepoSshConnectionId } from '../../repo-execution-host'
 import { getLocalProjectWorktreeGitOptions } from '../../project-runtime-git-options'
 import { ipcMain } from 'electron'
 import type { ExecutionHostId } from '../../../shared/execution-host'
@@ -15,6 +16,7 @@ import {
 import { resolveRepoForExecutionHost } from '../worktrees/repo-host-ownership'
 import type { WorktreeIpcContext } from '../worktrees/worktree-ipc-context'
 import { resolveWorkspaceOrcaDirName } from '../../../shared/orca-dir-names'
+import { assertWslMoveRepoWritable } from '../../persistence/moving-wsl-projects/wsl-move-scope-guard'
 
 /** Route private command overrides to the owning host without changing shared hook settings. */
 export function registerWorktreeHookFileHandlers(context: WorktreeIpcContext): void {
@@ -34,10 +36,11 @@ export function registerWorktreeHookFileHandlers(context: WorktreeIpcContext): v
           source: 'none' as const
         }
       }
-      if (repo.connectionId) {
-        const orcaDirName = resolveWorkspaceOrcaDirName(store.getSettings())
+      const orcaDirName = resolveWorkspaceOrcaDirName(store.getSettings())
+      const connectionId = getStoredRepoSshConnectionId(repo)
+      if (connectionId) {
         const issueCommandPath = joinWorktreeRelativePath(repo.path, `${orcaDirName}/issue-command`)
-        const fsProvider = getSshFilesystemProvider(repo.connectionId)
+        const fsProvider = getSshFilesystemProvider(connectionId)
         if (!fsProvider) {
           return {
             status: 'error',
@@ -72,19 +75,15 @@ export function registerWorktreeHookFileHandlers(context: WorktreeIpcContext): v
         }
         const effectiveContent = localContent ?? sharedContent
         return {
-          status: localContent ? 'ok' : status,
+          status,
           localContent,
           sharedContent,
           effectiveContent,
           localFilePath: issueCommandPath,
-          source: localContent
-            ? ('local' as const)
-            : sharedContent
-              ? ('shared' as const)
-              : ('none' as const)
+          source: localContent ? ('local' as const) : sharedContent ? ('shared' as const) : ('none' as const)
         }
       }
-      return readIssueCommand(repo.path, resolveWorkspaceOrcaDirName(store.getSettings()))
+      return readIssueCommand(repo.path, orcaDirName)
     }
   )
 
@@ -95,10 +94,12 @@ export function registerWorktreeHookFileHandlers(context: WorktreeIpcContext): v
       if (!repo || isFolderRepo(repo)) {
         return
       }
-      if (repo.connectionId) {
-        const orcaDirName = resolveWorkspaceOrcaDirName(store.getSettings())
+      assertWslMoveRepoWritable(store, repo)
+      const orcaDirName = resolveWorkspaceOrcaDirName(store.getSettings())
+      const connectionId = getStoredRepoSshConnectionId(repo)
+      if (connectionId) {
         const issueCommandPath = joinWorktreeRelativePath(repo.path, `${orcaDirName}/issue-command`)
-        const fsProvider = getSshFilesystemProvider(repo.connectionId)
+        const fsProvider = getSshFilesystemProvider(connectionId)
         if (!fsProvider) {
           throw new Error(
             'Remote filesystem unavailable. Reconnect the SSH target before retrying.'
@@ -114,7 +115,7 @@ export function registerWorktreeHookFileHandlers(context: WorktreeIpcContext): v
           return
         }
         await fsProvider.createDir(joinWorktreeRelativePath(repo.path, orcaDirName))
-        if (await isIssueCommandIgnoredByGit(repo.path, orcaDirName, repo.connectionId)) {
+        if (await isIssueCommandIgnoredByGit(repo.path, orcaDirName, connectionId)) {
           await fsProvider.writeFile(issueCommandPath, `${trimmed}\n`)
           return
         }
@@ -136,7 +137,7 @@ export function registerWorktreeHookFileHandlers(context: WorktreeIpcContext): v
       }
       await writeIssueCommand(
         repo.path,
-        resolveWorkspaceOrcaDirName(store.getSettings()),
+        orcaDirName,
         args.content,
         () => getLocalProjectWorktreeGitOptions(store, repo)
       )

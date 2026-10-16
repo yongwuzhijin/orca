@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import { getConnectionId } from '@/lib/connection-context'
 import { getLocalProjectExecutionRuntimeContext } from '@/lib/local-preflight-context'
-import { getRepoOwnerRoutedSettings } from '@/lib/repo-runtime-owner'
+import { ipcOrRuntimeTargetForHostId } from '@/runtime/runtime-client-target'
 import { resolveSourceControlLaunchPlatform } from '@/lib/source-control-launch-platform'
-import { getWorktreeGitIdentityDisplay } from '@/lib/worktree-git-identity-display'
+import { getWorktreeGitIdentityDisplay } from '../../../../../../shared/worktree/git-identity-display'
 import { useAppStore } from '@/store'
 import { useRepoById, useWorktreeMap } from '@/store/selectors'
 import { getGitHubPRCacheKey } from '@/store/slices/github-cache-key'
@@ -11,6 +11,7 @@ import { getHostedReviewCacheKey } from '@/store/slices/hosted-review-cache-iden
 import type { GitBranchChangeEntry } from '../../../../../../shared/git-diff-compare-types'
 import type { GitStatusEntry } from '../../../../../../shared/git-status-types'
 import { isFolderRepo } from '../../../../../../shared/repo-kind'
+import { getRepoExecutionHostId } from '../../../../../../shared/execution-host'
 import { selectReviewCacheData, selectReviewCacheEntry } from '../../review-cache-entry-selection'
 import { useReviewEmbeddedWorktreeId } from '@/components/todo/detail/review-embedded-worktree-context'
 
@@ -114,22 +115,21 @@ export function useSourceControlWorktreeContext() {
   )
   const hostedReviewEntryData = hostedReviewEntry?.data ?? null
   const activePrFromQueue = useAppStore((s) => selectReviewCacheData(s.prCache, activePrCacheKey))
-  // Why: git/file mutations and repo metadata belong to the repo OWNER host, not the currently focused sidebar host.
-  const activeRepoSettings = useMemo(
+  // Why: git calls and repo metadata go to the repo's OWNER host; `null` (no repo row) runs nothing.
+  const activeRepoTarget = useMemo(
     () =>
-      getRepoOwnerRoutedSettings(
-        settings,
-        activeRepoId
-          ? {
-              id: activeRepoId,
+      activeRepoId
+        ? ipcOrRuntimeTargetForHostId(
+            getRepoExecutionHostId({
               connectionId: activeRepoConnectionId,
               executionHostId: activeRepoExecutionHostId
-            }
-          : null
-      ),
-    [activeRepoConnectionId, activeRepoExecutionHostId, activeRepoId, settings]
+            })
+          )
+        : null,
+    [activeRepoConnectionId, activeRepoExecutionHostId, activeRepoId]
   )
-  const activeRepoRuntimeEnvironmentId = activeRepoSettings?.activeRuntimeEnvironmentId ?? null
+  const activeRepoRuntimeEnvironmentId =
+    activeRepoTarget?.kind === 'environment' ? activeRepoTarget.environmentId : null
   const rightSidebarOpen = useAppStore((s) => s.rightSidebarOpen)
 
   const isFolder = activeRepo ? isFolderRepo(activeRepo) : false
@@ -161,7 +161,7 @@ export function useSourceControlWorktreeContext() {
     activeRepoId,
     activeRepoPath,
     activeRepoRuntimeEnvironmentId,
-    activeRepoSettings,
+    activeRepoTarget,
     activeSourceControlLaunchPlatform,
     activeWorktree,
     activeWorktreeId,

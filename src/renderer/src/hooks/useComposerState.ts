@@ -1,6 +1,6 @@
 /* eslint-disable max-lines -- Why: co-locates all NewWorkspaceComposerCard state so the full-page composer and quick-composer modal share one source of truth. */
 /* oxlint-disable react-doctor/no-adjust-state-on-prop-change -- Why: composer state synchronizes selected repo metadata, setup policy, issue-command hooks, and provider link lookups from async runtime IPC. */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/store'
@@ -54,6 +54,7 @@ import type {
 } from '../../../shared/orca-yaml-hook-types'
 import type { ProjectGroup } from '../../../shared/project-group-types'
 import type { TuiAgent } from '../../../shared/tui-agent'
+import type { QuickSubmitOptions } from './composer-state/quick-creation-request'
 import type { WorkspaceSource as WorkspaceCreateTelemetrySource } from '../../../shared/workspace-source'
 import type { SetupDecision, SparsePreset } from '../../../shared/worktree/create-types'
 import type { WorktreeMeta } from '../../../shared/worktree/meta-types'
@@ -245,6 +246,18 @@ type SmartGitHubPrStartPointSelection = {
   resolved?: GitHubPrStartPoint
 }
 
+export {
+  canResolveFolderSmartGitHubSubmit,
+  getInitialAutoManagedWorkspaceName,
+  getInitialGitHubPrStartPointSelection,
+  getMatchingLinkedTaskSourceContext,
+  isExplicitWorkspaceNameInput,
+  resolveInitialWorkspaceRunSeed,
+  resolveSmartGitHubCreateNames,
+  retargetGitHubPrStartPointSelection
+} from './composer-state/composer-decisions'
+export type { InitialWorkspaceRunSeedInput } from './composer-state/composer-decisions'
+
 export type UseComposerStateOptions = {
   initialRepoId?: string
   initialEphemeralVmRecipeId?: string
@@ -254,6 +267,7 @@ export type UseComposerStateOptions = {
   initialLinkedWorkItem?: LinkedWorkItemSummary | null
   initialGitHubWorkItem?: GitHubWorkItem | null
   initialTaskSourceContext?: TaskSourceContext | null
+  initialWorkspaceTarget?: WorkspaceCreationTargetHint | null
   initialWorkspaceStatus?: WorkspaceStatus
   /** Seeds the Start-from selection on open; the Create-from → Quick fallback uses it so a PR pick lands with the resolved PR head as base. */
   initialBaseBranch?: string
@@ -269,7 +283,6 @@ export type UseComposerStateOptions = {
   telemetrySource?: WorkspaceCreateTelemetrySource
   /** Enables linked-item prompt and issue-command automation for this composer entry point. */
   enableIssueAutomation?: boolean
-  createGateMode?: 'full' | 'quick'
 }
 
 export type ComposerCardProps = {
@@ -404,195 +417,16 @@ export type UseComposerStateResult = {
   /** Attach to the composer wrapper so the global Enter-to-submit handler scopes to the visible composer. */
   composerRef: React.RefObject<HTMLDivElement | null>
   onComposerNodeChange: (node: HTMLDivElement | null) => void
-  promptTextareaRef: React.RefObject<HTMLTextAreaElement | null>
-  nameInputRef: React.RefObject<HTMLInputElement | null>
+  promptTextareaRef: RefObject<HTMLTextAreaElement | null>
+  nameInputRef: RefObject<HTMLInputElement | null>
   submit: () => Promise<void>
-  submitQuick: (agent: TuiAgent | null) => Promise<void>
+  submitQuick: (agent: TuiAgent | null, options?: QuickSubmitOptions) => Promise<void>
   /** Invoked by the Enter handler to re-check whether submission should fire. */
   createDisabled: boolean
   /** Selects the repo a nested Add Project flow just added, clearing any folder-group target so the composer lands on it. */
   selectAddedProjectRepo: (repoId: string) => void
 }
 
-export type InitialWorkspaceRunSeedInput = {
-  draftProjectId?: string | null
-  draftHostId?: string | null
-  draftProjectHostSetupId?: string | null
-  initialTaskSourceContext?: Pick<
-    TaskSourceContext,
-    'projectId' | 'hostId' | 'projectHostSetupId'
-  > | null
-}
-
-function getRepoSetupAgentStartupPolicy(repo?: {
-  hookSettings?: Pick<RepoHookSettings, 'setupAgentStartupPolicy'>
-}): SetupAgentStartupPolicy {
-  return repo?.hookSettings?.setupAgentStartupPolicy ?? 'start-immediately'
-}
-
-function buildSetupAgentStartupHookSettings(
-  current: RepoHookSettings | undefined,
-  setupAgentStartupPolicy: SetupAgentStartupPolicy
-): RepoHookSettings {
-  const defaults = getDefaultRepoHookSettings()
-  return {
-    ...defaults,
-    ...current,
-    setupRunPolicy: current?.setupRunPolicy ?? defaults.setupRunPolicy,
-    setupAgentStartupPolicy,
-    commandSourcePolicy: current?.commandSourcePolicy ?? defaults.commandSourcePolicy,
-    scripts: {
-      ...defaults.scripts,
-      ...current?.scripts
-    }
-  }
-}
-
-export function resolveInitialWorkspaceRunSeed({
-  draftProjectId,
-  draftHostId,
-  draftProjectHostSetupId,
-  initialTaskSourceContext
-}: InitialWorkspaceRunSeedInput): {
-  projectId: string | null
-  hostId: ExecutionHostId | null
-  projectHostSetupId: string | null
-} {
-  return {
-    projectId: draftProjectId ?? initialTaskSourceContext?.projectId ?? null,
-    hostId: normalizeExecutionHostId(draftHostId ?? initialTaskSourceContext?.hostId),
-    projectHostSetupId:
-      draftProjectHostSetupId ?? initialTaskSourceContext?.projectHostSetupId ?? null
-  }
-}
-
-export function isExplicitWorkspaceNameInput({
-  name,
-  lastAutoName
-}: {
-  name: string
-  lastAutoName: string
-}): boolean {
-  // Why: a user-authored name must win over linked-item and first-message AI naming.
-  return Boolean(name.trim()) && name !== lastAutoName && !isWorkItemLookupText(name)
-}
-
-export function resolveSmartGitHubCreateNames({
-  resolutionKind,
-  smartWorkspaceName,
-  smartDisplayName,
-  fallbackWorkspaceName,
-  nameIsAutoManaged
-}: {
-  resolutionKind: Exclude<PendingSmartGitHubSubmitResolution['kind'], 'none'>
-  smartWorkspaceName: string
-  smartDisplayName: string
-  fallbackWorkspaceName: string
-  nameIsAutoManaged: boolean
-}): { workspaceName: string; displayName: string | undefined } {
-  if (resolutionKind === 'pr-start-point' && !nameIsAutoManaged && fallbackWorkspaceName) {
-    // Why: submit-time PR start-point augments an already-linked PR; don't reclaim a name the user edited after selecting.
-    return { workspaceName: fallbackWorkspaceName, displayName: undefined }
-  }
-  return { workspaceName: smartWorkspaceName, displayName: smartDisplayName }
-}
-
-function getLinkedWorkItemSeedName(item: LinkedWorkItemSummary | null | undefined): string {
-  if (!item) {
-    return ''
-  }
-  return getLinkedWorkItemWorkspaceName(item)?.seedName ?? getLinkedWorkItemSuggestedName(item)
-}
-
-function getGitHubLinkedWorkItemIdentity(
-  item: LinkedWorkItemSummary | null | undefined
-): GitHubWorkItemIdentity | null {
-  if (
-    !item ||
-    getLinkedWorkItemProvider(item) !== 'github' ||
-    (item.type !== 'issue' && item.type !== 'pr')
-  ) {
-    return null
-  }
-
-  return resolveGitHubWorkItemIdentity({
-    type: item.type,
-    number: item.number,
-    url: item.url
-  })
-}
-
-function normalizeGitHubLinkedWorkItem(
-  item: LinkedWorkItemSummary | null | undefined
-): LinkedWorkItemSummary | null {
-  if (!item) {
-    return null
-  }
-  const identity = getGitHubLinkedWorkItemIdentity(item)
-  if (!identity || (identity.type === item.type && identity.number === item.number)) {
-    return item
-  }
-
-  return { ...item, type: identity.type, number: identity.number }
-}
-
-export function getInitialGitHubPrStartPointSelection({
-  item,
-  linkedWorkItem,
-  repoId
-}: {
-  item: GitHubWorkItem | null | undefined
-  linkedWorkItem: LinkedWorkItemSummary | null | undefined
-  repoId: string | null | undefined
-}): SmartGitHubPrStartPointSelection | null {
-  if (!item || !repoId) {
-    return null
-  }
-  const itemIdentity = resolveGitHubWorkItemIdentity(item)
-  const linkedIdentity = getGitHubLinkedWorkItemIdentity(linkedWorkItem)
-  if (
-    itemIdentity.type !== 'pr' ||
-    linkedIdentity?.type !== 'pr' ||
-    itemIdentity.number !== linkedIdentity.number
-  ) {
-    return null
-  }
-  return {
-    repoId,
-    item: { ...item, type: itemIdentity.type, number: itemIdentity.number }
-  }
-}
-
-export function retargetGitHubPrStartPointSelection(
-  selection: SmartGitHubPrStartPointSelection | null,
-  repoId: string
-): SmartGitHubPrStartPointSelection | null {
-  return selection ? { repoId, item: selection.item } : null
-}
-
-export function getMatchingLinkedTaskSourceContext(
-  item: LinkedWorkItemSummary | null | undefined,
-  context: TaskSourceContext | null | undefined
-): TaskSourceContext | null {
-  return isWorkspaceLinkedItemSourceContextMatch(item, context) ? (context ?? null) : null
-}
-
-export function getInitialAutoManagedWorkspaceName({
-  draftName,
-  draftLinkedWorkItem,
-  initialName,
-  initialLinkedWorkItem
-}: {
-  draftName?: string | null
-  draftLinkedWorkItem?: LinkedWorkItemSummary | null
-  initialName: string
-  initialLinkedWorkItem?: LinkedWorkItemSummary | null
-}): string {
-  // Why: a prefilled name counts as user input unless it exactly matches the linked-item seed Orca generated.
-  const candidateName = draftName ?? initialName
-  const seedName = getLinkedWorkItemSeedName(draftLinkedWorkItem ?? initialLinkedWorkItem)
-  return candidateName && seedName && candidateName === seedName ? candidateName : ''
-}
 
 // Why: page composer and Cmd+J modal can coexist, so route a native file drop to only the most-recently-mounted one, else it duplicates across both.
 const composerDropStack: symbol[] = []
@@ -4108,7 +3942,7 @@ export function useComposerState(options: UseComposerStateOptions): UseComposerS
   }, [])
 
   const submitQuick = useCallback(
-    async (requestedAgent: TuiAgent | null): Promise<void> => {
+    async (requestedAgent: TuiAgent | null, _options?: QuickSubmitOptions): Promise<void> => {
       if (isProjectGroupTarget) {
         await submitFolderTarget(requestedAgent)
         return
