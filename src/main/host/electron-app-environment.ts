@@ -1,11 +1,17 @@
 import { app } from 'electron'
 import type { AppEnvironment, AppPathName, AppProcessMetric } from '../../shared/app-environment'
+import { initializeOrcaHomeDirNameFromEnvironment } from '../../shared/orca-home-dir-name'
 
 /**
  * Electron-backed AppEnvironment for the desktop app: a pass-through to
  * `electron.app`, so desktop path, version and lifecycle behaviour is unchanged.
  */
 export class ElectronAppEnvironment implements AppEnvironment {
+  constructor() {
+    // Why here: hook and credential paths throw until this snapshot exists, and this is built once before they resolve.
+    initializeOrcaHomeDirNameFromEnvironment(process.env)
+  }
+
   getPath(name: AppPathName): string {
     return app.getPath(name)
   }
